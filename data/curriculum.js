@@ -116,6 +116,8 @@ const CURRICULUM = {
         { day: 10, title: "Atomics, CAS & Lock-Free Structures", duration: 90, topic: "Concurrency", status: "locked", file: null, heavy: true },
         { day: 11, title: "CompletableFuture & Async Pipelines", duration: 60, topic: "Concurrency", status: "locked", file: null },
         { day: 12, title: "Virtual Threads (Project Loom)",      duration: 90, topic: "Concurrency", status: "locked", file: null, heavy: true },
+        { day: "12a", title: "Modern Java: Records, Sealed Classes & Pattern Matching (Java 14–21)", duration: 90, topic: "Java Language", status: "locked", file: null, heavy: true,
+          note: "Records as immutable DTOs; sealed classes for exhaustive domain modelling; pattern matching instanceof; switch expressions & guarded patterns (Java 21); text blocks; Structured Concurrency with StructuredTaskScope (pairs with Day 12 Virtual Threads); Sequenced Collections" },
         { day: 13, title: "ConcurrentCollections & Patterns",    duration: 60, topic: "Concurrency", status: "locked", file: null },
         { day: 14, title: "Rate Limiter Synthesis",              duration: 60, topic: "Concurrency", status: "locked", file: null },
       ]
@@ -131,10 +133,6 @@ const CURRICULUM = {
         { day: 19, title: "Project Reactor Operators",            duration: 90, topic: "Reactive", status: "locked", file: null, heavy: true },
         { day: 20, title: "WebFlux End-to-End",                   duration: 60, topic: "Reactive", status: "locked", file: null },
         { day: 21, title: "Reactive vs Virtual Threads — ADR Capstone", duration: 60, topic: "Reactive", status: "locked", file: null },
-        { day: "21a", title: "REST API Design + gRPC + WebSockets", duration: 90, topic: "Spring", status: "locked", file: null, heavy: true,
-          note: "REST constraints & maturity model; gRPC proto contracts vs REST trade-offs; WebSocket upgrade, heartbeat, backpressure; when to choose each — architect decision rubric" },
-        { day: "21b", title: "Modern Java: Records, Sealed Classes & Pattern Matching (Java 14-21)", duration: 90, topic: "Java Language", status: "locked", file: null, heavy: true,
-          note: "Records as immutable DTOs; sealed classes for exhaustive domain modelling; pattern matching instanceof; switch expressions & guarded patterns (Java 21); text blocks; Structured Concurrency with StructuredTaskScope; Sequenced Collections" },
       ]
     },
 
@@ -273,6 +271,8 @@ const CURRICULUM = {
           note: "DB-per-service rationale & shared schema anti-pattern; Strangler Fig migration playbook (proxy layer, feature flags, traffic shifting); ACL as translation layer between bounded contexts; architect interview: migrate a shared Oracle DB to microservices without downtime" },
         { day: 86, title: "DDD & Bounded Contexts",              duration: 60, topic: "Microservices", status: "locked", file: null },
         { day: 87, title: "Saga Pattern",                        duration: 90, topic: "Microservices", status: "locked", file: null, heavy: true },
+        { day: "87a", title: "REST API Design + gRPC + WebSockets", duration: 90, topic: "Microservices", status: "locked", file: null, heavy: true,
+          note: "REST constraints & maturity model; gRPC proto contracts vs REST trade-offs; WebSocket upgrade, heartbeat, backpressure; when to choose each — architect decision rubric; fits alongside API Gateway/BFF for a complete inter-service communication picture" },
         { day: 88, title: "API Gateway, BFF & Service Mesh",     duration: 60, topic: "Microservices", status: "locked", file: null },
         { day: 89, title: "Service Discovery",                   duration: 60, topic: "Microservices", status: "locked", file: null },
         { day: "89a", title: "OAuth2 / JWT / Spring Security — Auth Architecture", duration: 90, topic: "Microservices", status: "locked", file: null, heavy: true,
