@@ -1,10 +1,10 @@
-# Phase 1 — Advanced Java (Weeks 1–3, Days 1–21)
+# Phase 1 — Advanced Java (Weeks 1–3, Days 1–21 + 7a, 7b)
 
-> **Goal:** Master the JVM as a runtime, not just a language. Understand memory, GC, concurrency, modern Java language features, and the framework internals that shape every architectural decision in production Java.
+> **Goal:** Master the JVM as a runtime, not just a language. Understand memory, GC, modern Java language features, concurrency, and the framework internals that shape every architectural decision in production Java.
 
 ---
 
-## Week 1 — JVM Internals & Garbage Collection (Days 1–7)
+## Week 1 — JVM Internals, GC & Java Advanced (Days 1–7, 7a, 7b)
 
 ### Day 1 — Stack vs Heap Fundamentals ✅
 - **Core concepts:** JVM memory regions, stack vs heap, primitives vs references, frame lifecycle
@@ -88,9 +88,57 @@
 - **Architect lens:** Synthesis is what separates Senior from Staff
 - **Interview signal:** This IS the interview question pattern for Staff loops
 
+### Day 7a — Java Advanced: Records, Sealed Classes, Pattern Matching & Modern APIs (Java 14–21)
+- **Core concepts:**
+  - **Records** (Java 16): immutable data carriers, compact constructors, custom accessors — replaces Lombok `@Value` in modern codebases
+  - **Sealed classes + interfaces** (Java 17): `permits` keyword, exhaustive `switch`, modelling algebraic types and domain hierarchies cleanly
+  - **Pattern matching `instanceof`** (Java 16): binding variables, type narrowing without explicit cast
+  - **Pattern matching `switch`** (Java 21): arrow labels, `yield`, guarded patterns (`case String s when s.length() > 5`), exhaustiveness checking at compile time
+  - **Deconstruction patterns**: record patterns (`case Point(int x, int y)`) and nested deconstruction
+  - **Text blocks** (Java 15): multiline strings, indentation stripping, `\` line continuation, `\s` trailing-space preservation
+  - **Structured Concurrency** (Java 21): `StructuredTaskScope.ShutdownOnFailure` / `ShutdownOnSuccess` — fork child tasks, auto-cancel on first failure; pairs with Virtual Threads
+  - **Sequenced Collections** (Java 21): `SequencedCollection`, `SequencedSet`, `SequencedMap` — `reversed()`, `getFirst()`, `getLast()` added to collection hierarchy
+  - **String templates** (Java 21 preview): interpolation processors, `STR.`, `FMT.`
+  - **Migration patterns**: replacing inheritance hierarchies with sealed+record trees; replacing null checks with pattern switch
+- **Architect lens:** Spring 3.x uses Records heavily for DTOs; sealed classes model API response variants cleanly; pattern matching eliminates visitor boilerplate; Structured Concurrency unlocks safer fan-out with virtual threads
+- **Interview signal:** "Refactor this DTO to a Record" / "Model a Payment with subtypes using sealed classes and process with pattern switch"
+- **Challenge:** Rewrite a traditional Payment class hierarchy using sealed classes + records + pattern matching switch; add a StructuredTaskScope fan-out that cancels on first failure
+- **Resources:**
+  - JEP 395 (Records), JEP 409 (Sealed Classes), JEP 441 (Pattern Matching switch), JEP 453 (Structured Concurrency), JEP 431 (Sequenced Collections)
+  - "Java 21 New Features" — JDK 21 release notes and JEP index
+
+### Day 7b — Streams & Functional Interfaces: Advanced Patterns & Internals
+- **Core concepts:**
+  - **Functional interface mechanics**: `@FunctionalInterface`, SAM types, 4 kinds of method references (static, instance-unbound, instance-bound, constructor), capture semantics (effectively-final rule), heap pollution with varargs
+  - **Lambda desugaring via `invokedynamic`**: how the JVM avoids generating anonymous classes at compile time; LambdaMetafactory and the cost model
+  - **Stream pipeline internals**: `Spliterator`-based lazy evaluation, encounter order, stateless vs stateful ops, short-circuit evaluation (`findFirst`, `anyMatch`), `ORDERED`/`SIZED`/`SUBSIZED`/`DISTINCT` characteristics
+  - **Advanced collectors**:
+    - `Collectors.teeing` (Java 12) — two downstream collectors merged by a merge function
+    - Downstream collectors: `groupingBy` + `counting`, `mapping`, `filtering`, `collectingAndThen`
+    - Custom `Collector<T,A,R>`: implementing supplier, accumulator, combiner, finisher, characteristics
+  - **`flatMap` vs `mapMulti`** (Java 16): when `mapMulti` avoids boxing and intermediate stream allocation
+  - **Parallel streams**: `ForkJoinPool.commonPool`, how spliterators split, when parallel hurts (stateful ops like `sorted`, ordered pipelines, small N, IO-bound)
+  - **Gatherers API** (Java 22 preview): `window`, `fold`, `scan`, custom `Gatherer<T,A,R>` — stateful one-to-many transformations that were impossible with existing stream ops
+  - **`Optional` deep-dive**: `flatMap`, `or()`, `ifPresentOrElse`, `stream()` bridge to Stream API; anti-patterns (Optional as field, Optional parameter, `isPresent()`+`get()` chains)
+  - **Custom `Spliterator`**: implementing `tryAdvance`, `trySplit`, characteristic flags for parallel-capable infinite sources
+  - **Real-world patterns**:
+    - Pagination with `Stream.iterate` + `takeWhile` (Java 9)
+    - Lazy DB cursor wrapping via Spliterator
+    - Multi-level `groupingBy` for report generation
+    - Collector fusion for single-pass aggregation
+    - Reactive bridge: `Flux.fromStream` pitfalls, push-to-pull via `Stream.generate`
+- **Architect lens:** Streams + lambdas are the backbone of modern Java data pipelines; misusing parallel streams is a common production anti-pattern; custom collectors replace entire utility libraries
+- **Interview signal:** "Implement a custom collector" / "Why is this parallel stream slower than sequential?" / "What's wrong with this Optional chain?"
+- **Challenge:** Write a custom `Collector` that builds a `Map<Category, TopN>` (top-N items per category) in a single pass; then rewrite a nested-loop report using `groupingBy` + `teeing`
+- **Resources:**
+  - "Streams in Java" — Stuart Marks (JavaOne, must-watch for internals)
+  - JEP 461 (Stream Gatherers)
+  - "Optional in Java" — Stuart Marks (YouTube — covers anti-patterns exhaustively)
+  - *Modern Java in Action* — Urma, Fusco, Mycroft — Chapters 4-7
+
 ---
 
-## Week 2 — Concurrency Mastery (Days 8–14 + Day 12a)
+## Week 2 — Concurrency Mastery (Days 8–14)
 
 ### Day 8 — Threads, Thread Pools, ExecutorService
 - **Core concepts:** Platform threads, OS thread mapping, `Thread.start()`, `ExecutorService` types (FixedThreadPool, CachedThreadPool, ScheduledExecutor), thread pool sizing formula (Little's Law)
@@ -134,22 +182,6 @@
 - **Resources:**
   - JEP 444: Virtual Threads (search "JEP 444")
   - "Virtual Threads" — Ron Pressler (project lead, YouTube Devoxx talk — essential viewing)
-
-### Day 12a — Modern Java: Records, Sealed Classes & Pattern Matching (Java 14–21)
-- **Core concepts:**
-  - **Records** (Java 16 stable): immutable data carriers, canonical constructors, compact constructors — replaces Lombok `@Value` in modern codebases
-  - **Sealed classes** (Java 17 stable): `permits` keyword, exhaustive `switch`, modelling sum types and domain hierarchies
-  - **Pattern matching `instanceof`** (Java 16): type narrowing without explicit cast
-  - **Pattern matching `switch`** (Java 21 stable): guarded patterns (`case String s when s.length() > 5`), exhaustiveness checking
-  - **Text blocks** (Java 15 stable): multiline strings, `\` line continuation, `"""` delimiter
-  - **Structured Concurrency** (Java 21): `StructuredTaskScope.ShutdownOnFailure` and `ShutdownOnSuccess`, pairs with Virtual Threads from Day 12
-  - **Sequenced Collections** (Java 21): `SequencedCollection`, `SequencedMap` — new interface in the collection hierarchy
-- **Architect lens:** Spring 3.x uses Records heavily for DTOs; sealed classes model API response variants cleanly; pattern matching eliminates visitor boilerplate
-- **Interview signal:** "Refactor this DTO to use a Record" / "Why are sealed classes useful for domain modelling?"
-- **Challenge:** Rewrite a traditional Payment class hierarchy using sealed classes + records + pattern matching switch
-- **Resources:**
-  - JEP 395 (Records), JEP 409 (Sealed Classes), JEP 441 (Pattern Matching switch), JEP 453 (Structured Concurrency)
-  - "Java 21 New Features" — JDK 21 release notes
 
 ### Day 13 — Concurrent Collections & Producer-Consumer Patterns
 - **Core concepts:** `ConcurrentHashMap` (internals: striping, treeification), `CopyOnWriteArrayList`, `BlockingQueue` variants, producer-consumer pattern, classic Disruptor mention

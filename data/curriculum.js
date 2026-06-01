@@ -105,6 +105,16 @@ const CURRICULUM = {
         { day: 5, title: "Java Memory Model (JMM) & happens-before",      topic: "Concurrency",        status: "locked", file: null },
         { day: 6, title: "Profiling in Anger: JFR, async-profiler, flame graphs", topic: "JVM Memory", status: "locked", file: null },
         { day: 7, title: "Week 1 Synthesis: Production Diagnosis",        topic: "JVM Memory",         status: "locked", file: null },
+        {
+          day: "7a", title: "Java Advanced: Records, Sealed Classes, Pattern Matching & Modern APIs (Java 14–21)",
+          topic: "Java Language", status: "locked", file: null,
+          note: "Records (compact constructors, custom accessors, records-as-value-types); Sealed classes + interfaces for exhaustive algebraic types; Pattern matching instanceof with binding vars; Switch expressions (arrow labels, yield) + guarded patterns (Java 21 when clauses); Deconstruction patterns — record patterns, array patterns; Text blocks (indentation stripping, \\ line continuation); Structured Concurrency: StructuredTaskScope.ShutdownOnFailure / ShutdownOnSuccess — fork/join with automatic cancellation; Sequenced Collections: SequencedCollection, SequencedSet, SequencedMap with reversed views; String templates (preview — interpolation with processors); Value objects & Valhalla preview concepts; Migration paths: how to replace inheritance hierarchies with sealed+record trees, null-checks with pattern switch"
+        },
+        {
+          day: "7b", title: "Streams & Functional Interfaces: Advanced Patterns & Internals",
+          topic: "Java Language", status: "locked", file: null,
+          note: "Functional interface mechanics: @FunctionalInterface, SAM types, method references (4 kinds) vs lambdas, capture semantics (effectively-final, heap pollution with varargs); Lambda desugaring via invokedynamic — how the JVM avoids generating anonymous classes; Stream internals: spliterator-based lazy pipeline, encounter order, stateful vs stateless ops, short-circuit evaluation; Advanced collectors: Collectors.teeing, downstream collectors, custom Collector<T,A,R> implementation, groupingBy with counting/mapping/filtering; flatMap vs mapMulti (Java 16) — when mapMulti wins on performance; Parallel streams: ForkJoinPool.commonPool, spliterator SIZED/ORDERED/SUBSIZED characteristics, when parallel hurts (stateful, ordered, small N); Gatherers API (Java 22 preview): window, fold, scan, custom Gatherer<T,A,R> — stream operations that were impossible before; Optional deep-dive: chaining flatMap, or(), ifPresentOrElse, stream() bridge, anti-patterns (Optional as field, isPresent/get); Custom spliterators: implementing trySplit for parallel-capable infinite sources; Reactive bridge: Flux.fromStream pitfalls, Stream.generate for push-to-pull conversion; Real patterns: pagination with Stream.iterate + takeWhile, lazy DB cursor wrapping, multi-level groupBy for report generation, collector fusion"
+        },
       ]
     },
 
@@ -116,8 +126,6 @@ const CURRICULUM = {
         { day: 10,   title: "Atomics, CAS, Lock-Free Patterns",                                      topic: "Concurrency",    status: "locked", file: null },
         { day: 11,   title: "CompletableFuture & Async Composition",                                 topic: "Concurrency",    status: "locked", file: null },
         { day: 12,   title: "Virtual Threads (Project Loom)",                                        topic: "Concurrency",    status: "locked", file: null },
-        { day: "12a", title: "Modern Java: Records, Sealed Classes & Pattern Matching (Java 14–21)", topic: "Java Language",  status: "locked", file: null,
-          note: "Records as immutable DTOs; sealed classes for exhaustive domain modelling; pattern matching instanceof; switch expressions & guarded patterns (Java 21); text blocks; Structured Concurrency with StructuredTaskScope (pairs with Virtual Threads); Sequenced Collections" },
         { day: 13,   title: "Concurrent Collections & Producer-Consumer Patterns",                   topic: "Concurrency",    status: "locked", file: null },
         { day: 14,   title: "Week 2 Synthesis: Design a Rate Limiter",                               topic: "Concurrency",    status: "locked", file: null },
       ]
@@ -405,4 +413,4 @@ const CURRICULUM = {
 /* Flat lookup helpers used by app.js */
 CURRICULUM.allDays = CURRICULUM.weeks.flatMap(w => w.days.map(d => ({ ...d, weekNum: w.week, weekTitle: w.title, phaseId: w.phase })));
 CURRICULUM.dayMap  = Object.fromEntries(CURRICULUM.allDays.map(d => [`${d.weekNum}-${d.day}`, d]));
-CURRICULUM.total   = CURRICULUM.allDays.length; // 155
+CURRICULUM.total   = CURRICULUM.allDays.length; // 156
