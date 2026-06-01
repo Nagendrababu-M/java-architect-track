@@ -360,6 +360,88 @@ function triggerConfetti() {
   setTimeout(() => container.remove(), 3500);
 }
 
+/* ── Lesson navigation (bottom nav + floating bar) ──────── */
+
+function initLessonNav() {
+  // Only run on lesson pages (week-XX/day-Y.html)
+  const match = window.location.pathname.match(/week-(\d+)\/day-(.+)\.html/i);
+  if (!match) return;
+
+  const weekNum = parseInt(match[1]);
+  const rawDay  = match[2]; // e.g. "1", "12a"
+  const dayId   = isNaN(Number(rawDay)) ? rawDay : parseInt(rawDay);
+
+  // Find current index in allDays
+  const allDays = CURRICULUM.allDays;
+  const idx = allDays.findIndex(d => d.weekNum === weekNum && String(d.day) === String(dayId));
+  if (idx === -1) return;
+
+  const prev = idx > 0 ? allDays[idx - 1] : null;
+  const next = idx < allDays.length - 1 ? allDays[idx + 1] : null;
+
+  const prevHref = prev && prev.file ? `../${prev.file}` : null;
+  const nextHref = next && next.file ? `../${next.file}` : null;
+
+  // ── Inject bottom nav ──
+  const footer = document.querySelector('footer');
+  if (footer) {
+    const nav = document.createElement('div');
+    nav.className = 'lesson-nav';
+    nav.innerHTML = `
+      ${prev
+        ? `<a class="lesson-nav-btn${prevHref ? '' : ' disabled'}" href="${prevHref || '#'}">
+             <span class="nav-direction">← Previous</span>
+             <span class="nav-title">Day ${prev.day} · ${prev.title}</span>
+           </a>`
+        : `<div class="lesson-nav-btn disabled">
+             <span class="nav-direction">← Previous</span>
+             <span class="nav-title">Start of curriculum</span>
+           </div>`}
+      <a class="lesson-nav-btn center" href="../index.html">
+        <span class="nav-curriculum-icon">🗺</span>
+        <span class="nav-direction">Curriculum</span>
+      </a>
+      ${next
+        ? `<a class="lesson-nav-btn${nextHref ? '' : ' disabled'}" href="${nextHref || '#'}" style="align-items:flex-end;text-align:right">
+             <span class="nav-direction">Next →</span>
+             <span class="nav-title">Day ${next.day} · ${next.title}</span>
+           </a>`
+        : `<div class="lesson-nav-btn disabled" style="align-items:flex-end">
+             <span class="nav-direction">Next →</span>
+             <span class="nav-title">End of curriculum</span>
+           </div>`}`;
+    footer.parentNode.insertBefore(nav, footer);
+  }
+
+  // ── Inject floating bar ──
+  const floatNav = document.createElement('div');
+  floatNav.className = 'float-nav';
+  floatNav.id = 'float-nav';
+  floatNav.innerHTML = `
+    <button class="float-scroll-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑ Top</button>
+    <div class="float-divider"></div>
+    ${prev
+      ? `<a class="float-btn${prevHref ? '' : ' disabled'}" href="${prevHref || '#'}">← Day ${prev.day}</a>`
+      : `<span class="float-btn disabled">← Start</span>`}
+    <a class="float-btn accent" href="../index.html">🗺 Curriculum</a>
+    ${next
+      ? `<a class="float-btn${nextHref ? '' : ' disabled'}" href="${nextHref || '#'}">Day ${next.day} →</a>`
+      : `<span class="float-btn disabled">End →</span>`}`;
+  document.body.appendChild(floatNav);
+
+  // Show/hide on scroll
+  let ticking = false;
+  window.addEventListener('scroll', () => {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(() => {
+      const visible = window.scrollY > 280;
+      floatNav.classList.toggle('visible', visible);
+      ticking = false;
+    });
+  }, { passive: true });
+}
+
 /* ── Search ───────────────────────────────────────────────── */
 
 function handleSearch(raw) {
@@ -448,5 +530,6 @@ function escRegex(str) {
 /* ── Boot ─────────────────────────────────────────────────── */
 document.addEventListener('DOMContentLoaded', () => {
   initLandingPage();
+  initLessonNav();
   // Lesson pages call their own init (e.g. initOpenEndedChallenge) inline.
 });
