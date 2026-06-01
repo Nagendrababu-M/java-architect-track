@@ -25,6 +25,136 @@
     margin-right: 20px;
   }
   .hero-stat strong { color: var(--accent); }
+
+  /* ── Search bar ───────────────────────────────────────────── */
+  .search-wrap {
+    position: relative;
+    margin: 28px 0 0;
+  }
+  .search-icon {
+    position: absolute;
+    left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 16px;
+    opacity: .4;
+    pointer-events: none;
+  }
+  #search-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 13px 44px 13px 44px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--ink);
+    font-family: 'Inter Tight', sans-serif;
+    font-size: 15px;
+    outline: none;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  #search-input::placeholder { color: var(--ink-faint); }
+  #search-input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(255,122,61,.12);
+  }
+  .search-clear {
+    position: absolute;
+    right: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: var(--ink-dim);
+    font-size: 18px;
+    cursor: pointer;
+    padding: 4px 6px;
+    display: none;
+    line-height: 1;
+  }
+  .search-clear:hover { color: var(--ink); }
+
+  /* ── Search results panel ─────────────────────────────────── */
+  #search-panel { display: none; }
+  #search-panel.active { display: block; }
+  .search-meta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--ink-faint);
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    margin: 20px 0 14px;
+  }
+  .search-meta strong { color: var(--ink-dim); }
+  .search-results-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 12px;
+  }
+  .search-result-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    text-decoration: none;
+    color: inherit;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    transition: border-color .15s, transform .12s;
+  }
+  .search-result-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+  }
+  .search-result-card.locked {
+    opacity: .55;
+    cursor: default;
+    pointer-events: none;
+  }
+  .src-day {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: .05em;
+  }
+  .src-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--ink);
+    line-height: 1.35;
+  }
+  .src-title mark {
+    background: rgba(255,122,61,.22);
+    color: inherit;
+    border-radius: 2px;
+    padding: 0 1px;
+  }
+  .src-meta {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 4px;
+  }
+  .src-topic {
+    font-size: 11px;
+    padding: 2px 7px;
+    border-radius: 20px;
+    background: var(--bg);
+    color: var(--ink-dim);
+    border: 1px solid var(--border);
+  }
+  .src-week {
+    font-size: 11px;
+    color: var(--ink-faint);
+    align-self: center;
+  }
+  .search-empty {
+    padding: 48px 0;
+    text-align: center;
+    color: var(--ink-faint);
+    font-size: 14px;
+  }
 </style>
 </head>
 <body>
@@ -71,13 +201,24 @@
   </section>
 
   <!-- â”€â”€ NAV TABS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
-  <nav class="tab-nav">
+  
+  <!-- SEARCH -->
+  <div class="search-wrap">
+    <span class="search-icon">&#128269;</span>
+    <input id="search-input" type="search" placeholder="Search by topic, title, or day number…" autocomplete="off" oninput="handleSearch(this.value)" />
+    <button class="search-clear" id="search-clear" onclick="clearSearch()" title="Clear search">&times;</button>
+  </div>
+
+<nav class="tab-nav" id="tab-nav">
     <button class="tab-btn active" data-tab="day"   onclick="switchTab('day')">Browse by Day</button>
     <button class="tab-btn"        data-tab="topic" onclick="switchTab('topic')">Browse by Topic</button>
   </nav>
 
   <!-- â”€â”€ BY DAY â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
-  <div class="tab-panel active" id="by-day-panel">
+  <!-- SEARCH RESULTS -->
+  <div id="search-panel"></div>
+
+    <div class="tab-panel active" id="by-day-panel">
     <p class="section-label">All 22 Weeks</p>
     <!-- Rendered by app.js renderByDay() -->
   </div>

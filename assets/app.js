@@ -360,6 +360,91 @@ function triggerConfetti() {
   setTimeout(() => container.remove(), 3500);
 }
 
+/* ── Search ───────────────────────────────────────────────── */
+
+function handleSearch(raw) {
+  const query = raw.trim();
+  const clearBtn = document.getElementById('search-clear');
+  const searchPanel = document.getElementById('search-panel');
+  const tabNav = document.getElementById('tab-nav');
+
+  if (clearBtn) clearBtn.style.display = query ? 'block' : 'none';
+
+  if (!query) {
+    // Restore tab view
+    if (searchPanel) { searchPanel.innerHTML = ''; searchPanel.classList.remove('active'); }
+    if (tabNav) tabNav.style.display = '';
+    document.querySelectorAll('.tab-panel').forEach(p => p.style.display = '');
+    return;
+  }
+
+  // Hide tabs, show search panel
+  if (tabNav) tabNav.style.display = 'none';
+  document.querySelectorAll('.tab-panel').forEach(p => p.style.display = 'none');
+  if (searchPanel) searchPanel.classList.add('active');
+
+  const q = query.toLowerCase();
+  const matches = CURRICULUM.allDays.filter(d =>
+    d.title.toLowerCase().includes(q) ||
+    d.topic.toLowerCase().includes(q) ||
+    String(d.day).toLowerCase().includes(q) ||
+    (d.weekTitle && d.weekTitle.toLowerCase().includes(q))
+  );
+
+  if (!searchPanel) return;
+
+  if (matches.length === 0) {
+    searchPanel.innerHTML = `
+      <div class="search-meta">No results for "<strong>${escHtml(query)}</strong>"</div>
+      <div class="search-empty">Try a topic name, day title, or day number.</div>`;
+    return;
+  }
+
+  const highlight = (text) => {
+    const re = new RegExp(`(${escRegex(query)})`, 'gi');
+    return escHtml(text).replace(re, '<mark>$1</mark>');
+  };
+
+  const cards = matches.map(d => {
+    const status = getDayStatus(d.weekNum, d.day, d.status);
+    const isLocked = status === 'locked';
+    const isDone   = status === 'done';
+    const statusIcon = isDone ? '✅' : isLocked ? '🔒' : '🔵';
+    const href = (!isLocked && d.file) ? d.file : '#';
+    const tag  = (!isLocked && d.file) ? 'a' : 'div';
+
+    return `
+    <${tag} class="search-result-card${isLocked ? ' locked' : ''}" ${tag === 'a' ? `href="${href}"` : ''}>
+      <div class="src-day">DAY ${d.day} ${statusIcon}</div>
+      <div class="src-title">${highlight(d.title)}</div>
+      <div class="src-meta">
+        <span class="src-topic">${highlight(d.topic)}</span>
+        <span class="src-week">Wk ${d.weekNum} · ${escHtml(d.weekTitle)}</span>
+      </div>
+    </${tag}>`;
+  }).join('');
+
+  searchPanel.innerHTML = `
+    <div class="search-meta">${matches.length} result${matches.length !== 1 ? 's' : ''} for "<strong>${escHtml(query)}</strong>"</div>
+    <div class="search-results-grid">${cards}</div>`;
+}
+
+function clearSearch() {
+  const input = document.getElementById('search-input');
+  if (input) { input.value = ''; input.focus(); }
+  handleSearch('');
+}
+
+function escHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function escRegex(str) {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 /* ── Boot ─────────────────────────────────────────────────── */
 document.addEventListener('DOMContentLoaded', () => {
   initLandingPage();
