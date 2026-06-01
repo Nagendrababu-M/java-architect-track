@@ -1,4 +1,4 @@
-# Phase 3 — System Design: LLD + HLD (Weeks 8–14, Days 49–95)
+# Phase 3 — System Design: LLD + HLD (Weeks 8–14, Days 49–95 + Days 49a, 69a)
 
 > **Goal:** This is the phase that defines architect-level competence. By Day 95 you should be able to walk into any system design interview, drive the conversation, and defend every decision with trade-offs.
 >
@@ -6,7 +6,7 @@
 
 ---
 
-## Week 8 — LLD Foundations: SOLID + Core Patterns (Days 49–54)
+## Week 8 — LLD Foundations: SOLID + Core Patterns (Days 49–54 + Day 49a)
 
 ### Day 49 — Object-Oriented Design Principles Revisited
 - **Core concepts:** Encapsulation, inheritance vs composition (favor composition), Tell Don't Ask, Law of Demeter
@@ -15,6 +15,24 @@
 - **Resources:**
   - *Clean Code* — Robert C. Martin (Chapters 1-3 minimum)
   - "Composition vs Inheritance" — multiple talks
+
+### Day 49a — UML Diagrams for Software Architects: Class, Sequence, Component & ER
+- **Core concepts:**
+  - **Class diagrams**: associations (plain arrow), aggregation (hollow diamond), composition (filled diamond), dependency (dashed arrow), realization (dashed + hollow triangle), generalization (solid + hollow triangle); multiplicity (`1`, `0..*`, `1..*`); abstract classes vs interfaces; drawing GoF patterns (Strategy, Decorator, Observer) as class diagrams before coding
+  - **Sequence diagrams**: lifelines, activation bars, synchronous (`→`) vs async (`→>`) messages; combined fragments — `alt` (if/else), `opt` (optional), `loop` (iteration), `par` (parallel); self-calls; object creation (`new`) and destruction (`X`); sequence diagrams for REST call chains, saga choreography, event-driven fan-out
+  - **Component & deployment diagrams**: components with provided/required interfaces; `<<interface>>` stereotype; connectors; mapping microservices to components; nodes and artifacts in deployment diagrams
+  - **ER diagrams**: entities, attributes (simple, composite, derived, multi-valued), cardinality (crow's foot notation — one-to-one, one-to-many, many-to-many); weak entities and identifying relationships; translating ER → normalized relational schema; ER for interviews (schema design questions)
+  - **Activity & state-machine diagrams**: activity diagrams for business flows (decision nodes, forks/joins, swimlanes); state-machine diagrams for lifecycle modelling (Order states: pending → confirmed → shipped → delivered → returned)
+  - **UML in LLD interviews**: how to sketch a class diagram in the first 5 minutes before writing code; naming conventions; what interviewers actually look for (relationships > methods); common mistakes (over-engineering the diagram)
+  - **Tools**: draw.io (free, browser-based), PlantUML (code-first, version-control friendly), Mermaid (markdown-native — renders in GitHub/Notion)
+- **Architect lens:** A well-drawn class diagram communicates design in seconds; sequence diagrams are the lingua franca for distributed system discussions with product and infra teams
+- **Interview signal:** "Draw the class diagram for Splitwise" — expected before any code
+- **Challenge:** Draw class + sequence diagrams for a Notification System (Day 58 design); use PlantUML to version the diagrams
+- **Resources:**
+  - *UML Distilled* — Martin Fowler (essential, short, no fluff)
+  - PlantUML docs: plantuml.com
+  - Mermaid live editor: mermaid.live
+  - "UML Class Diagrams" — Derek Banas (YouTube)
 
 ### Day 50 — SOLID Principles (SRP, OCP, LSP, ISP, DIP)
 - **Core concepts:**
@@ -170,7 +188,7 @@
 
 ---
 
-## Week 11 — Storage: SQL, NoSQL, Sharding (Days 69–75 + Day 75a)
+## Week 11 — Storage: SQL, NoSQL, Sharding (Days 69–75 + Days 69a, 75a)
 
 ### Day 69 — Relational Database Internals
 - **Core concepts:** B-tree indexes, transaction log, MVCC, isolation levels, deadlocks
@@ -179,6 +197,31 @@
 - **Resources:**
   - *Database Internals* — Alex Petrov (key reference)
   - "Use the Index, Luke!" — use-the-index-luke.com
+
+### Day 69a — Database Normalization: 1NF to BCNF, Denormalization & Practical Trade-offs
+- **Core concepts:**
+  - **Functional dependencies (FD)**: definition — `X → Y` (X determines Y); trivial vs non-trivial FDs; attribute closure (`X+`); finding candidate keys and superkeys; Armstrong's axioms (reflexivity, augmentation, transitivity)
+  - **1NF**: atomicity — no repeating groups, no multi-valued columns, all values same domain; common violations in JSON-column anti-patterns; when PostgreSQL JSONB breaks 1NF
+  - **2NF**: no partial dependencies on a composite primary key — worked example: `OrderItem(orderId, productId, productName, quantity)` → `productName` partially depends on `productId` alone; decompose to `OrderItem` + `Product`
+  - **3NF**: no transitive dependencies (non-key → non-key) — worked example: `Customer(customerId, city, zipCode, country)` → `country` depends on `zipCode`, not `customerId`; decompose to `Customer` + `Location`
+  - **BCNF (Boyce-Codd Normal Form)**: every determinant is a candidate key — stricter than 3NF; example: course-teacher-room scheduling anomaly; when BCNF decomposition loses dependency preservation
+  - **4NF**: no multi-valued dependencies — example: `Employee(emp, skill, language)` if skills and languages are independent → decompose into separate tables
+  - **Lossless-join vs dependency-preserving decomposition**: can't always guarantee both; the trade-off and when to accept dependency loss
+  - **Normalization in practice**: normalize to 3NF/BCNF during initial schema design; document every deliberate deviation
+  - **Denormalization patterns**:
+    - Materialized aggregates (pre-computed counts, sums stored in parent row)
+    - Pre-joined tables for hot read paths (avoids expensive joins at query time)
+    - Redundant columns with write-time update strategy (triggers vs application logic)
+    - Summary/rollup tables for reporting workloads
+  - **OLTP vs OLAP schemas**: normalized 3NF for OLTP (write-heavy, many small transactions); star schema / snowflake schema for OLAP warehouses (denormalized for fast analytical reads); dimension tables, fact tables, slowly changing dimensions (SCD Type 1/2)
+  - **Interview patterns**: "Find all normalization violations in this schema"; "Normalize this order table to 3NF step by step"; "Why would you intentionally break 3NF in a high-read-traffic system?"
+- **Architect lens:** Most production bugs involving stale or inconsistent data trace back to schema normalization violations; denormalization decisions must be explicit and documented, never accidental
+- **Interview signal:** Schema design questions always probe 2NF/3NF understanding; HLD interviews expect you to discuss OLTP vs OLAP schema choice
+- **Challenge:** Given a flat `orders` table with 12 columns, identify all FD violations and produce a normalized 3NF schema; then deliberately denormalize one table for a read-heavy dashboard use case and justify it
+- **Resources:**
+  - *Database Design for Mere Mortals* — Michael J. Hernandez (best normalization book for practitioners)
+  - *Fundamentals of Database Systems* — Elmasri & Navathe (Chapter 14-15 for formal FD theory)
+  - CMU Database course (Andy Pavlo) — normalization lecture (YouTube, free)
 
 ### Day 70 — SQL Sharding & Replication
 - **Core concepts:** Read replicas, primary/replica lag, sharding strategies (range, hash, geo), resharding pain

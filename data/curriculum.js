@@ -203,6 +203,11 @@ const CURRICULUM = {
       week: 8, phase: 3, title: "LLD Foundations",
       days: [
         { day: 49, title: "Object-Oriented Design Principles Revisited", topic: "System Design (LLD)", status: "locked", file: null },
+        {
+          day: "49a", title: "UML Diagrams for Software Architects: Class, Sequence, Component & ER",
+          topic: "System Design (LLD)", status: "locked", file: null,
+          note: "Class diagrams: association/aggregation/composition/dependency/realization/generalization; multiplicity notation; abstract classes vs interfaces; how to read and draw GoF patterns as class diagrams. Sequence diagrams: lifelines, activation bars, synchronous vs async messages, alt/opt/loop combined fragments, self-calls, creation/destruction; sequence diagrams for REST call chains, event-driven flows, saga choreography. Component & deployment diagrams: components, interfaces (provided/required), connectors, nodes; mapping microservices to components. ER diagrams: entities, attributes, cardinality (crow's foot notation), weak entities, identifying vs non-identifying relationships; translating ER to normalized relational schema. Activity & state-machine diagrams: when to use each. UML in LLD interviews: how to quickly sketch a class diagram before coding; naming conventions; what interviewers look for. Tools: draw.io (free), PlantUML (code-first, great for version control), Mermaid (markdown-native)."
+        },
         { day: 50, title: "SOLID Principles (SRP, OCP, LSP, ISP, DIP)", topic: "System Design (LLD)", status: "locked", file: null },
         { day: 51, title: "Creational Patterns: Singleton, Factory, Builder", topic: "System Design (LLD)", status: "locked", file: null },
         { day: 52, title: "Structural Patterns: Adapter, Decorator, Facade, Proxy", topic: "System Design (LLD)", status: "locked", file: null },
@@ -243,6 +248,11 @@ const CURRICULUM = {
       week: 11, phase: 3, title: "Storage",
       days: [
         { day: 69, title: "Relational Database Internals",              topic: "System Design (HLD)", status: "locked", file: null },
+        {
+          day: "69a", title: "Database Normalization: 1NF to BCNF, Denormalization & Practical Trade-offs",
+          topic: "System Design (HLD)", status: "locked", file: null,
+          note: "Functional dependencies: definition, trivial vs non-trivial, closure of attributes, candidate keys vs superkeys. 1NF: atomicity, no repeating groups — common violations in JSON-column anti-patterns. 2NF: eliminate partial dependencies on composite keys — worked example with an order_items table. 3NF: eliminate transitive dependencies — worked example with a customer_city_zipcode table. BCNF (Boyce-Codd): stricter than 3NF — multi-valued dependency edge cases; when 3NF ≠ BCNF. 4NF: multi-valued dependencies (rare but important for junction tables with independent attributes). Decomposition: lossless-join vs dependency-preserving decomposition; why you can't always have both. Normalization in practice: normalize to 3NF/BCNF during schema design, then deliberately denormalize for read performance. Denormalization patterns: materialized aggregates, pre-joined tables, redundant columns (with write-time update strategy), summary tables. OLTP vs OLAP schema: 3NF for OLTP, star/snowflake schema for OLAP warehouses. Interview patterns: 'Find all anomalies in this schema', 'Normalize this table to 3NF', 'Why would you break 3NF in this scenario?'"
+        },
         { day: 70, title: "SQL Sharding & Replication",               topic: "System Design (HLD)", status: "locked", file: null },
         { day: 71, title: "NoSQL Landscape",                          topic: "System Design (HLD)", status: "locked", file: null },
         { day: 72, title: "DynamoDB Design Patterns",                 topic: "System Design (HLD)", status: "locked", file: null },
@@ -413,4 +423,4 @@ const CURRICULUM = {
 /* Flat lookup helpers used by app.js */
 CURRICULUM.allDays = CURRICULUM.weeks.flatMap(w => w.days.map(d => ({ ...d, weekNum: w.week, weekTitle: w.title, phaseId: w.phase })));
 CURRICULUM.dayMap  = Object.fromEntries(CURRICULUM.allDays.map(d => [`${d.weekNum}-${d.day}`, d]));
-CURRICULUM.total   = CURRICULUM.allDays.length; // 156
+CURRICULUM.total   = CURRICULUM.allDays.length; // 158
