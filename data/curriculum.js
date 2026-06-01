@@ -131,6 +131,10 @@ const CURRICULUM = {
         { day: 19, title: "Project Reactor Operators",            duration: 90, topic: "Reactive", status: "locked", file: null, heavy: true },
         { day: 20, title: "WebFlux End-to-End",                   duration: 60, topic: "Reactive", status: "locked", file: null },
         { day: 21, title: "Reactive vs Virtual Threads — ADR Capstone", duration: 60, topic: "Reactive", status: "locked", file: null },
+        { day: "21a", title: "REST API Design + gRPC + WebSockets", duration: 90, topic: "Spring", status: "locked", file: null, heavy: true,
+          note: "REST constraints & maturity model; gRPC proto contracts vs REST trade-offs; WebSocket upgrade, heartbeat, backpressure; when to choose each — architect decision rubric" },
+        { day: "21b", title: "Modern Java: Records, Sealed Classes & Pattern Matching (Java 14-21)", duration: 90, topic: "Java Language", status: "locked", file: null, heavy: true,
+          note: "Records as immutable DTOs; sealed classes for exhaustive domain modelling; pattern matching instanceof; switch expressions & guarded patterns (Java 21); text blocks; Structured Concurrency with StructuredTaskScope; Sequenced Collections" },
       ]
     },
 
@@ -225,6 +229,8 @@ const CURRICULUM = {
         { day: 67, title: "Consistent Hashing",                  duration: 90, topic: "System Design (HLD)", status: "locked", file: null, heavy: true },
         { day: 68, title: "Caching Strategies",                  duration: 60, topic: "System Design (HLD)", status: "locked", file: null },
         { day: 69, title: "CDNs & Edge Caching",                 duration: 60, topic: "System Design (HLD)", status: "locked", file: null },
+        { day: "69a", title: "Redis Deep Dive: Sorted Sets, Cluster, Sentinel & Lua", duration: 90, topic: "System Design (HLD)", status: "locked", file: null, heavy: true,
+          note: "Sorted sets for leaderboards/rate-limiting; Redis Cluster sharding & slot mapping; Sentinel vs Cluster HA; Lua scripting for atomic operations; eviction policies; architect decision: Redis vs Memcached vs in-process cache" },
         { day: 70, title: "Decision Matrix Synthesis",           duration: 60, topic: "System Design (HLD)", status: "locked", file: null },
       ]
     },
@@ -239,6 +245,8 @@ const CURRICULUM = {
         { day: 75, title: "Time-Series Databases",               duration: 60, topic: "System Design (HLD)", status: "locked", file: null },
         { day: 76, title: "DB Selection Framework",              duration: 60, topic: "System Design (HLD)", status: "locked", file: null },
         { day: 77, title: "Schema Design Patterns",              duration: 60, topic: "System Design (HLD)", status: "locked", file: null },
+        { day: "77a", title: "Distributed Locking + Distributed ID Generation", duration: 90, topic: "System Design (HLD)", status: "locked", file: null, heavy: true,
+          note: "Redlock algorithm; fencing tokens; ZooKeeper vs Redis locking trade-offs; Snowflake IDs (timestamp+machineId+seq); Twitter Snowflake vs UUIDv7 vs DB sequences; clock skew hazards; architect interview: design a globally unique order ID system" },
       ]
     },
 
@@ -250,6 +258,8 @@ const CURRICULUM = {
         { day: 80, title: "Kafka Consumer Groups",               duration: 90, topic: "Microservices", status: "locked", file: null, heavy: true },
         { day: 81, title: "Exactly-Once Semantics",              duration: 60, topic: "Microservices", status: "locked", file: null },
         { day: 82, title: "Event Sourcing & CQRS",               duration: 60, topic: "Microservices", status: "locked", file: null },
+        { day: "82a", title: "Transactional Outbox Pattern + CQRS Deep Dive", duration: 90, topic: "Microservices", status: "locked", file: null, heavy: true,
+          note: "Dual-write problem; Outbox table + CDC (Debezium) vs polling publisher; at-least-once delivery guarantees; CQRS write vs read model sync lag; eventual consistency UX implications; architect interview: make this payment service reliable without 2PC" },
         { day: 83, title: "Stream Processing",                   duration: 60, topic: "Microservices", status: "locked", file: null },
         { day: 84, title: "Event-Driven Order System",           duration: 60, topic: "Microservices", status: "locked", file: null },
       ]
@@ -259,10 +269,14 @@ const CURRICULUM = {
       week: 13, phase: 3, title: "Microservices",
       days: [
         { day: 85, title: "Monolith vs Microservices Trade-offs",duration: 60, topic: "Microservices", status: "locked", file: null },
+        { day: "85a", title: "Database per Service + Strangler Fig + Anti-Corruption Layer", duration: 90, topic: "Microservices", status: "locked", file: null, heavy: true,
+          note: "DB-per-service rationale & shared schema anti-pattern; Strangler Fig migration playbook (proxy layer, feature flags, traffic shifting); ACL as translation layer between bounded contexts; architect interview: migrate a shared Oracle DB to microservices without downtime" },
         { day: 86, title: "DDD & Bounded Contexts",              duration: 60, topic: "Microservices", status: "locked", file: null },
         { day: 87, title: "Saga Pattern",                        duration: 90, topic: "Microservices", status: "locked", file: null, heavy: true },
         { day: 88, title: "API Gateway, BFF & Service Mesh",     duration: 60, topic: "Microservices", status: "locked", file: null },
         { day: 89, title: "Service Discovery",                   duration: 60, topic: "Microservices", status: "locked", file: null },
+        { day: "89a", title: "OAuth2 / JWT / Spring Security — Auth Architecture", duration: 90, topic: "Microservices", status: "locked", file: null, heavy: true,
+          note: "OAuth2 flows (Authorization Code + PKCE, Client Credentials, Device); JWT structure, signing (RS256 vs HS256), expiry & rotation; Spring Security filter chain; RBAC vs ABAC; token introspection vs local validation trade-offs; architect interview: design auth for a multi-tenant SaaS" },
         { day: 90, title: "Resilience Patterns",                 duration: 90, topic: "Microservices", status: "locked", file: null, heavy: true },
         { day: 91, title: "Microservices Migration ADR",         duration: 60, topic: "Microservices", status: "locked", file: null },
       ]
@@ -306,6 +320,8 @@ const CURRICULUM = {
         { day: 110, title: "Kubernetes Core Concepts",          duration: 90, topic: "DevOps", status: "locked", file: null, heavy: true },
         { day: 111, title: "K8s Operations & Scaling",          duration: 90, topic: "DevOps", status: "locked", file: null, heavy: true },
         { day: 112, title: "EKS on AWS",                        duration: 60, topic: "DevOps", status: "locked", file: null },
+        { day: "112a", title: "12-Factor App + Testing Strategy: Contract Tests & Chaos Engineering", duration: 90, topic: "DevOps", status: "locked", file: null, heavy: true,
+          note: "12-Factor principles applied to Spring Boot microservices; Pact for consumer-driven contract tests; TestContainers for integration tests; Chaos Monkey / Chaos Engineering principles; Netflix Chaos patterns; architect interview: how do you prevent regressions when 40 teams own 200 services?" },
       ]
     },
 
@@ -396,4 +412,4 @@ const CURRICULUM = {
 /* Flat lookup helpers used by app.js */
 CURRICULUM.allDays = CURRICULUM.weeks.flatMap(w => w.days.map(d => ({ ...d, weekNum: w.week, weekTitle: w.title, phaseId: w.phase })));
 CURRICULUM.dayMap  = Object.fromEntries(CURRICULUM.allDays.map(d => [`${d.weekNum}-${d.day}`, d]));
-CURRICULUM.total   = CURRICULUM.allDays.length; // 154
+CURRICULUM.total   = CURRICULUM.allDays.length; // 162 (154 original + 8 new: 21a, 21b, 69a, 77a, 82a, 85a, 89a, 112a)
