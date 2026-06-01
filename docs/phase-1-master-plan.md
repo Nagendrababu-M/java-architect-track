@@ -1,10 +1,10 @@
-# Phase 1 — Advanced Java (Weeks 1–3, Days 1–21 + 7a, 7b)
+# Phase 1 — Advanced Java (Weeks 1–3, Days 1–23)
 
 > **Goal:** Master the JVM as a runtime, not just a language. Understand memory, GC, modern Java language features, concurrency, and the framework internals that shape every architectural decision in production Java.
 
 ---
 
-## Week 1 — JVM Internals, GC & Java Advanced (Days 1–7, 7a, 7b)
+## Week 1 — JVM Internals, GC & Java Advanced (Days 1–9)
 
 ### Day 1 — Stack vs Heap Fundamentals ✅
 - **Core concepts:** JVM memory regions, stack vs heap, primitives vs references, frame lifecycle
@@ -88,7 +88,7 @@
 - **Architect lens:** Synthesis is what separates Senior from Staff
 - **Interview signal:** This IS the interview question pattern for Staff loops
 
-### Day 7a — Java Advanced: Records, Sealed Classes, Pattern Matching & Modern APIs (Java 14–21)
+### Day 8 — Java Advanced: Records, Sealed Classes, Pattern Matching & Modern APIs (Java 14–21)
 - **Core concepts:**
   - **Records** (Java 16): immutable data carriers, compact constructors, custom accessors — replaces Lombok `@Value` in modern codebases
   - **Sealed classes + interfaces** (Java 17): `permits` keyword, exhaustive `switch`, modelling algebraic types and domain hierarchies cleanly
@@ -107,7 +107,7 @@
   - JEP 395 (Records), JEP 409 (Sealed Classes), JEP 441 (Pattern Matching switch), JEP 453 (Structured Concurrency), JEP 431 (Sequenced Collections)
   - "Java 21 New Features" — JDK 21 release notes and JEP index
 
-### Day 7b — Streams & Functional Interfaces: Advanced Patterns & Internals
+### Day 9 — Streams & Functional Interfaces: Advanced Patterns & Internals
 - **Core concepts:**
   - **Functional interface mechanics**: `@FunctionalInterface`, SAM types, 4 kinds of method references (static, instance-unbound, instance-bound, constructor), capture semantics (effectively-final rule), heap pollution with varargs
   - **Lambda desugaring via `invokedynamic`**: how the JVM avoids generating anonymous classes at compile time; LambdaMetafactory and the cost model
@@ -138,7 +138,7 @@
 
 ---
 
-## Week 2 — Concurrency Mastery (Days 8–14)
+## Week 2 — Concurrency Mastery (Days 10–16)
 
 ### Day 8 — Threads, Thread Pools, ExecutorService
 - **Core concepts:** Platform threads, OS thread mapping, `Thread.start()`, `ExecutorService` types (FixedThreadPool, CachedThreadPool, ScheduledExecutor), thread pool sizing formula (Little's Law)
