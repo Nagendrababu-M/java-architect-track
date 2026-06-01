@@ -68,7 +68,7 @@ u.age = <span class="num-lit">30</span>;
 u.name = <span class="str">"Ana"</span>;</code></pre>
 
     <div class="diagram-svg">
-      <svg viewBox="0 0 760 260" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Instance fields embedded in heap object">
+      <svg viewBox="0 0 760 260" xmlns="http://www.w3.org/2000/svg" width="100%" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Instance fields embedded in heap object">
         <defs>
           <marker id="arrA" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
             <path d="M 0 0 L 10 5 L 0 10 z" fill="#ff7a3d"/>
@@ -145,7 +145,7 @@ u.name = <span class="str">"Ana"</span>;</code></pre>
     <p>It&rsquo;s loaded once when a class is first used (called &ldquo;class loading&rdquo;) and typically lives for the entire lifetime of the JVM. Unlike the heap, it&rsquo;s not garbage-collected on a regular basis &mdash; classes only get unloaded under specific conditions.</p>
 
     <div class="diagram-svg">
-      <svg viewBox="0 0 760 320" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Three memory regions with Counter example">
+      <svg viewBox="0 0 760 320" xmlns="http://www.w3.org/2000/svg" width="100%" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Three memory regions with Counter example">
         <text x="120" y="30" fill="#7ab8e8" font-family="JetBrains Mono, monospace" font-size="11" font-weight="700" text-anchor="middle" letter-spacing="2">STACK</text>
         <text x="380" y="30" fill="#ff7a3d" font-family="JetBrains Mono, monospace" font-size="11" font-weight="700" text-anchor="middle" letter-spacing="2">HEAP</text>
         <text x="640" y="30" fill="#b18ae0" font-family="JetBrains Mono, monospace" font-size="11" font-weight="700" text-anchor="middle" letter-spacing="2">METASPACE</text>
@@ -208,7 +208,7 @@ u.name = <span class="str">"Ana"</span>;</code></pre>
 
     <p>You now have all three regions. Here&rsquo;s the decision tree that covers every case you&rsquo;ll see &mdash; commit it to memory:</p>
 
-    <table class="compare">
+    <div class="compare-wrap"><table class="compare">
       <thead>
         <tr><th>What you have</th><th>Where it lives</th><th>Why</th></tr>
       </thead>
@@ -244,8 +244,7 @@ u.name = <span class="str">"Ana"</span>;</code></pre>
           <td>Loaded once per JVM by the classloader</td>
         </tr>
       </tbody>
-    </table>
-
+    </table></div>
     <p>If you can run code through this table line by line, you have the JVM memory model. Everything else this week &mdash; GC, escape analysis, virtual threads &mdash; is just consequences of these rules.</p>
   </div>
 
@@ -317,7 +316,7 @@ vh.getAndAdd(counter, <span class="num">1</span>);  <span class="cm">// atomic i
 
     <h4>Where you&rsquo;ll see this as an architect</h4>
 
-    <table class="compare">
+    <div class="compare-wrap"><table class="compare">
       <thead>
         <tr><th>Framework / Tool</th><th>How it uses Reflection</th><th>Modern alternative</th></tr>
       </thead>
@@ -348,8 +347,7 @@ vh.getAndAdd(counter, <span class="num">1</span>);  <span class="cm">// atomic i
           <td>Sealed classes reduce the need for mocking entire hierarchies</td>
         </tr>
       </tbody>
-    </table>
-
+    </table></div>
     <div class="check">
       <span class="check-tag">QUICK CHECK</span>
       <p>Spring Boot works fine in development (Java 11) but crashes on the production JVM (Java 17) with:</p>
@@ -543,7 +541,7 @@ vh.getAndAdd(counter, <span class="num">1</span>);  <span class="cm">// atomic i
   </div>
 
   <footer>
-    DAY 2 OF 154 &middot; STATIC, INSTANCE, METASPACE &middot; PHASE 1 / 6
+    DAY 2 OF 158 &middot; STATIC, INSTANCE, METASPACE &middot; PHASE 1 / 6
   </footer>
 
 </div>

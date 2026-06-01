@@ -41,7 +41,7 @@
     <h4>The regions, at the highest level</h4>
 
     <div class="diagram-svg">
-      <svg viewBox="0 0 760 280" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="JVM memory divided into regions">
+      <svg viewBox="0 0 760 280" xmlns="http://www.w3.org/2000/svg" width="100%" preserveAspectRatio="xMidYMid meet" role="img" aria-label="JVM memory divided into regions">
         <defs>
           <linearGradient id="processGrad" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stop-color="#1a1d28"/>
@@ -113,7 +113,7 @@
 }</code></pre>
 
     <div class="diagram-svg">
-      <svg viewBox="0 0 760 260" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Stack growing through three method calls">
+      <svg viewBox="0 0 760 260" xmlns="http://www.w3.org/2000/svg" width="100%" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Stack growing through three method calls">
         <text x="120" y="30" fill="#9aa0ad" font-family="JetBrains Mono, monospace" font-size="11" text-anchor="middle" letter-spacing="2">CALL a()</text>
         <text x="380" y="30" fill="#9aa0ad" font-family="JetBrains Mono, monospace" font-size="11" text-anchor="middle" letter-spacing="2">a() CALLS b()</text>
         <text x="640" y="30" fill="#9aa0ad" font-family="JetBrains Mono, monospace" font-size="11" text-anchor="middle" letter-spacing="2">b() CALLS c()</text>
@@ -173,7 +173,7 @@
     <p>When you write <code>Order order = new Order(100);</code>, <strong>two things</strong> happen in two different places:</p>
 
     <div class="diagram-svg">
-      <svg viewBox="0 0 760 220" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Reference on stack pointing to object on heap">
+      <svg viewBox="0 0 760 220" xmlns="http://www.w3.org/2000/svg" width="100%" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Reference on stack pointing to object on heap">
         <defs>
           <marker id="arr1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
             <path d="M 0 0 L 10 5 L 0 10 z" fill="#ff7a3d"/>
@@ -226,7 +226,7 @@
 
     <p>Now let&rsquo;s lock it in with a direct comparison. Read every row.</p>
 
-    <table class="compare">
+    <div class="compare-wrap"><table class="compare">
       <thead>
         <tr><th>Property</th><th>Stack</th><th>Heap</th></tr>
       </thead>
@@ -240,8 +240,7 @@
         <tr><td>Failure when full</td><td><code>StackOverflowError</code></td><td><code>OutOfMemoryError</code></td></tr>
         <tr><td>Order of operations</td><td>Strict LIFO</td><td>Any order</td></tr>
       </tbody>
-    </table>
-
+    </table></div>
     <p>Notice the symmetry of trade-offs. The stack is fast and self-cleaning, but small and rigid. The heap is flexible and large, but expensive and needs a GC. <strong>Neither is better.</strong> Each exists because each is right for what it stores.</p>
   </div>
 
@@ -255,7 +254,7 @@
     <h4>1. Diagnosing production failures</h4>
     <p>You will, eventually, get paged at 2 AM because production crashed with one of these two errors. The cause and the fix are completely different:</p>
 
-    <table class="compare">
+    <div class="compare-wrap"><table class="compare">
       <thead>
         <tr><th>Error</th><th>What it means</th><th>Where to look</th></tr>
       </thead>
@@ -271,8 +270,7 @@
           <td>Memory leaks, oversized caches, large in-memory data</td>
         </tr>
       </tbody>
-    </table>
-
+    </table></div>
     <h4>2. Capacity planning for high-throughput services</h4>
     <p>Consider a server handling 10,000 concurrent requests. If each request runs on its own platform thread with a 1MB stack:</p>
 
@@ -409,7 +407,7 @@
   </div>
 
   <footer>
-    DAY 1 OF 154 &middot; STACK VS HEAP &middot; PHASE 1 / 6
+    DAY 1 OF 158 &middot; STACK VS HEAP &middot; PHASE 1 / 6
   </footer>
 
 </div>

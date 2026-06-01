@@ -192,6 +192,12 @@ ol li::before {
   margin: 28px 0;
   box-shadow: 0 8px 32px rgba(0,0,0,0.25);
 }
+.diagram-svg svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  min-width: 280px;
+}
 .diagram-svg svg { width: 100%; height: auto; display: block; }
 .diagram-caption {
   text-align: center;
@@ -203,15 +209,22 @@ ol li::before {
 }
 
 /* ── Tables ─────────────────────────────────────────────── */
+.compare-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+  margin: 24px 0;
+}
 .compare {
   width: 100%;
+  min-width: 480px;
   border-collapse: collapse;
-  margin: 24px 0;
   background: var(--bg-elev);
-  border-radius: var(--radius-md);
-  overflow: hidden;
-  border: 1px solid var(--line);
   font-size: 15px;
+  margin: 0;
+  border: none;
+  border-radius: 0;
 }
 .compare th, .compare td {
   padding: 14px 18px;
@@ -692,7 +705,10 @@ ol li::before {
   width: 100%; height: 100%;
   pointer-events: none;
   z-index: 9999;
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  max-width: 100%;
 }
 .confetti-piece {
   position: absolute;
@@ -1058,18 +1074,7 @@ footer {
 }
 
 /* ── Responsive ──────────────────────────────────────────── */
-@media (max-width: 640px) {
-  .container, .container-wide { padding: 40px 20px 80px; }
-  pre  { font-size: 12px; padding: 16px; }
-  .challenge, .challenge-form { padding: 24px 16px; }
-  .analogy, .key-rule, .architect-callout { padding: 20px; }
-  .week-days { grid-template-columns: 1fr 1fr; }
-  .topics-grid { grid-template-columns: 1fr; }
-  .form-row { grid-template-columns: 1fr auto; }
-  .result-icon { display: none; }
-  h2 { font-size: 24px; }
-  .hero h1 { font-size: clamp(28px, 8vw, 44px); }
-}
+
 
 
 /* ── Lesson page navigation ──────────────────────────────── */
@@ -1195,12 +1200,7 @@ footer {
 }
 .float-scroll-top:hover { background: var(--line); color: var(--ink); }
 
-@media (max-width: 600px) {
-  .lesson-nav { flex-direction: column; align-items: stretch; }
-  .lesson-nav-btn { max-width: 100%; }
-  .float-nav { bottom: 12px; left: 10px; right: 10px; transform: translateX(0) translateY(80px); width: calc(100% - 20px); justify-content: center; }
-  .float-nav.visible { transform: translateX(0) translateY(0); }
-}
+
 
 /* ── Reflection section ──────────────────────────────────── */
 .reflection {
@@ -1339,3 +1339,103 @@ footer {
   display: none;
 }
 .confidence-saved.visible { display: block; }
+
+
+/* ═══════════════════════════════════════════════════════════
+   RESPONSIVE — tablet, mobile, small mobile
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── Tablet (641–900px) ─────────────────────────────────── */
+@media (max-width: 900px) {
+  .container       { padding: 40px 28px 100px; }
+  .container-wide  { padding: 40px 28px 80px; }
+  .week-days       { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+  .compare td      { font-size: 14px; padding: 12px 14px; }
+  .float-btn       { font-size: 11px; padding: 5px 9px; }
+  pre              { font-size: 13px; }
+}
+
+/* ── Mobile (≤640px) ────────────────────────────────────── */
+@media (max-width: 640px) {
+  /* Layout */
+  .container, .container-wide { padding: 24px 14px 120px; }
+
+  /* Typography */
+  h2   { font-size: 20px; }
+  h4   { font-size: 14px; }
+  .hero h1 { font-size: clamp(26px, 8vw, 40px); }
+  p    { font-size: 14px; line-height: 1.65; }
+
+  /* Code */
+  pre  { font-size: 11.5px; padding: 14px 12px; border-radius: 6px; }
+  code { font-size: 12px; word-break: break-word; }
+
+  /* Content blocks */
+  .stage-tag                  { font-size: 10px; }
+  .check, .recap              { padding: 14px 16px; }
+  .analogy, .key-rule         { padding: 16px; }
+  .architect-callout          { padding: 16px; }
+  .challenge, .challenge-form { padding: 18px 14px; }
+  .check-tag, .recap-tag      { font-size: 9px; }
+  .scope                      { font-size: 13px; }
+
+  /* Challenge form */
+  .form-row     { grid-template-columns: 1fr; gap: 6px; }
+  .form-label   { font-size: 13px; }
+  select        { font-size: 13px; padding: 9px 12px; width: 100%; }
+  .result-icon  { display: none; }
+  .hint-text, .explanation-text { font-size: 13px; }
+  .btn-check, .btn-show-answers { width: 100%; justify-content: center; font-size: 13px; }
+
+  /* Landing page */
+  .week-days  { grid-template-columns: 1fr 1fr; }
+  .topics-grid { grid-template-columns: 1fr; }
+  .day-card   { padding: 10px 12px; }
+  .day-number { font-size: 9px; }
+  .day-title  { font-size: 12px; }
+  .hero-stat  { font-size: 11px; margin-right: 10px; }
+  .tab-btn    { font-size: 12px; padding: 8px 12px; }
+  .phase-chip { font-size: 10px; padding: 4px 10px; }
+  .search-wrap { margin: 16px 0 0; }
+  #search-input { font-size: 14px; padding: 11px 38px; }
+  .search-results-grid { grid-template-columns: 1fr; }
+
+  /* Reflection */
+  .reflection-body  { padding: 16px 14px; }
+  .takeaways        { padding: 12px 14px; }
+  .confidence-btns  { flex-direction: column; gap: 6px; }
+  .conf-btn         { font-size: 12px; padding: 8px 14px; text-align: center; }
+
+  /* Lesson nav */
+  .lesson-nav     { flex-direction: column; align-items: stretch; padding: 14px; gap: 8px; }
+  .lesson-nav-btn { max-width: 100%; padding: 8px 10px; }
+  .nav-title      { font-size: 12px; }
+
+  /* Float nav */
+  .float-nav {
+    bottom: 10px;
+    left: 8px; right: 8px;
+    width: calc(100% - 16px);
+    max-width: none;
+    transform: translateX(0) translateY(80px);
+    justify-content: center;
+    flex-wrap: wrap;
+    border-radius: 14px;
+    padding: 8px 10px;
+    gap: 4px;
+  }
+  .float-nav.visible { transform: translateX(0) translateY(0); }
+  .float-btn         { font-size: 12px; padding: 6px 10px; }
+  .float-scroll-top  { font-size: 12px; padding: 6px 8px; }
+  .float-divider     { display: none; }
+}
+
+/* ── Small mobile (≤400px) ──────────────────────────────── */
+@media (max-width: 400px) {
+  .week-days { grid-template-columns: 1fr; }
+  .day-card  { padding: 10px; }
+  pre        { font-size: 11px; padding: 10px; }
+  h2         { font-size: 18px; }
+  .lesson-nav { margin: 32px 0 20px; }
+  select     { font-size: 12px; }
+}

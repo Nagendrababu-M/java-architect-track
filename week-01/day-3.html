@@ -248,7 +248,7 @@
 
     <p>Three GC events you need to recognize instantly in production logs:</p>
 
-    <table class="compare">
+    <div class="compare-wrap"><table class="compare">
       <thead>
         <tr><th>Event</th><th>What it does</th><th>Cost</th></tr>
       </thead>
@@ -269,8 +269,7 @@
           <td>Very slow (seconds). Rare. Always investigate.</td>
         </tr>
       </tbody>
-    </table>
-
+    </table></div>
     <h4>Stop-the-World &mdash; the silent killer</h4>
 
     <p>Most GC phases require the application to <strong>pause completely</strong> while the GC works. Every application thread freezes. No requests served. No responses sent. No code executes.</p>
@@ -421,7 +420,7 @@
   </div>
 
   <footer>
-    DAY 3 OF 154 &middot; GARBAGE COLLECTION FUNDAMENTALS &middot; PHASE 1 / 6
+    DAY 3 OF 158 &middot; GARBAGE COLLECTION FUNDAMENTALS &middot; PHASE 1 / 6
   </footer>
 
 </div>
