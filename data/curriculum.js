@@ -23,7 +23,7 @@ const CURRICULUM = {
       days: [
         {
           day: 1, title: "Stack vs Heap Fundamentals",
-          topic: "JVM Memory", status: "done",
+          topic: "JVM Memory", status: "done", duration: 60,
           file: "week-01/day-1.html",
           challenge: {
             type: "select",
@@ -43,7 +43,7 @@ const CURRICULUM = {
         },
         {
           day: 2, title: "Static, Instance & Metaspace",
-          topic: "JVM Memory", status: "done",
+          topic: "JVM Memory", status: "done", duration: 60,
           file: "week-01/day-2.html",
           challenge: {
             type: "select",
@@ -75,7 +75,7 @@ const CURRICULUM = {
         },
         {
           day: 3, title: "Garbage Collection Fundamentals",
-          topic: "Garbage Collection", status: "done",
+          topic: "Garbage Collection", status: "done", duration: 60,
           file: "week-01/day-3.html",
           challenge: {
             type: "open-ended",

@@ -94,7 +94,7 @@ function renderDayCard(weekNum, day, progress) {
   const isComingSoon = !day.file && !isLocked;
 
   const statusIcon = isDone ? '✅' : isCurrent ? '🔵' : isLocked ? '🔒' : '🔵';
-  const durLabel   = day.duration >= 90 ? `${day.duration} min ⚡` : `${day.duration} min`;
+  const durLabel   = (isDone || isCurrent) && day.duration ? `${day.duration} min` : '';
   const classes    = ['day-card', status, isComingSoon ? 'coming-soon' : ''].filter(Boolean).join(' ');
   const tooltip    = isLocked ? 'data-tooltip="Complete previous days first"' : '';
   const href       = (!isLocked && day.file) ? day.file : '#';
@@ -103,9 +103,9 @@ function renderDayCard(weekNum, day, progress) {
   return `
   <${tag} class="${classes}" ${tag==='a' ? `href="${href}"` : ''} ${tooltip}>
     <div class="day-number">DAY ${day.day}</div>
-    <div class="day-title">${day.heavy ? '⚡ ' : ''}${day.title}</div>
+    <div class="day-title">${day.title}</div>
     <div class="day-footer">
-      <span class="day-duration">${isComingSoon && !day.file ? 'Coming soon' : durLabel}</span>
+      ${durLabel ? `<span class="day-duration">${durLabel}</span>` : ''}
       <span class="day-status">${statusIcon}</span>
     </div>
   </${tag}>`;
@@ -144,8 +144,6 @@ function renderByTopic() {
 
   let html = '<div class="topics-grid">';
   Object.entries(topicMap).forEach(([topic, days]) => {
-    const totalMins = days.reduce((s, d) => s + d.duration, 0);
-    const hrs = (totalMins / 60).toFixed(1);
     const accessible = days.filter(d => d.file);
 
     html += `
@@ -153,7 +151,6 @@ function renderByTopic() {
       <div class="topic-name">${topic}</div>
       <div class="topic-stats">
         <span><span>${days.length}</span> lessons</span>
-        <span><span>${hrs}</span> hrs total</span>
       </div>
       <div class="topic-days">
         ${accessible.slice(0, 5).map(d => {
