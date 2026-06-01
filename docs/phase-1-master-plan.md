@@ -15,13 +15,15 @@
   - Oracle JVM Spec, Chapter 2 (search: "JVM Specification runtime data areas")
   - "Understanding the JVM" — Jon Rose, JavaOne (YouTube)
 
-### Day 2 — Static, Instance & Metaspace ✅
-- **Core concepts:** Static vs instance fields, class loading, Metaspace, where references vs objects live
-- **Architect lens:** Static collections = silent memory leaks. Metaspace tuning matters for microservices with many classes.
-- **Interview signal:** "Why did PermGen get replaced by Metaspace?"
-- **Challenge:** 7-line code analysis covering all 3 memory regions
+### Day 2 — Static, Instance, Metaspace & Reflection ✅
+- **Core concepts:** Static vs instance fields, class loading, Metaspace; Java Reflection API — `Class.forName()`, `getDeclaredFields()`, `getDeclaredMethods()`, `setAccessible()`; how `getDeclaredFields()` distinguishes static from instance fields; `MethodHandle` and `VarHandle` as JIT-friendly alternatives; JPMS module system restrictions (Java 9+)
+- **Architect lens:** Static collections = silent memory leaks; dynamic class loading exhausts Metaspace; reflection is the engine behind Spring DI, Jackson, JPA, JUnit, Mockito; prefer constructor injection to avoid reflection entirely
+- **Interview signal:** "Why did PermGen get replaced by Metaspace?" / "Why is reflection slow and what’s the alternative?" / "Why does your app crash with InaccessibleObjectException on Java 17?"
+- **Challenge:** 7-row memory classification + Quick Check: diagnose a module-system reflection failure on Java 17
 - **Resources:**
   - JEP 122: Remove the Permanent Generation (search "JEP 122")
+  - JEP 396: Strongly Encapsulate JDK Internals by Default (Java 16+)
+  - `java.lang.invoke` package Javadoc — MethodHandles, MethodHandle, VarHandle
   - "Metaspace in OpenJDK 8" — Jon Masamitsu blog
 
 ### Day 3 — GC Fundamentals ✅

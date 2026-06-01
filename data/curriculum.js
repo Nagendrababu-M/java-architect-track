@@ -42,8 +42,8 @@ const CURRICULUM = {
           }
         },
         {
-          day: 2, title: "Static, Instance & Metaspace",
-          topic: "JVM Memory", status: "done", duration: 60,
+          day: 2, title: "Static, Instance, Metaspace & Reflection",
+          topic: "JVM Memory", status: "done", duration: 75,
           file: "week-01/day-2.html",
           challenge: {
             type: "select",

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Week 1 · Day 2 — Static, Instance &amp; Metaspace</title>
+<title>Week 1 · Day 2 — Static, Instance, Metaspace &amp; Reflection</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,800&family=JetBrains+Mono:wght@400;500;700&family=Inter+Tight:wght@400;500;600&display=swap" rel="stylesheet">
@@ -30,10 +30,10 @@
       <span>Week 1 / Day 2</span>
     </div>
     <h1>
-      Static, Instance &amp; Metaspace
-      <span class="sub">The third memory region, and a full code challenge that uses all three.</span>
+      Static, Instance, Metaspace &amp; Reflection
+      <span class="sub">Class metadata, runtime inspection, MethodHandles &mdash; and a full 7-row memory challenge.</span>
     </h1>
-    <div class="scope"><strong>SCOPE</strong> &middot; 60 min &middot; 4 stages + final challenge</div>
+    <div class="scope"><strong>SCOPE</strong> &middot; 75 min &middot; 5 stages + final challenge</div>
   </header>
 
   <div class="recap">
@@ -249,9 +249,119 @@ u.name = <span class="str">"Ana"</span>;</code></pre>
     <p>If you can run code through this table line by line, you have the JVM memory model. Everything else this week &mdash; GC, escape analysis, virtual threads &mdash; is just consequences of these rules.</p>
   </div>
 
-  <!-- STAGE 4 — Full 7-row interactive challenge -->
+
+  <!-- STAGE 4 — Java Reflection & the Runtime Class -->
   <div class="stage">
-    <span class="stage-tag">STAGE 4 <span class="time">25 MIN</span></span>
+    <span class="stage-tag">STAGE 4 <span class="time">15 MIN</span></span>
+    <h2>Java Reflection: reading the class at runtime</h2>
+
+    <p>You now know that class metadata &mdash; the description of fields, methods, annotations, and constructors &mdash; lives in <strong>Metaspace</strong>. The <strong>Reflection API</strong> (<code>java.lang.reflect</code>) is the official way to read and manipulate that metadata at runtime, after compilation.</p>
+
+    <div class="key-rule">
+      <p><strong>Every loaded class has exactly one <code>Class&lt;?&gt;</code> object in Metaspace.</strong></p>
+      <p>Reflection is how your code reaches into that <code>Class</code> object and inspects or invokes what it describes &mdash; without knowing the type at compile time.</p>
+    </div>
+
+    <h4>The core APIs</h4>
+
+<pre><code><span class="cm">// 1. Get the Class object — three ways</span>
+<span class="typ">Class</span>&lt;?&gt; c1 = <span class="typ">String</span>.<span class="kw">class</span>;                      <span class="cm">// compile-time literal</span>
+<span class="typ">Class</span>&lt;?&gt; c2 = <span class="str">"hello"</span>.getClass();                <span class="cm">// from an instance</span>
+<span class="typ">Class</span>&lt;?&gt; c3 = <span class="typ">Class</span>.forName(<span class="str">"java.lang.String"</span>); <span class="cm">// dynamic — triggers class loading into Metaspace</span>
+
+<span class="cm">// 2. Inspect fields — see static vs instance distinction from today</span>
+<span class="kw">for</span> (<span class="typ">Field</span> f : <span class="typ">MyService</span>.<span class="kw">class</span>.getDeclaredFields()) {
+    boolean isStatic = <span class="typ">Modifier</span>.isStatic(f.getModifiers());
+    System.out.printf(<span class="str">"%s  static=%b  type=%s%n"</span>, f.getName(), isStatic, f.getType().getSimpleName());
+}
+
+<span class="cm">// 3. Invoke a method by name at runtime</span>
+<span class="typ">Method</span> m = <span class="typ">String</span>.<span class="kw">class</span>.getDeclaredMethod(<span class="str">"toUpperCase"</span>);
+<span class="typ">String</span> result = (<span class="typ">String</span>) m.invoke(<span class="str">"hello"</span>);  <span class="cm">// "HELLO"</span>
+
+<span class="cm">// 4. Access a private field — bypass access control</span>
+<span class="typ">Field</span> f = <span class="typ">String</span>.<span class="kw">class</span>.getDeclaredField(<span class="str">"value"</span>);
+f.setAccessible(<span class="kw">true</span>);                           <span class="cm">// ⚠ opens the door — use sparingly</span>
+<span class="kw">byte</span>[] bytes = (<span class="kw">byte</span>[]) f.get(<span class="str">"hello"</span>);</code></pre>
+
+    <h4>How this connects to Metaspace</h4>
+
+    <p><code>Class.forName("com.example.OrderService")</code> triggers the full class-loading pipeline: load &rarr; verify &rarr; prepare &rarr; resolve &rarr; initialise. The resulting <code>Class</code> object and all its metadata land in <strong>Metaspace</strong>. Every subsequent reflection call reads from that Metaspace entry &mdash; not from the heap.</p>
+
+    <p>This is why loading thousands of classes dynamically &mdash; plugin systems, hot-reload frameworks, OSGi containers &mdash; can exhaust Metaspace even when heap usage looks completely normal.</p>
+
+    <h4>The performance cost &mdash; and the modern fix</h4>
+
+    <p>Reflection is <strong>slow compared to direct calls</strong>. Every <code>Method.invoke()</code> bypasses JIT inlining, performs access checks on every call, and boxes/unboxes primitives. In a tight loop, it can be 10&ndash;100&times; slower than a direct invocation.</p>
+
+    <p>Java 7 introduced <strong><code>MethodHandle</code></strong> in <code>java.lang.invoke</code>. Java 9 added <strong><code>VarHandle</code></strong> for field access. Both are JIT-friendly, module-safe, and the performance gap nearly disappears after the JVM warms up.</p>
+
+<pre><code><span class="cm">// MethodHandle — the JIT-inlineable, module-safe alternative</span>
+<span class="typ">MethodHandles.Lookup</span> lookup = <span class="typ">MethodHandles</span>.lookup();
+<span class="typ">MethodHandle</span> mh = lookup.findVirtual(
+    <span class="typ">String</span>.<span class="kw">class</span>,
+    <span class="str">"toUpperCase"</span>,
+    <span class="typ">MethodType</span>.methodType(<span class="typ">String</span>.<span class="kw">class</span>)
+);
+<span class="typ">String</span> up = (<span class="typ">String</span>) mh.invoke(<span class="str">"hello"</span>);  <span class="cm">// JIT can inline this</span>
+
+<span class="cm">// VarHandle — atomic field access without sun.misc.Unsafe</span>
+<span class="typ">VarHandle</span> vh = <span class="typ">MethodHandles</span>.lookup()
+    .in(<span class="typ">Counter</span>.<span class="kw">class</span>)
+    .findVarHandle(<span class="typ">Counter</span>.<span class="kw">class</span>, <span class="str">"count"</span>, <span class="kw">int</span>.<span class="kw">class</span>);
+vh.getAndAdd(counter, <span class="num">1</span>);  <span class="cm">// atomic increment — no synchronized block needed</span></code></pre>
+
+    <h4>Module system restrictions (Java 9+)</h4>
+
+    <p>The JPMS module system broke many frameworks that relied on <code>setAccessible(true)</code> across module boundaries. You now need an explicit <code>opens</code> directive in <code>module-info.java</code>, or pass <code>--add-opens</code> on the command line. This is why you see flags like <code>--add-opens java.base/java.lang=ALL-UNNAMED</code> in Spring Boot startup scripts for older apps running on Java 17+.</p>
+
+    <h4>Where you&rsquo;ll see this as an architect</h4>
+
+    <table class="compare">
+      <thead>
+        <tr><th>Framework / Tool</th><th>How it uses Reflection</th><th>Modern alternative</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Spring DI</td>
+          <td><code>getDeclaredFields()</code> + <code>setAccessible()</code> for <code>@Autowired</code> field injection</td>
+          <td>Constructor injection &mdash; no reflection needed, GraalVM-friendly</td>
+        </tr>
+        <tr>
+          <td>Jackson / Gson</td>
+          <td>Reads fields to serialise/deserialise JSON at runtime</td>
+          <td>Records (Java 16): Jackson uses canonical constructor instead</td>
+        </tr>
+        <tr>
+          <td>JPA / Hibernate</td>
+          <td>Reads <code>@Entity</code>, <code>@Column</code> annotations to build schema at startup</td>
+          <td>Annotation processors (compile-time) for GraalVM native image</td>
+        </tr>
+        <tr>
+          <td>JUnit 5</td>
+          <td>Discovers <code>@Test</code> methods, injects parameters via <code>ParameterResolver</code></td>
+          <td>&mdash;</td>
+        </tr>
+        <tr>
+          <td>Mockito</td>
+          <td>Subclasses and proxies types at runtime via <code>ByteBuddy</code> + <code>Objenesis</code></td>
+          <td>Sealed classes reduce the need for mocking entire hierarchies</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="check">
+      <span class="check-tag">QUICK CHECK</span>
+      <p>Spring Boot works fine in development (Java 11) but crashes on the production JVM (Java 17) with:</p>
+      <p><code style="color:var(--red)">InaccessibleObjectException: Unable to make field private final byte[] java.lang.String.value accessible</code></p>
+      <p>What changed between Java 11 and Java 17 to cause this? What are your two options to fix it?</p>
+      <p style="margin-top: 12px; color:var(--ink-faint); font-size: 13px"><em>Hint: The module system tightened strong encapsulation in Java 16+ (JEP 396). Fix 1: add <code>--add-opens java.base/java.lang=ALL-UNNAMED</code> to JVM args (quick, temporary). Fix 2 (better): switch to constructor injection or MethodHandle so you never need private field access in the first place.</em></p>
+    </div>
+  </div>
+
+  <!-- STAGE 5 — Full 7-row interactive challenge -->
+  <div class="stage">
+    <span class="stage-tag">STAGE 5 <span class="time">25 MIN</span></span>
     <h2>The full challenge</h2>
 
     <p>Time to apply everything. Run this code through the decision tree from Stage 3:</p>
