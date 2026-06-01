@@ -23,7 +23,7 @@ const CURRICULUM = {
       days: [
         {
           day: 1, title: "Stack vs Heap Fundamentals",
-          duration: 60, topic: "JVM Memory", status: "done",
+          topic: "JVM Memory", status: "done",
           file: "week-01/day-1.html",
           challenge: {
             type: "select",
@@ -43,7 +43,7 @@ const CURRICULUM = {
         },
         {
           day: 2, title: "Static, Instance & Metaspace",
-          duration: 60, topic: "JVM Memory", status: "done",
+          topic: "JVM Memory", status: "done",
           file: "week-01/day-2.html",
           challenge: {
             type: "select",
@@ -75,7 +75,7 @@ const CURRICULUM = {
         },
         {
           day: 3, title: "Garbage Collection Fundamentals",
-          duration: 60, topic: "Garbage Collection", status: "done",
+          topic: "Garbage Collection", status: "done",
           file: "week-01/day-3.html",
           challenge: {
             type: "open-ended",
@@ -101,38 +101,38 @@ const CURRICULUM = {
             ]
           }
         },
-        { day: 4, title: "GC Algorithms, Tuning & Profiling", duration: 180, topic: "Garbage Collection", status: "locked", file: null, heavy: true },
-        { day: 5, title: "Java Memory Model & Happens-Before",  duration: 90,  topic: "Concurrency",        status: "locked", file: null, heavy: true },
-        { day: 6, title: "JFR & async-profiler",               duration: 60,  topic: "JVM Memory",         status: "locked", file: null },
-        { day: 7, title: "Week 1 Production Diagnosis Synthesis", duration: 60, topic: "JVM Memory",       status: "locked", file: null },
+        { day: 4, title: "GC Algorithms, Tuning & Profiling",       topic: "Garbage Collection", status: "locked", file: null },
+        { day: 5, title: "Java Memory Model & Happens-Before",       topic: "Concurrency",        status: "locked", file: null },
+        { day: 6, title: "JFR & async-profiler",                     topic: "JVM Memory",         status: "locked", file: null },
+        { day: 7, title: "Week 1 Production Diagnosis Synthesis",    topic: "JVM Memory",         status: "locked", file: null },
       ]
     },
 
     {
       week: 2, phase: 1, title: "Concurrency",
       days: [
-        { day: 8,  title: "Thread Pools & ExecutorService",     duration: 60, topic: "Concurrency", status: "locked", file: null },
-        { day: 9,  title: "synchronized, ReentrantLock & Conditions", duration: 60, topic: "Concurrency", status: "locked", file: null },
-        { day: 10, title: "Atomics, CAS & Lock-Free Structures", duration: 90, topic: "Concurrency", status: "locked", file: null, heavy: true },
-        { day: 11, title: "CompletableFuture & Async Pipelines", duration: 60, topic: "Concurrency", status: "locked", file: null },
-        { day: 12, title: "Virtual Threads (Project Loom)",      duration: 90, topic: "Concurrency", status: "locked", file: null, heavy: true },
-        { day: "12a", title: "Modern Java: Records, Sealed Classes & Pattern Matching (Java 14–21)", duration: 90, topic: "Java Language", status: "locked", file: null, heavy: true,
-          note: "Records as immutable DTOs; sealed classes for exhaustive domain modelling; pattern matching instanceof; switch expressions & guarded patterns (Java 21); text blocks; Structured Concurrency with StructuredTaskScope (pairs with Day 12 Virtual Threads); Sequenced Collections" },
-        { day: 13, title: "ConcurrentCollections & Patterns",    duration: 60, topic: "Concurrency", status: "locked", file: null },
-        { day: 14, title: "Rate Limiter Synthesis",              duration: 60, topic: "Concurrency", status: "locked", file: null },
+        { day: 8,    title: "Thread Pools & ExecutorService",                                        topic: "Concurrency",    status: "locked", file: null },
+        { day: 9,    title: "synchronized, ReentrantLock & Conditions",                              topic: "Concurrency",    status: "locked", file: null },
+        { day: 10,   title: "Atomics, CAS & Lock-Free Structures",                                   topic: "Concurrency",    status: "locked", file: null },
+        { day: 11,   title: "CompletableFuture & Async Pipelines",                                   topic: "Concurrency",    status: "locked", file: null },
+        { day: 12,   title: "Virtual Threads (Project Loom)",                                        topic: "Concurrency",    status: "locked", file: null },
+        { day: "12a", title: "Modern Java: Records, Sealed Classes & Pattern Matching (Java 14–21)", topic: "Java Language",  status: "locked", file: null,
+          note: "Records as immutable DTOs; sealed classes for exhaustive domain modelling; pattern matching instanceof; switch expressions & guarded patterns (Java 21); text blocks; Structured Concurrency with StructuredTaskScope (pairs with Virtual Threads); Sequenced Collections" },
+        { day: 13,   title: "ConcurrentCollections & Patterns",                                      topic: "Concurrency",    status: "locked", file: null },
+        { day: 14,   title: "Rate Limiter Synthesis",                                                topic: "Concurrency",    status: "locked", file: null },
       ]
     },
 
     {
       week: 3, phase: 1, title: "Spring Boot & Reactive",
       days: [
-        { day: 15, title: "Spring Boot Internals",               duration: 60, topic: "Spring",   status: "locked", file: null },
-        { day: 16, title: "Bean Lifecycle, AOP & Proxies",        duration: 60, topic: "Spring",   status: "locked", file: null },
-        { day: 17, title: "@Transactional Deep-Dive",             duration: 60, topic: "Spring",   status: "locked", file: null },
-        { day: 18, title: "Reactive Foundations",                 duration: 90, topic: "Reactive", status: "locked", file: null, heavy: true },
-        { day: 19, title: "Project Reactor Operators",            duration: 90, topic: "Reactive", status: "locked", file: null, heavy: true },
-        { day: 20, title: "WebFlux End-to-End",                   duration: 60, topic: "Reactive", status: "locked", file: null },
-        { day: 21, title: "Reactive vs Virtual Threads — ADR Capstone", duration: 60, topic: "Reactive", status: "locked", file: null },
+        { day: 15, title: "Spring Boot Internals",                    topic: "Spring",   status: "locked", file: null },
+        { day: 16, title: "Bean Lifecycle, AOP & Proxies",            topic: "Spring",   status: "locked", file: null },
+        { day: 17, title: "@Transactional Deep-Dive",                 topic: "Spring",   status: "locked", file: null },
+        { day: 18, title: "Reactive Foundations",                     topic: "Reactive", status: "locked", file: null },
+        { day: 19, title: "Project Reactor Operators",                topic: "Reactive", status: "locked", file: null },
+        { day: 20, title: "WebFlux End-to-End",                       topic: "Reactive", status: "locked", file: null },
+        { day: 21, title: "Reactive vs Virtual Threads — ADR Capstone", topic: "Reactive", status: "locked", file: null },
       ]
     },
 
@@ -141,52 +141,51 @@ const CURRICULUM = {
     {
       week: 4, phase: 2, title: "Arrays & Strings",
       days: [
-        { day: 22, title: "Two Pointers Pattern",                duration: 60, topic: "DSA — Arrays/Strings", status: "locked", file: null },
-        { day: 23, title: "Sliding Window — Fixed Size",         duration: 60, topic: "DSA — Arrays/Strings", status: "locked", file: null },
-        { day: 24, title: "Sliding Window — Variable Size",      duration: 90, topic: "DSA — Arrays/Strings", status: "locked", file: null, heavy: true },
-        { day: 25, title: "Prefix Sums & Range Queries",         duration: 60, topic: "DSA — Arrays/Strings", status: "locked", file: null },
-        { day: 26, title: "String Manipulation Patterns",        duration: 60, topic: "DSA — Arrays/Strings", status: "locked", file: null },
-        { day: 27, title: "Array Rotations & In-Place Tricks",   duration: 60, topic: "DSA — Arrays/Strings", status: "locked", file: null },
-        { day: 28, title: "Arrays/Strings Synthesis Drill",      duration: 60, topic: "DSA — Arrays/Strings", status: "locked", file: null },
+        { day: 22, title: "Two Pointers Pattern",                     topic: "DSA — Arrays/Strings", status: "locked", file: null },
+        { day: 23, title: "Sliding Window (Fixed & Variable Size)",   topic: "DSA — Arrays/Strings", status: "locked", file: null },
+        { day: 24, title: "Prefix Sums & Range Queries",              topic: "DSA — Arrays/Strings", status: "locked", file: null },
+        { day: 25, title: "String Manipulation Patterns",             topic: "DSA — Arrays/Strings", status: "locked", file: null },
+        { day: 26, title: "Array Rotations & In-Place Tricks",        topic: "DSA — Arrays/Strings", status: "locked", file: null },
+        { day: 27, title: "Arrays/Strings Synthesis Drill",           topic: "DSA — Arrays/Strings", status: "locked", file: null },
       ]
     },
 
     {
       week: 5, phase: 2, title: "Trees & Graphs",
       days: [
-        { day: 29, title: "Binary Tree Traversals",              duration: 60, topic: "DSA — Trees/Graphs", status: "locked", file: null },
-        { day: 30, title: "Binary Search Trees",                 duration: 60, topic: "DSA — Trees/Graphs", status: "locked", file: null },
-        { day: 31, title: "DFS Patterns",                        duration: 90, topic: "DSA — Trees/Graphs", status: "locked", file: null, heavy: true },
-        { day: 32, title: "Graph BFS",                           duration: 60, topic: "DSA — Trees/Graphs", status: "locked", file: null },
-        { day: 33, title: "DFS & Cycle Detection",               duration: 60, topic: "DSA — Trees/Graphs", status: "locked", file: null },
-        { day: 34, title: "Topological Sort & Union-Find",       duration: 90, topic: "DSA — Trees/Graphs", status: "locked", file: null, heavy: true },
-        { day: 35, title: "Trees/Graphs Synthesis",              duration: 60, topic: "DSA — Trees/Graphs", status: "locked", file: null },
+        { day: 28, title: "Binary Tree Traversals",                   topic: "DSA — Trees/Graphs", status: "locked", file: null },
+        { day: 29, title: "Binary Search Trees",                      topic: "DSA — Trees/Graphs", status: "locked", file: null },
+        { day: 30, title: "DFS Patterns",                             topic: "DSA — Trees/Graphs", status: "locked", file: null },
+        { day: 31, title: "Graph BFS",                                topic: "DSA — Trees/Graphs", status: "locked", file: null },
+        { day: 32, title: "DFS & Cycle Detection",                    topic: "DSA — Trees/Graphs", status: "locked", file: null },
+        { day: 33, title: "Topological Sort & Union-Find",            topic: "DSA — Trees/Graphs", status: "locked", file: null },
+        { day: 34, title: "Trees/Graphs Synthesis",                   topic: "DSA — Trees/Graphs", status: "locked", file: null },
       ]
     },
 
     {
       week: 6, phase: 2, title: "Dynamic Programming",
       days: [
-        { day: 36, title: "DP Foundations & Memoization",        duration: 60, topic: "DSA — DP", status: "locked", file: null },
-        { day: 37, title: "1D Dynamic Programming",              duration: 60, topic: "DSA — DP", status: "locked", file: null },
-        { day: 38, title: "Grid DP (2D)",                        duration: 60, topic: "DSA — DP", status: "locked", file: null },
-        { day: 39, title: "Knapsack Variants",                   duration: 90, topic: "DSA — DP", status: "locked", file: null, heavy: true },
-        { day: 40, title: "String DP (Edit Distance, LCS)",      duration: 60, topic: "DSA — DP", status: "locked", file: null },
-        { day: 41, title: "Interval DP & Stocks",                duration: 60, topic: "DSA — DP", status: "locked", file: null },
-        { day: 42, title: "DP Pattern Identification Synthesis", duration: 60, topic: "DSA — DP", status: "locked", file: null },
+        { day: 35, title: "DP Foundations & Memoization",             topic: "DSA — DP", status: "locked", file: null },
+        { day: 36, title: "1D Dynamic Programming",                   topic: "DSA — DP", status: "locked", file: null },
+        { day: 37, title: "Grid DP (2D)",                             topic: "DSA — DP", status: "locked", file: null },
+        { day: 38, title: "Knapsack Variants",                        topic: "DSA — DP", status: "locked", file: null },
+        { day: 39, title: "String DP (Edit Distance, LCS)",           topic: "DSA — DP", status: "locked", file: null },
+        { day: 40, title: "Interval DP & Stocks",                     topic: "DSA — DP", status: "locked", file: null },
+        { day: 41, title: "DP Pattern Identification Synthesis",      topic: "DSA — DP", status: "locked", file: null },
       ]
     },
 
     {
       week: 7, phase: 2, title: "Advanced DSA",
       days: [
-        { day: 43, title: "Heaps & Priority Queues",             duration: 60, topic: "DSA — Advanced", status: "locked", file: null },
-        { day: 44, title: "Two Heaps Pattern",                   duration: 60, topic: "DSA — Advanced", status: "locked", file: null },
-        { day: 45, title: "Tries",                               duration: 90, topic: "DSA — Advanced", status: "locked", file: null, heavy: true },
-        { day: 46, title: "Backtracking",                        duration: 60, topic: "DSA — Advanced", status: "locked", file: null },
-        { day: 47, title: "Binary Search Mastery",               duration: 60, topic: "DSA — Advanced", status: "locked", file: null },
-        { day: 48, title: "Greedy Patterns",                     duration: 60, topic: "DSA — Advanced", status: "locked", file: null },
-        { day: 49, title: "Mock Coding Interview",               duration: 90, topic: "DSA — Advanced", status: "locked", file: null },
+        { day: 42, title: "Heaps & Priority Queues",                  topic: "DSA — Advanced", status: "locked", file: null },
+        { day: 43, title: "Two Heaps Pattern",                        topic: "DSA — Advanced", status: "locked", file: null },
+        { day: 44, title: "Tries",                                    topic: "DSA — Advanced", status: "locked", file: null },
+        { day: 45, title: "Backtracking",                             topic: "DSA — Advanced", status: "locked", file: null },
+        { day: 46, title: "Binary Search Mastery",                    topic: "DSA — Advanced", status: "locked", file: null },
+        { day: 47, title: "Greedy Patterns",                          topic: "DSA — Advanced", status: "locked", file: null },
+        { day: 48, title: "Mock Coding Interview",                    topic: "DSA — Advanced", status: "locked", file: null },
       ]
     },
 
@@ -195,103 +194,101 @@ const CURRICULUM = {
     {
       week: 8, phase: 3, title: "LLD Foundations",
       days: [
-        { day: 50, title: "OO Principles Review",               duration: 60, topic: "System Design (LLD)", status: "locked", file: null },
-        { day: 51, title: "SOLID Part 1 (SRP, OCP, LSP)",       duration: 90, topic: "System Design (LLD)", status: "locked", file: null, heavy: true },
-        { day: 52, title: "SOLID Part 2 (ISP, DIP)",            duration: 60, topic: "System Design (LLD)", status: "locked", file: null },
-        { day: 53, title: "Creational Patterns",                 duration: 60, topic: "System Design (LLD)", status: "locked", file: null },
-        { day: 54, title: "Structural Patterns",                 duration: 60, topic: "System Design (LLD)", status: "locked", file: null },
-        { day: 55, title: "Behavioral Patterns",                 duration: 90, topic: "System Design (LLD)", status: "locked", file: null, heavy: true },
-        { day: 56, title: "Refactoring Synthesis",               duration: 60, topic: "System Design (LLD)", status: "locked", file: null },
+        { day: 49, title: "OO Principles Review",                     topic: "System Design (LLD)", status: "locked", file: null },
+        { day: 50, title: "SOLID Principles (SRP, OCP, LSP, ISP, DIP)", topic: "System Design (LLD)", status: "locked", file: null },
+        { day: 51, title: "Creational Patterns",                      topic: "System Design (LLD)", status: "locked", file: null },
+        { day: 52, title: "Structural Patterns",                      topic: "System Design (LLD)", status: "locked", file: null },
+        { day: 53, title: "Behavioral Patterns",                      topic: "System Design (LLD)", status: "locked", file: null },
+        { day: 54, title: "Refactoring Synthesis",                    topic: "System Design (LLD)", status: "locked", file: null },
       ]
     },
 
     {
       week: 9, phase: 3, title: "LLD Practice",
       days: [
-        { day: 57, title: "LLD: Parking Lot",                   duration: 90, topic: "System Design (LLD)", status: "locked", file: null, heavy: true },
-        { day: 58, title: "LLD: Rate Limiter",                  duration: 60, topic: "System Design (LLD)", status: "locked", file: null },
-        { day: 59, title: "LLD: LRU Cache",                     duration: 90, topic: "System Design (LLD)", status: "locked", file: null, heavy: true },
-        { day: 60, title: "LLD: Logger & Notification System",  duration: 60, topic: "System Design (LLD)", status: "locked", file: null },
-        { day: 61, title: "LLD: Splitwise",                     duration: 60, topic: "System Design (LLD)", status: "locked", file: null },
-        { day: 62, title: "LLD: Elevator",                      duration: 60, topic: "System Design (LLD)", status: "locked", file: null },
-        { day: 63, title: "Mock LLD Interview",                  duration: 90, topic: "System Design (LLD)", status: "locked", file: null },
+        { day: 55, title: "LLD: Parking Lot",                        topic: "System Design (LLD)", status: "locked", file: null },
+        { day: 56, title: "LLD: Rate Limiter",                       topic: "System Design (LLD)", status: "locked", file: null },
+        { day: 57, title: "LLD: LRU Cache",                          topic: "System Design (LLD)", status: "locked", file: null },
+        { day: 58, title: "LLD: Logger & Notification System",       topic: "System Design (LLD)", status: "locked", file: null },
+        { day: 59, title: "LLD: Splitwise",                          topic: "System Design (LLD)", status: "locked", file: null },
+        { day: 60, title: "LLD: Elevator",                           topic: "System Design (LLD)", status: "locked", file: null },
+        { day: 61, title: "Mock LLD Interview",                      topic: "System Design (LLD)", status: "locked", file: null },
       ]
     },
 
     {
       week: 10, phase: 3, title: "HLD Theory",
       days: [
-        { day: 64, title: "CAP Theorem",                         duration: 90, topic: "System Design (HLD)", status: "locked", file: null, heavy: true },
-        { day: 65, title: "PACELC & Consistency Models",         duration: 60, topic: "System Design (HLD)", status: "locked", file: null },
-        { day: 66, title: "Load Balancing",                      duration: 90, topic: "System Design (HLD)", status: "locked", file: null, heavy: true },
-        { day: 67, title: "Consistent Hashing",                  duration: 90, topic: "System Design (HLD)", status: "locked", file: null, heavy: true },
-        { day: 68, title: "Caching Strategies",                  duration: 60, topic: "System Design (HLD)", status: "locked", file: null },
-        { day: 69, title: "CDNs & Edge Caching",                 duration: 60, topic: "System Design (HLD)", status: "locked", file: null },
-        { day: "69a", title: "Redis Deep Dive: Sorted Sets, Cluster, Sentinel & Lua", duration: 90, topic: "System Design (HLD)", status: "locked", file: null, heavy: true,
-          note: "Sorted sets for leaderboards/rate-limiting; Redis Cluster sharding & slot mapping; Sentinel vs Cluster HA; Lua scripting for atomic operations; eviction policies; architect decision: Redis vs Memcached vs in-process cache" },
-        { day: 70, title: "Decision Matrix Synthesis",           duration: 60, topic: "System Design (HLD)", status: "locked", file: null },
+        { day: 62, title: "CAP Theorem",                              topic: "System Design (HLD)", status: "locked", file: null },
+        { day: 63, title: "PACELC & Consistency Models",              topic: "System Design (HLD)", status: "locked", file: null },
+        { day: 64, title: "Load Balancing",                           topic: "System Design (HLD)", status: "locked", file: null },
+        { day: 65, title: "Consistent Hashing",                      topic: "System Design (HLD)", status: "locked", file: null },
+        { day: 66, title: "Caching Strategies",                      topic: "System Design (HLD)", status: "locked", file: null },
+        { day: 67, title: "CDNs & Edge Caching",                     topic: "System Design (HLD)", status: "locked", file: null },
+        { day: "67a", title: "Redis Deep Dive: Sorted Sets, Cluster, Sentinel & Lua", topic: "System Design (HLD)", status: "locked", file: null,
+          note: "Sorted sets for leaderboards/rate-limiting; Redis Cluster sharding & slot mapping; Sentinel vs Cluster HA; Lua scripting for atomic operations; eviction policies; Redis vs Memcached vs in-process cache" },
+        { day: 68, title: "Decision Matrix Synthesis",               topic: "System Design (HLD)", status: "locked", file: null },
       ]
     },
 
     {
       week: 11, phase: 3, title: "Storage",
       days: [
-        { day: 71, title: "SQL Internals & Indexes",             duration: 60, topic: "System Design (HLD)", status: "locked", file: null },
-        { day: 72, title: "Sharding & Replication",              duration: 90, topic: "System Design (HLD)", status: "locked", file: null, heavy: true },
-        { day: 73, title: "NoSQL Landscape",                     duration: 90, topic: "System Design (HLD)", status: "locked", file: null, heavy: true },
-        { day: 74, title: "DynamoDB Deep-Dive",                  duration: 90, topic: "System Design (HLD)", status: "locked", file: null, heavy: true },
-        { day: 75, title: "Time-Series Databases",               duration: 60, topic: "System Design (HLD)", status: "locked", file: null },
-        { day: 76, title: "DB Selection Framework",              duration: 60, topic: "System Design (HLD)", status: "locked", file: null },
-        { day: 77, title: "Schema Design Patterns",              duration: 60, topic: "System Design (HLD)", status: "locked", file: null },
-        { day: "77a", title: "Distributed Locking + Distributed ID Generation", duration: 90, topic: "System Design (HLD)", status: "locked", file: null, heavy: true,
-          note: "Redlock algorithm; fencing tokens; ZooKeeper vs Redis locking trade-offs; Snowflake IDs (timestamp+machineId+seq); Twitter Snowflake vs UUIDv7 vs DB sequences; clock skew hazards; architect interview: design a globally unique order ID system" },
+        { day: 69, title: "SQL Internals & Indexes",                  topic: "System Design (HLD)", status: "locked", file: null },
+        { day: 70, title: "Sharding & Replication",                   topic: "System Design (HLD)", status: "locked", file: null },
+        { day: 71, title: "NoSQL Landscape",                          topic: "System Design (HLD)", status: "locked", file: null },
+        { day: 72, title: "DynamoDB Deep-Dive",                       topic: "System Design (HLD)", status: "locked", file: null },
+        { day: 73, title: "Time-Series Databases",                    topic: "System Design (HLD)", status: "locked", file: null },
+        { day: 74, title: "DB Selection Framework",                   topic: "System Design (HLD)", status: "locked", file: null },
+        { day: 75, title: "Schema Design Patterns",                   topic: "System Design (HLD)", status: "locked", file: null },
+        { day: "75a", title: "Distributed Locking + Distributed ID Generation", topic: "System Design (HLD)", status: "locked", file: null,
+          note: "Redlock algorithm; fencing tokens; ZooKeeper vs Redis locking trade-offs; Snowflake IDs (timestamp+machineId+seq); Twitter Snowflake vs UUIDv7 vs DB sequences; clock skew hazards" },
       ]
     },
 
     {
       week: 12, phase: 3, title: "Messaging",
       days: [
-        { day: 78, title: "Queue vs Pub/Sub",                    duration: 60, topic: "Microservices", status: "locked", file: null },
-        { day: 79, title: "Kafka Internals",                     duration: 90, topic: "Microservices", status: "locked", file: null, heavy: true },
-        { day: 80, title: "Kafka Consumer Groups",               duration: 90, topic: "Microservices", status: "locked", file: null, heavy: true },
-        { day: 81, title: "Exactly-Once Semantics",              duration: 60, topic: "Microservices", status: "locked", file: null },
-        { day: 82, title: "Event Sourcing & CQRS",               duration: 60, topic: "Microservices", status: "locked", file: null },
-        { day: "82a", title: "Transactional Outbox Pattern + CQRS Deep Dive", duration: 90, topic: "Microservices", status: "locked", file: null, heavy: true,
-          note: "Dual-write problem; Outbox table + CDC (Debezium) vs polling publisher; at-least-once delivery guarantees; CQRS write vs read model sync lag; eventual consistency UX implications; architect interview: make this payment service reliable without 2PC" },
-        { day: 83, title: "Stream Processing",                   duration: 60, topic: "Microservices", status: "locked", file: null },
-        { day: 84, title: "Event-Driven Order System",           duration: 60, topic: "Microservices", status: "locked", file: null },
+        { day: 76, title: "Queue vs Pub/Sub",                         topic: "Microservices", status: "locked", file: null },
+        { day: 77, title: "Kafka: Internals & Consumer Groups",       topic: "Microservices", status: "locked", file: null },
+        { day: 78, title: "Exactly-Once Semantics",                   topic: "Microservices", status: "locked", file: null },
+        { day: 79, title: "Event Sourcing & CQRS",                    topic: "Microservices", status: "locked", file: null },
+        { day: "79a", title: "Transactional Outbox Pattern + CQRS Deep Dive", topic: "Microservices", status: "locked", file: null,
+          note: "Dual-write problem; Outbox table + CDC (Debezium) vs polling publisher; at-least-once delivery guarantees; CQRS write vs read model sync lag; eventual consistency UX implications" },
+        { day: 80, title: "Stream Processing",                        topic: "Microservices", status: "locked", file: null },
+        { day: 81, title: "Event-Driven Order System",                topic: "Microservices", status: "locked", file: null },
       ]
     },
 
     {
       week: 13, phase: 3, title: "Microservices",
       days: [
-        { day: 85, title: "Monolith vs Microservices Trade-offs",duration: 60, topic: "Microservices", status: "locked", file: null },
-        { day: "85a", title: "Database per Service + Strangler Fig + Anti-Corruption Layer", duration: 90, topic: "Microservices", status: "locked", file: null, heavy: true,
-          note: "DB-per-service rationale & shared schema anti-pattern; Strangler Fig migration playbook (proxy layer, feature flags, traffic shifting); ACL as translation layer between bounded contexts; architect interview: migrate a shared Oracle DB to microservices without downtime" },
-        { day: 86, title: "DDD & Bounded Contexts",              duration: 60, topic: "Microservices", status: "locked", file: null },
-        { day: 87, title: "Saga Pattern",                        duration: 90, topic: "Microservices", status: "locked", file: null, heavy: true },
-        { day: "87a", title: "REST API Design + gRPC + WebSockets", duration: 90, topic: "Microservices", status: "locked", file: null, heavy: true,
-          note: "REST constraints & maturity model; gRPC proto contracts vs REST trade-offs; WebSocket upgrade, heartbeat, backpressure; when to choose each — architect decision rubric; fits alongside API Gateway/BFF for a complete inter-service communication picture" },
-        { day: 88, title: "API Gateway, BFF & Service Mesh",     duration: 60, topic: "Microservices", status: "locked", file: null },
-        { day: 89, title: "Service Discovery",                   duration: 60, topic: "Microservices", status: "locked", file: null },
-        { day: "89a", title: "OAuth2 / JWT / Spring Security — Auth Architecture", duration: 90, topic: "Microservices", status: "locked", file: null, heavy: true,
-          note: "OAuth2 flows (Authorization Code + PKCE, Client Credentials, Device); JWT structure, signing (RS256 vs HS256), expiry & rotation; Spring Security filter chain; RBAC vs ABAC; token introspection vs local validation trade-offs; architect interview: design auth for a multi-tenant SaaS" },
-        { day: 90, title: "Resilience Patterns",                 duration: 90, topic: "Microservices", status: "locked", file: null, heavy: true },
-        { day: 91, title: "Microservices Migration ADR",         duration: 60, topic: "Microservices", status: "locked", file: null },
+        { day: 82, title: "Monolith vs Microservices Trade-offs",     topic: "Microservices", status: "locked", file: null },
+        { day: 83, title: "DDD & Bounded Contexts",                   topic: "Microservices", status: "locked", file: null },
+        { day: "83a", title: "Database per Service + Strangler Fig + Anti-Corruption Layer", topic: "Microservices", status: "locked", file: null,
+          note: "DB-per-service rationale & shared schema anti-pattern; Strangler Fig migration playbook (proxy layer, feature flags, traffic shifting); ACL as translation layer between bounded contexts" },
+        { day: 84, title: "Saga Pattern",                             topic: "Microservices", status: "locked", file: null },
+        { day: "84a", title: "REST API Design + gRPC + WebSockets",   topic: "Microservices", status: "locked", file: null,
+          note: "REST constraints & maturity model; gRPC proto contracts vs REST trade-offs; WebSocket upgrade, heartbeat, backpressure; when to choose each — architect decision rubric" },
+        { day: 85, title: "API Gateway, BFF & Service Mesh",          topic: "Microservices", status: "locked", file: null },
+        { day: 86, title: "Service Discovery",                        topic: "Microservices", status: "locked", file: null },
+        { day: "86a", title: "OAuth2 / JWT / Spring Security — Auth Architecture", topic: "Microservices", status: "locked", file: null,
+          note: "OAuth2 flows (Authorization Code + PKCE, Client Credentials, Device); JWT structure, signing (RS256 vs HS256), expiry & rotation; Spring Security filter chain; RBAC vs ABAC; token introspection vs local validation trade-offs" },
+        { day: 87, title: "Resilience Patterns",                      topic: "Microservices", status: "locked", file: null },
+        { day: 88, title: "Microservices Migration ADR",              topic: "Microservices", status: "locked", file: null },
       ]
     },
 
     {
       week: 14, phase: 3, title: "HLD Mock Designs",
       days: [
-        { day: 92, title: "HLD Mock: TinyURL",                  duration: 90,  topic: "System Design (HLD)", status: "locked", file: null, heavy: true },
-        { day: 93, title: "HLD Mock: Twitter/X",                duration: 90,  topic: "System Design (HLD)", status: "locked", file: null, heavy: true },
-        { day: 94, title: "HLD Mock: Uber",                     duration: 90,  topic: "System Design (HLD)", status: "locked", file: null, heavy: true },
-        { day: 95, title: "HLD Mock: WhatsApp",                 duration: 90,  topic: "System Design (HLD)", status: "locked", file: null, heavy: true },
-        { day: 96, title: "HLD Mock: YouTube",                  duration: 60,  topic: "System Design (HLD)", status: "locked", file: null },
-        { day: 97, title: "HLD Mock: Distributed Cache",        duration: 60,  topic: "System Design (HLD)", status: "locked", file: null },
-        { day: 98, title: "Full Mock Interview",                 duration: 120, topic: "System Design (HLD)", status: "locked", file: null },
+        { day: 89, title: "HLD Mock: TinyURL",                        topic: "System Design (HLD)", status: "locked", file: null },
+        { day: 90, title: "HLD Mock: Twitter/X",                      topic: "System Design (HLD)", status: "locked", file: null },
+        { day: 91, title: "HLD Mock: Uber",                           topic: "System Design (HLD)", status: "locked", file: null },
+        { day: 92, title: "HLD Mock: WhatsApp",                       topic: "System Design (HLD)", status: "locked", file: null },
+        { day: 93, title: "HLD Mock: YouTube",                        topic: "System Design (HLD)", status: "locked", file: null },
+        { day: 94, title: "HLD Mock: Distributed Cache",              topic: "System Design (HLD)", status: "locked", file: null },
+        { day: 95, title: "Full Mock Interview",                      topic: "System Design (HLD)", status: "locked", file: null },
       ]
     },
 
@@ -300,54 +297,51 @@ const CURRICULUM = {
     {
       week: 15, phase: 4, title: "Core AWS",
       days: [
-        { day: 99,  title: "Regions, AZs & VPC",                duration: 60, topic: "AWS",    status: "locked", file: null },
-        { day: 100, title: "IAM: Roles, Policies & Best Practices", duration: 90, topic: "AWS", status: "locked", file: null, heavy: true },
-        { day: 101, title: "EC2: Instances, AMIs & Pricing",    duration: 60, topic: "AWS",    status: "locked", file: null },
-        { day: 102, title: "S3: Storage Classes & Patterns",    duration: 90, topic: "AWS",    status: "locked", file: null, heavy: true },
-        { day: 103, title: "DynamoDB on AWS",                   duration: 60, topic: "AWS",    status: "locked", file: null },
-        { day: 104, title: "RDS & Aurora",                      duration: 60, topic: "AWS",    status: "locked", file: null },
-        { day: 105, title: "Multi-Tier Architecture Synthesis", duration: 60, topic: "AWS",    status: "locked", file: null },
+        { day: 96,  title: "Regions, AZs & VPC",                     topic: "AWS", status: "locked", file: null },
+        { day: 97,  title: "IAM: Roles, Policies & Best Practices",   topic: "AWS", status: "locked", file: null },
+        { day: 98,  title: "EC2: Instances, AMIs & Pricing",          topic: "AWS", status: "locked", file: null },
+        { day: 99,  title: "S3: Storage Classes & Patterns",          topic: "AWS", status: "locked", file: null },
+        { day: 100, title: "DynamoDB on AWS",                         topic: "AWS", status: "locked", file: null },
+        { day: 101, title: "RDS & Aurora",                            topic: "AWS", status: "locked", file: null },
+        { day: 102, title: "Multi-Tier Architecture Synthesis",       topic: "AWS", status: "locked", file: null },
       ]
     },
 
     {
       week: 16, phase: 4, title: "Containers & Serverless",
       days: [
-        { day: 106, title: "Lambda Functions",                  duration: 60, topic: "DevOps", status: "locked", file: null },
-        { day: 107, title: "Lambda Patterns & Cold Starts",     duration: 90, topic: "DevOps", status: "locked", file: null, heavy: true },
-        { day: 108, title: "Docker Fundamentals",               duration: 60, topic: "DevOps", status: "locked", file: null },
-        { day: 109, title: "ECR, ECS & Fargate",                duration: 60, topic: "DevOps", status: "locked", file: null },
-        { day: 110, title: "Kubernetes Core Concepts",          duration: 90, topic: "DevOps", status: "locked", file: null, heavy: true },
-        { day: 111, title: "K8s Operations & Scaling",          duration: 90, topic: "DevOps", status: "locked", file: null, heavy: true },
-        { day: 112, title: "EKS on AWS",                        duration: 60, topic: "DevOps", status: "locked", file: null },
-        { day: "112a", title: "12-Factor App + Testing Strategy: Contract Tests & Chaos Engineering", duration: 90, topic: "DevOps", status: "locked", file: null, heavy: true,
-          note: "12-Factor principles applied to Spring Boot microservices; Pact for consumer-driven contract tests; TestContainers for integration tests; Chaos Monkey / Chaos Engineering principles; Netflix Chaos patterns; architect interview: how do you prevent regressions when 40 teams own 200 services?" },
+        { day: 103, title: "Lambda & Serverless Patterns",            topic: "DevOps", status: "locked", file: null },
+        { day: 104, title: "Docker Fundamentals",                     topic: "DevOps", status: "locked", file: null },
+        { day: 105, title: "ECR, ECS & Fargate",                     topic: "DevOps", status: "locked", file: null },
+        { day: 106, title: "Kubernetes: Core Concepts, Operations & Scaling", topic: "DevOps", status: "locked", file: null },
+        { day: 107, title: "EKS on AWS",                             topic: "DevOps", status: "locked", file: null },
+        { day: "107a", title: "12-Factor App + Testing Strategy: Contract Tests & Chaos Engineering", topic: "DevOps", status: "locked", file: null,
+          note: "12-Factor principles applied to Spring Boot microservices; Pact for consumer-driven contract tests; TestContainers for integration tests; Chaos Monkey / Chaos Engineering principles; Netflix Chaos patterns" },
       ]
     },
 
     {
       week: 17, phase: 4, title: "CI/CD & IaC",
       days: [
-        { day: 113, title: "CI/CD Pipeline Architecture",       duration: 60, topic: "DevOps", status: "locked", file: null },
-        { day: 114, title: "GitHub Actions & Jenkins",          duration: 60, topic: "DevOps", status: "locked", file: null },
-        { day: 115, title: "Terraform Fundamentals",            duration: 90, topic: "DevOps", status: "locked", file: null, heavy: true },
-        { day: 116, title: "Terraform Patterns & Modules",      duration: 60, topic: "DevOps", status: "locked", file: null },
-        { day: 117, title: "GitOps & ArgoCD",                   duration: 90, topic: "DevOps", status: "locked", file: null, heavy: true },
-        { day: 118, title: "Secrets Management",                duration: 60, topic: "DevOps", status: "locked", file: null },
-        { day: 119, title: "Full Pipeline Synthesis",           duration: 60, topic: "DevOps", status: "locked", file: null },
+        { day: 108, title: "CI/CD Pipeline Architecture",             topic: "DevOps", status: "locked", file: null },
+        { day: 109, title: "GitHub Actions & Jenkins",                topic: "DevOps", status: "locked", file: null },
+        { day: 110, title: "Terraform & IaC Patterns",               topic: "DevOps", status: "locked", file: null },
+        { day: 111, title: "GitOps & ArgoCD",                        topic: "DevOps", status: "locked", file: null },
+        { day: 112, title: "Secrets Management",                     topic: "DevOps", status: "locked", file: null },
+        { day: 113, title: "Full Pipeline Synthesis",                 topic: "DevOps", status: "locked", file: null },
       ]
     },
 
     {
       week: 18, phase: 4, title: "Observability & Reliability",
       days: [
-        { day: 120, title: "Metrics, Logs & Traces",            duration: 90, topic: "DevOps", status: "locked", file: null, heavy: true },
-        { day: 121, title: "CloudWatch & AWS Observability",    duration: 60, topic: "DevOps", status: "locked", file: null },
-        { day: 122, title: "SLI, SLO & SLA",                   duration: 60, topic: "DevOps", status: "locked", file: null },
-        { day: 123, title: "DR & Backup Strategies",            duration: 60, topic: "DevOps", status: "locked", file: null },
-        { day: 124, title: "Cost Optimization",                 duration: 90, topic: "DevOps", status: "locked", file: null, heavy: true },
-        { day: 125, title: "Security & Compliance",             duration: 60, topic: "DevOps", status: "locked", file: null },
-        { day: 126, title: "Production Architecture Capstone",  duration: 60, topic: "DevOps", status: "locked", file: null },
+        { day: 114, title: "Metrics, Logs & Traces",                  topic: "DevOps", status: "locked", file: null },
+        { day: 115, title: "CloudWatch & AWS Observability",          topic: "DevOps", status: "locked", file: null },
+        { day: 116, title: "SLI, SLO & SLA",                         topic: "DevOps", status: "locked", file: null },
+        { day: 117, title: "DR & Backup Strategies",                  topic: "DevOps", status: "locked", file: null },
+        { day: 118, title: "Cost Optimization",                       topic: "DevOps", status: "locked", file: null },
+        { day: 119, title: "Security & Compliance",                   topic: "DevOps", status: "locked", file: null },
+        { day: 120, title: "Production Architecture Capstone",        topic: "DevOps", status: "locked", file: null },
       ]
     },
 
@@ -356,26 +350,25 @@ const CURRICULUM = {
     {
       week: 19, phase: 5, title: "LLM Fundamentals & Java Frameworks",
       days: [
-        { day: 127, title: "LLM Basics & Architecture",         duration: 60, topic: "AI Integration", status: "locked", file: null },
-        { day: 128, title: "Prompt Engineering",                duration: 60, topic: "AI Integration", status: "locked", file: null },
-        { day: 129, title: "Spring AI",                         duration: 60, topic: "AI Integration", status: "locked", file: null },
-        { day: 130, title: "LangChain4j",                       duration: 90, topic: "AI Integration", status: "locked", file: null, heavy: true },
-        { day: 131, title: "Embeddings & Semantic Search",      duration: 90, topic: "AI Integration", status: "locked", file: null, heavy: true },
-        { day: 132, title: "Vector Databases",                  duration: 90, topic: "AI Integration", status: "locked", file: null, heavy: true },
-        { day: 133, title: "Q&A Bot Mini-Project",              duration: 60, topic: "AI Integration", status: "locked", file: null },
+        { day: 121, title: "LLM Basics & Architecture",               topic: "AI Integration", status: "locked", file: null },
+        { day: 122, title: "Prompt Engineering",                      topic: "AI Integration", status: "locked", file: null },
+        { day: 123, title: "Spring AI",                               topic: "AI Integration", status: "locked", file: null },
+        { day: 124, title: "LangChain4j",                             topic: "AI Integration", status: "locked", file: null },
+        { day: 125, title: "Embeddings & Semantic Search",            topic: "AI Integration", status: "locked", file: null },
+        { day: 126, title: "Vector Databases",                        topic: "AI Integration", status: "locked", file: null },
+        { day: 127, title: "Q&A Bot Mini-Project",                    topic: "AI Integration", status: "locked", file: null },
       ]
     },
 
     {
       week: 20, phase: 5, title: "Production AI",
       days: [
-        { day: 134, title: "RAG Architecture",                  duration: 60, topic: "AI Integration", status: "locked", file: null },
-        { day: 135, title: "RAG Pipeline Implementation",       duration: 90, topic: "AI Integration", status: "locked", file: null, heavy: true },
-        { day: 136, title: "Advanced RAG (Hybrid, Re-ranking)", duration: 90, topic: "AI Integration", status: "locked", file: null, heavy: true },
-        { day: 137, title: "LLM Tool Calling & Agents",         duration: 90, topic: "AI Integration", status: "locked", file: null, heavy: true },
-        { day: 138, title: "Production Concerns (Cost, Latency, Reliability)", duration: 60, topic: "AI Integration", status: "locked", file: null },
-        { day: 139, title: "LLM Observability & Evaluation",    duration: 60, topic: "AI Integration", status: "locked", file: null },
-        { day: 140, title: "Enterprise RAG System Design Capstone", duration: 90, topic: "AI Integration", status: "locked", file: null },
+        { day: 128, title: "RAG Architecture & Pipeline",             topic: "AI Integration", status: "locked", file: null },
+        { day: 129, title: "Advanced RAG (Hybrid, Re-ranking)",       topic: "AI Integration", status: "locked", file: null },
+        { day: 130, title: "LLM Tool Calling & Agents",               topic: "AI Integration", status: "locked", file: null },
+        { day: 131, title: "Production Concerns (Cost, Latency, Reliability)", topic: "AI Integration", status: "locked", file: null },
+        { day: 132, title: "LLM Observability & Evaluation",          topic: "AI Integration", status: "locked", file: null },
+        { day: 133, title: "Enterprise RAG System Design Capstone",   topic: "AI Integration", status: "locked", file: null },
       ]
     },
 
@@ -384,26 +377,26 @@ const CURRICULUM = {
     {
       week: 21, phase: 6, title: "Behavioral & Narrative",
       days: [
-        { day: 141, title: "Architect-Level Behavioral Framing", duration: 60, topic: "Interview Prep", status: "locked", file: null },
-        { day: 142, title: "STAR Deep-Dive",                     duration: 90, topic: "Interview Prep", status: "locked", file: null, heavy: true },
-        { day: 143, title: "12-Story Bank Construction",         duration: 90, topic: "Interview Prep", status: "locked", file: null, heavy: true },
-        { day: 144, title: "Conflict, Leadership & Influence",   duration: 60, topic: "Interview Prep", status: "locked", file: null },
-        { day: 145, title: "Failure & Ambiguity Practice",       duration: 60, topic: "Interview Prep", status: "locked", file: null },
-        { day: 146, title: "Salary Negotiation",                 duration: 90, topic: "Interview Prep", status: "locked", file: null, heavy: true },
-        { day: 147, title: "Resume & LinkedIn Refresh",          duration: 60, topic: "Interview Prep", status: "locked", file: null },
+        { day: 134, title: "Architect-Level Behavioral Framing",      topic: "Interview Prep", status: "locked", file: null },
+        { day: 135, title: "STAR Deep-Dive",                          topic: "Interview Prep", status: "locked", file: null },
+        { day: 136, title: "12-Story Bank Construction",              topic: "Interview Prep", status: "locked", file: null },
+        { day: 137, title: "Conflict, Leadership & Influence",        topic: "Interview Prep", status: "locked", file: null },
+        { day: 138, title: "Failure & Ambiguity Practice",            topic: "Interview Prep", status: "locked", file: null },
+        { day: 139, title: "Salary Negotiation",                      topic: "Interview Prep", status: "locked", file: null },
+        { day: 140, title: "Resume & LinkedIn Refresh",               topic: "Interview Prep", status: "locked", file: null },
       ]
     },
 
     {
       week: 22, phase: 6, title: "Full Mock Loops",
       days: [
-        { day: 148, title: "Mock Interview: Coding",             duration: 90,  topic: "Interview Prep", status: "locked", file: null },
-        { day: 149, title: "Mock Interview: LLD",                duration: 90,  topic: "Interview Prep", status: "locked", file: null },
-        { day: 150, title: "Mock Interview: HLD",                duration: 90,  topic: "Interview Prep", status: "locked", file: null },
-        { day: 151, title: "Mock Interview: Behavioral",         duration: 90,  topic: "Interview Prep", status: "locked", file: null },
-        { day: 152, title: "Full Loop Day 1 (Coding + LLD)",     duration: 120, topic: "Interview Prep", status: "locked", file: null },
-        { day: 153, title: "Full Loop Day 2 (HLD + Behavioral)", duration: 120, topic: "Interview Prep", status: "locked", file: null },
-        { day: 154, title: "Retrospective & Curriculum Completion", duration: 60, topic: "Interview Prep", status: "locked", file: null },
+        { day: 141, title: "Mock Interview: Coding",                  topic: "Interview Prep", status: "locked", file: null },
+        { day: 142, title: "Mock Interview: LLD",                     topic: "Interview Prep", status: "locked", file: null },
+        { day: 143, title: "Mock Interview: HLD",                     topic: "Interview Prep", status: "locked", file: null },
+        { day: 144, title: "Mock Interview: Behavioral",              topic: "Interview Prep", status: "locked", file: null },
+        { day: 145, title: "Full Loop Day 1 (Coding + LLD)",          topic: "Interview Prep", status: "locked", file: null },
+        { day: 146, title: "Full Loop Day 2 (HLD + Behavioral)",      topic: "Interview Prep", status: "locked", file: null },
+        { day: 147, title: "Retrospective & Curriculum Completion",   topic: "Interview Prep", status: "locked", file: null },
       ]
     },
   ]
@@ -412,4 +405,4 @@ const CURRICULUM = {
 /* Flat lookup helpers used by app.js */
 CURRICULUM.allDays = CURRICULUM.weeks.flatMap(w => w.days.map(d => ({ ...d, weekNum: w.week, weekTitle: w.title, phaseId: w.phase })));
 CURRICULUM.dayMap  = Object.fromEntries(CURRICULUM.allDays.map(d => [`${d.weekNum}-${d.day}`, d]));
-CURRICULUM.total   = CURRICULUM.allDays.length; // 162 (154 original + 8 new: 21a, 21b, 69a, 77a, 82a, 85a, 89a, 112a)
+CURRICULUM.total   = CURRICULUM.allDays.length; // 155
