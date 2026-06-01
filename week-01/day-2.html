@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Week 1 · Day 2 — Static, Instance &amp; Metaspace</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,800&family=JetBrains+Mono:wght@400;500;700&family=Inter+Tight:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/styles.css">
+<style>
+  body {
+    background-image:
+      radial-gradient(ellipse 800px 600px at 20% 0%, rgba(255,122,61,0.06), transparent 60%),
+      radial-gradient(ellipse 600px 400px at 90% 100%, rgba(177,138,224,0.05), transparent 60%);
+  }
+</style>
+</head>
+<body>
+<div class="grain"></div>
+
+<div class="container">
+
+  <header class="lesson-header">
+    <a href="../index.html" class="back-link">← Back to curriculum</a>
+    <div class="meta">
+      <span class="dot"></span>
+      <span class="phase">Phase 1 &middot; Advanced Java</span>
+      <span>&middot;</span>
+      <span>Week 1 / Day 2</span>
+    </div>
+    <h1>
+      Static, Instance &amp; Metaspace
+      <span class="sub">The third memory region, and a full code challenge that uses all three.</span>
+    </h1>
+    <div class="scope"><strong>SCOPE</strong> &middot; 60 min &middot; 4 stages + final challenge</div>
+  </header>
+
+  <div class="recap">
+    <span class="recap-tag">RECAP FROM DAY 1</span>
+    <p>You already know: <strong>local primitives live on the stack</strong>, <strong>references live on the stack</strong>, <strong>objects live on the heap</strong>. Today we extend that with two new wrinkles: <code>static</code> fields (which break the rules) and instance fields (which follow them).</p>
+  </div>
+
+  <!-- STAGE 1 -->
+  <div class="stage">
+    <span class="stage-tag">STAGE 1 <span class="time">12 MIN</span></span>
+    <h2>Instance fields live where their object lives</h2>
+
+    <p>On Day 1, you saw that the variable <code>order</code> sits on the stack while the <code>Order</code> object sits on the heap. But what about the <em>fields inside</em> that object &mdash; like <code>total</code> and <code>id</code>?</p>
+
+    <p>This is where instinct can mislead you. People see <code>int total</code> and think &ldquo;int = primitive = stack.&rdquo; That rule only applies to <strong>locals inside a method</strong>. Fields are a different category entirely.</p>
+
+    <div class="key-rule">
+      <p><strong>Instance fields are <em>part of</em> the object that owns them.</strong></p>
+      <p>If the object lives on the heap (which all objects do), then every field declared inside that object &mdash; primitive or reference &mdash; lives on the heap too. The field is physically embedded in the object&rsquo;s memory layout.</p>
+    </div>
+
+    <h4>See it laid out in memory</h4>
+
+<pre><code><span class="kw">class</span> <span class="typ">User</span> {
+    <span class="kw">int</span> age;              <span class="cmt">// instance field, primitive</span>
+    <span class="typ">String</span> name;          <span class="cmt">// instance field, reference</span>
+}
+
+<span class="cmt">// Somewhere in a method:</span>
+<span class="typ">User</span> u = <span class="kw">new</span> <span class="typ">User</span>();
+u.age = <span class="num-lit">30</span>;
+u.name = <span class="str">"Ana"</span>;</code></pre>
+
+    <div class="diagram-svg">
+      <svg viewBox="0 0 760 260" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Instance fields embedded in heap object">
+        <defs>
+          <marker id="arrA" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="#ff7a3d"/>
+          </marker>
+        </defs>
+        <text x="140" y="30" fill="#7ab8e8" font-family="JetBrains Mono, monospace" font-size="11" font-weight="700" text-anchor="middle" letter-spacing="2">STACK</text>
+        <rect x="50" y="60" width="180" height="80" rx="6" fill="#13192a" stroke="#7ab8e8" stroke-opacity="0.5"/>
+        <rect x="68" y="85" width="140" height="36" rx="4" fill="#0f1115" stroke="#252a37"/>
+        <text x="80" y="108" fill="#e8e6e1" font-family="JetBrains Mono, monospace" font-size="12">u</text>
+        <circle cx="198" cy="103" r="4" fill="#ff7a3d"/>
+        <text x="140" y="165" fill="#5e6473" font-family="Inter Tight, sans-serif" font-size="11" font-style="italic" text-anchor="middle">One reference,</text>
+        <text x="140" y="182" fill="#5e6473" font-family="Inter Tight, sans-serif" font-size="11" font-style="italic" text-anchor="middle">8 bytes</text>
+        <path d="M 203 103 L 380 103" fill="none" stroke="#ff7a3d" stroke-width="2" marker-end="url(#arrA)"/>
+        <text x="540" y="30" fill="#ff7a3d" font-family="JetBrains Mono, monospace" font-size="11" font-weight="700" text-anchor="middle" letter-spacing="2">HEAP</text>
+        <rect x="390" y="60" width="320" height="160" rx="6" fill="#1a1612" stroke="#ff7a3d" stroke-opacity="0.5"/>
+        <rect x="410" y="80" width="280" height="120" rx="4" fill="#0f1115" stroke="#ff7a3d" stroke-opacity="0.5"/>
+        <text x="425" y="103" fill="#ffb38a" font-family="JetBrains Mono, monospace" font-size="13" font-weight="500">User object</text>
+        <rect x="425" y="118" width="250" height="32" rx="3" fill="#1c2030" stroke="#252a37"/>
+        <text x="438" y="138" fill="#e8c87a" font-family="JetBrains Mono, monospace" font-size="11">age = 30</text>
+        <text x="660" y="138" fill="#5e6473" font-family="Inter Tight, sans-serif" font-size="10" font-style="italic" text-anchor="end">primitive, inline</text>
+        <rect x="425" y="155" width="250" height="32" rx="3" fill="#1c2030" stroke="#252a37"/>
+        <text x="438" y="175" fill="#e8c87a" font-family="JetBrains Mono, monospace" font-size="11">name &rarr;</text>
+        <circle cx="595" cy="171" r="3" fill="#6ed3a8"/>
+        <text x="660" y="175" fill="#5e6473" font-family="Inter Tight, sans-serif" font-size="10" font-style="italic" text-anchor="end">reference to "Ana"</text>
+        <text x="550" y="245" fill="#5e6473" font-family="Inter Tight, sans-serif" font-size="11" font-style="italic" text-anchor="middle">Both fields physically embedded inside the User object on the heap</text>
+      </svg>
+    </div>
+
+    <p>Notice what&rsquo;s happening:</p>
+    <ul>
+      <li>The <code>age = 30</code> primitive is stored <strong>directly</strong> inside the <code>User</code> object&rsquo;s memory.</li>
+      <li>The <code>name</code> field is a <strong>reference</strong> (still 8 bytes), embedded inside the object, that points to <em>another</em> heap object &mdash; the <code>String "Ana"</code>.</li>
+    </ul>
+
+    <p>So even a single <code>User u = new User()</code> can already produce <strong>two heap objects</strong>: the User itself, plus the String it references. This is why heap allocation patterns matter for performance &mdash; one line of code can mean multiple allocations.</p>
+
+    <div class="check">
+      <span class="check-tag">QUICK CHECK</span>
+      <p>If you have <code>class Box { int size; Box inner; }</code> and write <code>Box b = new Box(); b.inner = new Box();</code>, how many objects are on the heap? Where does the field <code>size</code> of the outer box live?</p>
+    </div>
+  </div>
+
+  <!-- STAGE 2 -->
+  <div class="stage">
+    <span class="stage-tag">STAGE 2 <span class="time">15 MIN</span></span>
+    <h2>Static fields &mdash; the rule-breakers</h2>
+
+    <p>So far the rules have been clean: locals on stack, objects on heap, fields with their object. Now we hit an exception.</p>
+
+    <p><strong>Static fields don&rsquo;t belong to any object.</strong> They belong to the <em>class itself</em>. There&rsquo;s only ever one copy, shared across the entire JVM, regardless of how many instances of the class exist.</p>
+
+<pre><code><span class="kw">class</span> <span class="typ">Counter</span> {
+    <span class="kw">static int</span> totalCount = <span class="num-lit">0</span>;   <span class="cmt">// belongs to the CLASS</span>
+    <span class="kw">int</span> instanceCount = <span class="num-lit">0</span>;        <span class="cmt">// belongs to each OBJECT</span>
+}
+
+<span class="typ">Counter</span> a = <span class="kw">new</span> <span class="typ">Counter</span>();
+<span class="typ">Counter</span> b = <span class="kw">new</span> <span class="typ">Counter</span>();
+<span class="cmt">// Two Counter objects exist. Each has its own instanceCount.</span>
+<span class="cmt">// But there is only ONE totalCount, shared by both.</span></code></pre>
+
+    <p>If static fields don&rsquo;t belong to an object, where do they live? Not on the heap (no object to live in). Not on the stack (they outlive every method). They live in a <strong>third region: Metaspace.</strong></p>
+
+    <h4>Meet Metaspace</h4>
+
+    <p>Metaspace is where the JVM stores everything about <em>classes themselves</em>:</p>
+    <ul>
+      <li>The class&rsquo;s structure &mdash; field names, types, method signatures</li>
+      <li>The bytecode for every method</li>
+      <li><strong>Static fields</strong> &mdash; both primitive values and object references</li>
+      <li>The <code>Class&lt;?&gt;</code> object that represents the class itself (for reflection)</li>
+    </ul>
+
+    <p>It&rsquo;s loaded once when a class is first used (called &ldquo;class loading&rdquo;) and typically lives for the entire lifetime of the JVM. Unlike the heap, it&rsquo;s not garbage-collected on a regular basis &mdash; classes only get unloaded under specific conditions.</p>
+
+    <div class="diagram-svg">
+      <svg viewBox="0 0 760 320" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Three memory regions with Counter example">
+        <text x="120" y="30" fill="#7ab8e8" font-family="JetBrains Mono, monospace" font-size="11" font-weight="700" text-anchor="middle" letter-spacing="2">STACK</text>
+        <text x="380" y="30" fill="#ff7a3d" font-family="JetBrains Mono, monospace" font-size="11" font-weight="700" text-anchor="middle" letter-spacing="2">HEAP</text>
+        <text x="640" y="30" fill="#b18ae0" font-family="JetBrains Mono, monospace" font-size="11" font-weight="700" text-anchor="middle" letter-spacing="2">METASPACE</text>
+        <rect x="40" y="55" width="160" height="220" rx="6" fill="#13192a" stroke="#7ab8e8" stroke-opacity="0.5"/>
+        <rect x="55" y="80" width="130" height="32" rx="3" fill="#0f1115" stroke="#252a37"/>
+        <text x="65" y="100" fill="#e8e6e1" font-family="JetBrains Mono, monospace" font-size="11">a</text>
+        <circle cx="175" cy="96" r="3" fill="#ff7a3d"/>
+        <rect x="55" y="120" width="130" height="32" rx="3" fill="#0f1115" stroke="#252a37"/>
+        <text x="65" y="140" fill="#e8e6e1" font-family="JetBrains Mono, monospace" font-size="11">b</text>
+        <circle cx="175" cy="136" r="3" fill="#ff7a3d"/>
+        <rect x="240" y="55" width="280" height="220" rx="6" fill="#1a1612" stroke="#ff7a3d" stroke-opacity="0.5"/>
+        <rect x="260" y="75" width="240" height="80" rx="4" fill="#0f1115" stroke="#ff7a3d" stroke-opacity="0.5"/>
+        <text x="275" y="98" fill="#ffb38a" font-family="JetBrains Mono, monospace" font-size="12">Counter #1</text>
+        <text x="275" y="120" fill="#e8c87a" font-family="JetBrains Mono, monospace" font-size="11">instanceCount = 0</text>
+        <text x="275" y="140" fill="#5e6473" font-family="JetBrains Mono, monospace" font-size="10" font-style="italic">(no totalCount here)</text>
+        <rect x="260" y="170" width="240" height="80" rx="4" fill="#0f1115" stroke="#ff7a3d" stroke-opacity="0.5"/>
+        <text x="275" y="193" fill="#ffb38a" font-family="JetBrains Mono, monospace" font-size="12">Counter #2</text>
+        <text x="275" y="215" fill="#e8c87a" font-family="JetBrains Mono, monospace" font-size="11">instanceCount = 0</text>
+        <text x="275" y="235" fill="#5e6473" font-family="JetBrains Mono, monospace" font-size="10" font-style="italic">(no totalCount here)</text>
+        <rect x="560" y="55" width="170" height="220" rx="6" fill="#1a1419" stroke="#b18ae0" stroke-opacity="0.45"/>
+        <rect x="575" y="80" width="140" height="60" rx="4" fill="#0f1115" stroke="#b18ae0" stroke-opacity="0.4"/>
+        <text x="585" y="100" fill="#b18ae0" font-family="JetBrains Mono, monospace" font-size="11">class Counter</text>
+        <text x="585" y="118" fill="#9aa0ad" font-family="JetBrains Mono, monospace" font-size="10">(bytecode, struct)</text>
+        <text x="585" y="132" fill="#9aa0ad" font-family="JetBrains Mono, monospace" font-size="10">(method table)</text>
+        <rect x="575" y="155" width="140" height="44" rx="4" fill="#0f1115" stroke="#b18ae0" stroke-opacity="0.6"/>
+        <text x="585" y="175" fill="#e8c87a" font-family="JetBrains Mono, monospace" font-size="11">totalCount = 0</text>
+        <text x="585" y="190" fill="#5e6473" font-family="JetBrains Mono, monospace" font-size="9" font-style="italic">ONE copy, shared</text>
+        <text x="640" y="245" fill="#5e6473" font-family="Inter Tight, sans-serif" font-size="11" font-style="italic" text-anchor="middle">Loaded once, lives</text>
+        <text x="640" y="260" fill="#5e6473" font-family="Inter Tight, sans-serif" font-size="11" font-style="italic" text-anchor="middle">with the JVM</text>
+      </svg>
+    </div>
+
+    <div class="key-rule">
+      <p><strong>Static = class-level. Instance = object-level.</strong></p>
+      <p>Static fields go to Metaspace (one copy per class). Instance fields go to the heap (one copy per object). This holds whether the field is a primitive or a reference.</p>
+    </div>
+
+    <h4>One catch &mdash; a static reference to an object</h4>
+
+    <p>What if a static field holds a reference to a <code>String</code> or <code>List</code>? The <em>reference itself</em> is in Metaspace. The <em>object it points to</em> is still on the heap. Same split as before &mdash; reference and object live in different places.</p>
+
+<pre><code><span class="kw">class</span> <span class="typ">Cache</span> {
+    <span class="kw">static</span> <span class="typ">List</span>&lt;<span class="typ">String</span>&gt; entries = <span class="kw">new</span> <span class="typ">ArrayList</span>&lt;&gt;();
+}
+<span class="cmt">// 'entries' reference: METASPACE</span>
+<span class="cmt">// the ArrayList object it points to: HEAP</span></code></pre>
+
+    <p>This is why a static <code>HashMap</code> that you forget to clear is a classic memory leak source. The reference in Metaspace keeps the heap object alive forever &mdash; and everything that object references &mdash; and the GC can never reclaim any of it.</p>
+
+    <div class="check">
+      <span class="check-tag">QUICK CHECK</span>
+      <p>If a class has <code>static String GREETING = "hello"</code>, where does the <code>GREETING</code> reference live? Where does the <code>String</code> object <code>"hello"</code> live? (Two different answers.)</p>
+    </div>
+  </div>
+
+  <!-- STAGE 3 -->
+  <div class="stage">
+    <span class="stage-tag">STAGE 3 <span class="time">8 MIN</span></span>
+    <h2>The unified decision tree</h2>
+
+    <p>You now have all three regions. Here&rsquo;s the decision tree that covers every case you&rsquo;ll see &mdash; commit it to memory:</p>
+
+    <table class="compare">
+      <thead>
+        <tr><th>What you have</th><th>Where it lives</th><th>Why</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Local primitive inside a method</td>
+          <td>STACK</td>
+          <td>Lives in the method&rsquo;s frame; dies when method returns</td>
+        </tr>
+        <tr>
+          <td>Local reference inside a method</td>
+          <td>STACK</td>
+          <td>The reference itself; the object it points to is elsewhere</td>
+        </tr>
+        <tr>
+          <td>Object created with <code>new</code></td>
+          <td>HEAP</td>
+          <td>Always. No exceptions in standard Java.</td>
+        </tr>
+        <tr>
+          <td>Instance field (primitive or reference)</td>
+          <td>HEAP</td>
+          <td>Embedded inside the owning object on the heap</td>
+        </tr>
+        <tr>
+          <td>Static field (primitive or reference)</td>
+          <td>METASPACE</td>
+          <td>Belongs to the class, not an instance</td>
+        </tr>
+        <tr>
+          <td>Class definition (bytecode, methods)</td>
+          <td>METASPACE</td>
+          <td>Loaded once per JVM by the classloader</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p>If you can run code through this table line by line, you have the JVM memory model. Everything else this week &mdash; GC, escape analysis, virtual threads &mdash; is just consequences of these rules.</p>
+  </div>
+
+  <!-- STAGE 4 — Full 7-row interactive challenge -->
+  <div class="stage">
+    <span class="stage-tag">STAGE 4 <span class="time">25 MIN</span></span>
+    <h2>The full challenge</h2>
+
+    <p>Time to apply everything. Run this code through the decision tree from Stage 3:</p>
+
+<pre><code><span class="kw">public class</span> <span class="typ">OrderProcessor</span> {
+    <span class="kw">private static int</span> counter = <span class="num-lit">0</span>;            <span class="line-label">// A</span>
+    <span class="kw">private</span> <span class="typ">String</span> region;                        <span class="line-label">// B</span>
+
+    <span class="kw">public</span> <span class="typ">Order</span> process(<span class="kw">int</span> quantity) {           <span class="line-label">// C</span>
+        <span class="kw">int</span> total = quantity * <span class="num-lit">10</span>;               <span class="line-label">// D</span>
+        <span class="typ">Order</span> order = <span class="kw">new</span> <span class="typ">Order</span>(total);            <span class="line-label">// E</span>
+        <span class="kw">return</span> order;                              <span class="line-label">// F</span>
+    }
+}</code></pre>
+
+    <p style="color:var(--ink-dim); font-size:14px;">There&rsquo;s a small twist in line <strong>B</strong>. Be careful with it.</p>
+
+    <!-- ── INTERACTIVE CHALLENGE ─────────────────────────── -->
+    <div class="challenge-form" id="challenge-1-2">
+      <span class="challenge-tag">INTERACTIVE CHALLENGE · 7 ROWS</span>
+      <h3>Where does each piece of data live?</h3>
+      <p>Use STACK, HEAP, or METASPACE for each labeled line.</p>
+
+      <div class="form-rows">
+        <!-- A -->
+        <div class="form-row">
+          <label class="form-label"><strong>A</strong> — <code>counter = 0</code> (static field)</label>
+          <select class="select-answer" name="A">
+            <option value="">— choose —</option>
+            <option value="STACK">STACK</option>
+            <option value="HEAP">HEAP</option>
+            <option value="METASPACE">METASPACE</option>
+          </select>
+          <span class="result-icon" id="r-1-2-A"></span>
+          <p class="hint-text" id="h-1-2-A"></p>
+          <p class="explanation-text" id="e-1-2-A">Static fields belong to the <em>class</em>, not any object. The class lives in Metaspace.</p>
+        </div>
+        <!-- B -->
+        <div class="form-row">
+          <label class="form-label"><strong>B</strong> — <code>region</code> (instance field — the twist is it's a String type)</label>
+          <select class="select-answer" name="B">
+            <option value="">— choose —</option>
+            <option value="STACK">STACK</option>
+            <option value="HEAP">HEAP</option>
+            <option value="METASPACE">METASPACE</option>
+          </select>
+          <span class="result-icon" id="r-1-2-B"></span>
+          <p class="hint-text" id="h-1-2-B"></p>
+          <p class="explanation-text" id="e-1-2-B">Instance fields are embedded inside their owning object. The <code>OrderProcessor</code> object lives on the heap, so <code>region</code> lives there too — even though it's a String type. Don't be fooled by the type; look at whether it's a field or a local.</p>
+        </div>
+        <!-- C -->
+        <div class="form-row">
+          <label class="form-label"><strong>C</strong> — <code>quantity</code> (the method parameter)</label>
+          <select class="select-answer" name="C">
+            <option value="">— choose —</option>
+            <option value="STACK">STACK</option>
+            <option value="HEAP">HEAP</option>
+            <option value="METASPACE">METASPACE</option>
+          </select>
+          <span class="result-icon" id="r-1-2-C"></span>
+          <p class="hint-text" id="h-1-2-C"></p>
+          <p class="explanation-text" id="e-1-2-C">Method parameters live in the current stack frame, same as local variables. They're gone when the method returns.</p>
+        </div>
+        <!-- D -->
+        <div class="form-row">
+          <label class="form-label"><strong>D</strong> — <code>total</code> (local primitive)</label>
+          <select class="select-answer" name="D">
+            <option value="">— choose —</option>
+            <option value="STACK">STACK</option>
+            <option value="HEAP">HEAP</option>
+            <option value="METASPACE">METASPACE</option>
+          </select>
+          <span class="result-icon" id="r-1-2-D"></span>
+          <p class="hint-text" id="h-1-2-D"></p>
+          <p class="explanation-text" id="e-1-2-D">Local primitive variables live in the stack frame of the method that declares them. Popped and gone on return.</p>
+        </div>
+        <!-- E1 -->
+        <div class="form-row">
+          <label class="form-label"><strong>E1</strong> — <code>order</code> (the reference variable)</label>
+          <select class="select-answer" name="E1">
+            <option value="">— choose —</option>
+            <option value="STACK">STACK</option>
+            <option value="HEAP">HEAP</option>
+            <option value="METASPACE">METASPACE</option>
+          </select>
+          <span class="result-icon" id="r-1-2-E1"></span>
+          <p class="hint-text" id="h-1-2-E1"></p>
+          <p class="explanation-text" id="e-1-2-E1">The reference <code>order</code> is a local variable — 8 bytes in the current stack frame pointing at the heap object.</p>
+        </div>
+        <!-- E2 -->
+        <div class="form-row">
+          <label class="form-label"><strong>E2</strong> — the <code>Order</code> object itself (result of <code>new Order(total)</code>)</label>
+          <select class="select-answer" name="E2">
+            <option value="">— choose —</option>
+            <option value="STACK">STACK</option>
+            <option value="HEAP">HEAP</option>
+            <option value="METASPACE">METASPACE</option>
+          </select>
+          <span class="result-icon" id="r-1-2-E2"></span>
+          <p class="hint-text" id="h-1-2-E2"></p>
+          <p class="explanation-text" id="e-1-2-E2"><code>new Order(total)</code> allocates an object. All objects go to the heap — always.</p>
+        </div>
+        <!-- F -->
+        <div class="form-row">
+          <label class="form-label"><strong>F</strong> — where does the <code>Order</code> object live after <code>return</code>?</label>
+          <select class="select-answer" name="F">
+            <option value="">— choose —</option>
+            <option value="STACK">STACK</option>
+            <option value="HEAP">HEAP</option>
+            <option value="METASPACE">METASPACE</option>
+          </select>
+          <span class="result-icon" id="r-1-2-F"></span>
+          <p class="hint-text" id="h-1-2-F"></p>
+          <p class="explanation-text" id="e-1-2-F">The <em>reference</em> on the stack is gone, but the heap object survives — it's now held by the caller's reference. It will be GC'd only when no more references point to it.</p>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button class="btn-check" onclick="validateChallenge('1-2')">Check My Answers</button>
+        <button class="btn-show-answers" id="show-btn-1-2" onclick="showAnswers('1-2')" style="display:none">Show Answers</button>
+      </div>
+
+      <div class="score-display" id="score-1-2"></div>
+
+      <div class="unlock-banner" id="unlock-1-2">
+        <strong style="color:var(--green)">✅ Day 2 complete!</strong> Day 3 is now unlocked &mdash;
+        <a href="day-3.html">Garbage Collection Fundamentals →</a>
+      </div>
+    </div>
+
+    <p style="margin-top: 30px; color: var(--ink-faint); font-size: 14px; font-style: italic; text-align: center;">Nail this and you&rsquo;ve fully internalized the JVM memory model. Day 3 unlocks: Garbage Collection Fundamentals (1 hr). Day 4 (3 hr, holiday mode): GC algorithms, tuning, and profiling.</p>
+  </div>
+
+  <footer>
+    DAY 2 OF 154 &middot; STATIC, INSTANCE, METASPACE &middot; PHASE 1 / 6
+  </footer>
+
+</div>
+
+<script src="../data/curriculum.js"></script>
+<script src="../assets/app.js"></script>
+</body>
+</html>

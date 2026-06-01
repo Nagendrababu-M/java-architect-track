@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Week 1 · Day 1 — JVM Memory Model (Stack vs Heap)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,800&family=JetBrains+Mono:wght@400;500;700&family=Inter+Tight:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body>
+<div class="grain"></div>
+
+<div class="container">
+
+  <header class="lesson-header">
+    <a href="../index.html" class="back-link">← Back to curriculum</a>
+    <div class="meta">
+      <span class="dot"></span>
+      <span class="phase">Phase 1 · Advanced Java</span>
+      <span>·</span>
+      <span>Week 1 / Day 1</span>
+    </div>
+    <h1>
+      The JVM Memory Model
+      <span class="sub">Part 1 of 2 — Stack vs. Heap, built from first principles.</span>
+    </h1>
+    <div class="scope"><strong>SCOPE</strong> &middot; 60 min &middot; 5 stages, pause after each</div>
+  </header>
+
+  <!-- STAGE 1 -->
+  <div class="stage">
+    <span class="stage-tag">STAGE 1 <span class="time">8 MIN</span></span>
+    <h2>What does &ldquo;JVM memory&rdquo; actually mean?</h2>
+
+    <p>When you run <code>java MyApp</code>, the operating system gives your JVM process a chunk of RAM. The JVM doesn&rsquo;t treat this RAM as one big blob &mdash; it deliberately divides it into <strong>regions</strong>, each with a different job.</p>
+
+    <p>Why divide it? Because different kinds of data have different lifetimes and access patterns. A method call ends in microseconds. An object you store in a cache might live for hours. Treating them the same would be wasteful and slow.</p>
+
+    <h4>The regions, at the highest level</h4>
+
+    <div class="diagram-svg">
+      <svg viewBox="0 0 760 280" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="JVM memory divided into regions">
+        <defs>
+          <linearGradient id="processGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#1a1d28"/>
+            <stop offset="100%" stop-color="#13151c"/>
+          </linearGradient>
+        </defs>
+        <rect x="20" y="30" width="720" height="230" rx="10" fill="url(#processGrad)" stroke="#252a37" stroke-width="1.5"/>
+        <text x="40" y="55" fill="#9aa0ad" font-family="JetBrains Mono, monospace" font-size="11" letter-spacing="2">JVM PROCESS · RAM</text>
+        <rect x="50" y="80" width="280" height="150" rx="6" fill="#1a1612" stroke="#ff7a3d" stroke-opacity="0.5"/>
+        <text x="190" y="110" fill="#ff7a3d" font-family="JetBrains Mono, monospace" font-size="13" font-weight="700" text-anchor="middle" letter-spacing="2">HEAP</text>
+        <text x="190" y="135" fill="#e8e6e1" font-family="Inter Tight, sans-serif" font-size="13" text-anchor="middle">All objects live here</text>
+        <text x="190" y="160" fill="#9aa0ad" font-family="Inter Tight, sans-serif" font-size="12" text-anchor="middle" font-style="italic">Shared by all threads</text>
+        <text x="190" y="200" fill="#5e6473" font-family="Inter Tight, sans-serif" font-size="11" text-anchor="middle">Large · Slow · GC-managed</text>
+        <rect x="350" y="80" width="170" height="150" rx="6" fill="#13192a" stroke="#7ab8e8" stroke-opacity="0.5"/>
+        <text x="435" y="110" fill="#7ab8e8" font-family="JetBrains Mono, monospace" font-size="13" font-weight="700" text-anchor="middle" letter-spacing="2">STACKS</text>
+        <text x="435" y="135" fill="#e8e6e1" font-family="Inter Tight, sans-serif" font-size="13" text-anchor="middle">Method frames</text>
+        <text x="435" y="160" fill="#9aa0ad" font-family="Inter Tight, sans-serif" font-size="12" text-anchor="middle" font-style="italic">One per thread</text>
+        <text x="435" y="200" fill="#5e6473" font-family="Inter Tight, sans-serif" font-size="11" text-anchor="middle">Small · Fast · Auto-cleaned</text>
+        <rect x="540" y="80" width="180" height="150" rx="6" fill="#1a1419" stroke="#e87a7a" stroke-opacity="0.4"/>
+        <text x="630" y="110" fill="#e87a7a" font-family="JetBrains Mono, monospace" font-size="13" font-weight="700" text-anchor="middle" letter-spacing="2">METASPACE</text>
+        <text x="630" y="135" fill="#e8e6e1" font-family="Inter Tight, sans-serif" font-size="13" text-anchor="middle">Class metadata</text>
+        <text x="630" y="160" fill="#9aa0ad" font-family="Inter Tight, sans-serif" font-size="12" text-anchor="middle" font-style="italic">Static fields too</text>
+        <text x="630" y="200" fill="#5e6473" font-family="Inter Tight, sans-serif" font-size="11" text-anchor="middle">Loaded once, lives forever</text>
+      </svg>
+    </div>
+    <p class="diagram-caption">There are a few more regions (PC registers, native method stack) but these three carry 95% of the architect-level conversation.</p>
+
+    <p>Today, we focus on the first two: <strong>heap</strong> and <strong>stack</strong>. Metaspace gets its own day later this week.</p>
+
+    <div class="check">
+      <span class="check-tag">QUICK CHECK &middot; No reply needed, just confirm to yourself</span>
+      <p>Before continuing: can you say out loud, in one sentence each, what &ldquo;heap&rdquo; and &ldquo;stack&rdquo; mean? If not, re-read above. If yes, scroll on.</p>
+    </div>
+  </div>
+
+  <!-- STAGE 2 -->
+  <div class="stage">
+    <span class="stage-tag">STAGE 2 <span class="time">12 MIN</span></span>
+    <h2>The Stack: a stack of plates, one per thread</h2>
+
+    <p>The name isn&rsquo;t metaphorical &mdash; it really is a stack data structure (LIFO). Every time a method gets called, the JVM pushes a new <strong>frame</strong> onto the stack. When the method returns, that frame is popped off and discarded.</p>
+
+    <div class="analogy">
+      <p>Picture a stack of dinner plates. Each plate is a method call. The top plate is the method currently running. When that method calls another method, a new plate gets stacked on top. When a method finishes, its plate is removed from the top. The bottom plate (<code>main()</code>) stays until the program ends.</p>
+    </div>
+
+    <h4>What&rsquo;s on each plate (frame)?</h4>
+    <ul>
+      <li><strong>Local variables</strong> declared inside that method</li>
+      <li><strong>Method parameters</strong> passed in</li>
+      <li><strong>The return address</strong> &mdash; where to go back to when this method finishes</li>
+    </ul>
+
+    <h4>Watch a stack grow and shrink</h4>
+
+<pre><code><span class="kw">public void</span> a() {
+    <span class="kw">int</span> x = <span class="num-lit">10</span>;
+    b();              <span class="cmt">// pushes b's frame on top of a's</span>
+}
+
+<span class="kw">public void</span> b() {
+    <span class="kw">int</span> y = <span class="num-lit">20</span>;
+    c();              <span class="cmt">// pushes c's frame on top of b's</span>
+}
+
+<span class="kw">public void</span> c() {
+    <span class="kw">int</span> z = <span class="num-lit">30</span>;
+    <span class="cmt">// at this exact moment, stack has 3 frames: a, b, c</span>
+}</code></pre>
+
+    <div class="diagram-svg">
+      <svg viewBox="0 0 760 260" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Stack growing through three method calls">
+        <text x="120" y="30" fill="#9aa0ad" font-family="JetBrains Mono, monospace" font-size="11" text-anchor="middle" letter-spacing="2">CALL a()</text>
+        <text x="380" y="30" fill="#9aa0ad" font-family="JetBrains Mono, monospace" font-size="11" text-anchor="middle" letter-spacing="2">a() CALLS b()</text>
+        <text x="640" y="30" fill="#9aa0ad" font-family="JetBrains Mono, monospace" font-size="11" text-anchor="middle" letter-spacing="2">b() CALLS c()</text>
+        <rect x="50" y="160" width="140" height="50" rx="4" fill="#0f1115" stroke="#7ab8e8" stroke-opacity="0.6"/>
+        <text x="120" y="183" fill="#e8e6e1" font-family="JetBrains Mono, monospace" font-size="12" text-anchor="middle">a()</text>
+        <text x="120" y="199" fill="#9aa0ad" font-family="JetBrains Mono, monospace" font-size="11" text-anchor="middle">x = 10</text>
+        <text x="120" y="240" fill="#5e6473" font-family="Inter Tight, sans-serif" font-size="11" text-anchor="middle" font-style="italic">1 frame</text>
+        <rect x="310" y="100" width="140" height="50" rx="4" fill="#0f1115" stroke="#7ab8e8" stroke-opacity="0.6"/>
+        <text x="380" y="123" fill="#e8e6e1" font-family="JetBrains Mono, monospace" font-size="12" text-anchor="middle">b()</text>
+        <text x="380" y="139" fill="#9aa0ad" font-family="JetBrains Mono, monospace" font-size="11" text-anchor="middle">y = 20</text>
+        <rect x="310" y="160" width="140" height="50" rx="4" fill="#0f1115" stroke="#7ab8e8" stroke-opacity="0.4"/>
+        <text x="380" y="183" fill="#9aa0ad" font-family="JetBrains Mono, monospace" font-size="12" text-anchor="middle">a()</text>
+        <text x="380" y="199" fill="#5e6473" font-family="JetBrains Mono, monospace" font-size="11" text-anchor="middle">x = 10</text>
+        <text x="380" y="240" fill="#5e6473" font-family="Inter Tight, sans-serif" font-size="11" text-anchor="middle" font-style="italic">2 frames</text>
+        <rect x="570" y="50" width="140" height="50" rx="4" fill="#0f1115" stroke="#7ab8e8" stroke-opacity="0.7"/>
+        <text x="640" y="73" fill="#e8e6e1" font-family="JetBrains Mono, monospace" font-size="12" text-anchor="middle">c()</text>
+        <text x="640" y="89" fill="#9aa0ad" font-family="JetBrains Mono, monospace" font-size="11" text-anchor="middle">z = 30</text>
+        <rect x="570" y="105" width="140" height="50" rx="4" fill="#0f1115" stroke="#7ab8e8" stroke-opacity="0.5"/>
+        <text x="640" y="128" fill="#9aa0ad" font-family="JetBrains Mono, monospace" font-size="12" text-anchor="middle">b()</text>
+        <text x="640" y="144" fill="#5e6473" font-family="JetBrains Mono, monospace" font-size="11" text-anchor="middle">y = 20</text>
+        <rect x="570" y="160" width="140" height="50" rx="4" fill="#0f1115" stroke="#7ab8e8" stroke-opacity="0.4"/>
+        <text x="640" y="183" fill="#5e6473" font-family="JetBrains Mono, monospace" font-size="12" text-anchor="middle">a()</text>
+        <text x="640" y="199" fill="#5e6473" font-family="JetBrains Mono, monospace" font-size="11" text-anchor="middle">x = 10</text>
+        <text x="640" y="240" fill="#5e6473" font-family="Inter Tight, sans-serif" font-size="11" text-anchor="middle" font-style="italic">3 frames</text>
+      </svg>
+    </div>
+
+    <p>When <code>c()</code> returns, its frame is popped instantly &mdash; <code>z</code> is gone. No garbage collector needed. This is why stack allocation is essentially <strong>free</strong>: pushing/popping is just moving a pointer up or down.</p>
+
+    <h4>Two consequences worth burning in</h4>
+    <ol>
+      <li><strong>Each thread has its own stack.</strong> A 100-thread server has 100 stacks. This is why thread count &times; stack size = real memory cost.</li>
+      <li><strong>The stack is small.</strong> Default ~512KB&ndash;1MB per thread. Recurse too deep and you get <code>StackOverflowError</code> &mdash; not because your computer is out of RAM, but because that one thread&rsquo;s tiny stack filled up.</li>
+    </ol>
+
+    <div class="check">
+      <span class="check-tag">QUICK CHECK</span>
+      <p>If method <code>a()</code> calls <code>b()</code>, and <code>b()</code> declares <code>int y = 20</code>, where does <code>y</code> live <strong>while <code>b()</code> is still running</strong>? And what happens to it the moment <code>b()</code> returns?</p>
+    </div>
+  </div>
+
+  <!-- STAGE 3 -->
+  <div class="stage">
+    <span class="stage-tag">STAGE 3 <span class="time">12 MIN</span></span>
+    <h2>The Heap: one shared warehouse for all objects</h2>
+
+    <p>The heap is where <strong>every object</strong> your program ever creates with <code>new</code> ends up. Every <code>String</code>, every <code>ArrayList</code>, every custom class. Always.</p>
+
+    <p>Unlike the stack, the heap is <em>not</em> organized as LIFO. Objects can be created in any order and freed in any order. They live for as long as something still references them &mdash; when no references remain, the Garbage Collector eventually reclaims their space.</p>
+
+    <div class="analogy">
+      <p>Think of the heap as a giant warehouse shared by every worker (thread) in the building. Anyone can put a box on a shelf. Anyone can read from any box (if they know the address). A cleanup crew (the GC) periodically walks the warehouse, finds boxes nobody is using anymore, and removes them.</p>
+    </div>
+
+    <h4>The key distinction that trips up most engineers</h4>
+
+    <p>When you write <code>Order order = new Order(100);</code>, <strong>two things</strong> happen in two different places:</p>
+
+    <div class="diagram-svg">
+      <svg viewBox="0 0 760 220" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Reference on stack pointing to object on heap">
+        <defs>
+          <marker id="arr1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="#ff7a3d"/>
+          </marker>
+        </defs>
+        <text x="160" y="30" fill="#7ab8e8" font-family="JetBrains Mono, monospace" font-size="11" font-weight="700" text-anchor="middle" letter-spacing="2">STACK (current frame)</text>
+        <rect x="60" y="60" width="200" height="100" rx="6" fill="#13192a" stroke="#7ab8e8" stroke-opacity="0.5"/>
+        <rect x="80" y="90" width="160" height="50" rx="4" fill="#0f1115" stroke="#252a37"/>
+        <text x="92" y="113" fill="#e8e6e1" font-family="JetBrains Mono, monospace" font-size="12">order</text>
+        <text x="92" y="130" fill="#9aa0ad" font-family="JetBrains Mono, monospace" font-size="10">(reference)</text>
+        <circle cx="230" cy="115" r="4" fill="#ff7a3d"/>
+        <text x="160" y="185" fill="#5e6473" font-family="Inter Tight, sans-serif" font-size="12" font-style="italic" text-anchor="middle">Holds the address</text>
+        <text x="160" y="202" fill="#5e6473" font-family="Inter Tight, sans-serif" font-size="11" text-anchor="middle">(like a postal code)</text>
+        <path d="M 235 115 L 490 115" fill="none" stroke="#ff7a3d" stroke-width="2" marker-end="url(#arr1)"/>
+        <text x="365" y="105" fill="#ff7a3d" font-family="JetBrains Mono, monospace" font-size="11" text-anchor="middle" font-style="italic">points to</text>
+        <text x="610" y="30" fill="#ff7a3d" font-family="JetBrains Mono, monospace" font-size="11" font-weight="700" text-anchor="middle" letter-spacing="2">HEAP</text>
+        <rect x="500" y="60" width="220" height="100" rx="6" fill="#1a1612" stroke="#ff7a3d" stroke-opacity="0.5"/>
+        <rect x="520" y="80" width="180" height="65" rx="4" fill="#0f1115" stroke="#ff7a3d" stroke-opacity="0.4"/>
+        <text x="535" y="103" fill="#ffb38a" font-family="JetBrains Mono, monospace" font-size="13" font-weight="500">Order</text>
+        <text x="535" y="123" fill="#9aa0ad" font-family="JetBrains Mono, monospace" font-size="11">total = 100</text>
+        <text x="535" y="138" fill="#9aa0ad" font-family="JetBrains Mono, monospace" font-size="11">id = 42</text>
+        <text x="610" y="185" fill="#5e6473" font-family="Inter Tight, sans-serif" font-size="12" font-style="italic" text-anchor="middle">The actual object</text>
+        <text x="610" y="202" fill="#5e6473" font-family="Inter Tight, sans-serif" font-size="11" text-anchor="middle">(the house at that address)</text>
+      </svg>
+    </div>
+
+    <p>The variable named <code>order</code> on the stack is <strong>not the object</strong>. It&rsquo;s a <em>reference</em> &mdash; a small fixed-size value (typically 4 or 8 bytes) that says &ldquo;the object lives at this address in the heap.&rdquo;</p>
+
+    <p>This is the single most important idea in today&rsquo;s lesson. <strong>References on stack. Objects on heap.</strong> Always.</p>
+
+    <h4>What about fields inside the object?</h4>
+
+    <p>This is where people often get confused. Look at the <code>Order</code> object in the diagram above. It contains <code>total = 100</code> &mdash; a primitive <code>int</code>. So is <code>total</code> on the stack?</p>
+
+    <p><strong>No.</strong> <code>total</code> is a <em>field</em> of the <code>Order</code> object. The <code>Order</code> object lives on the heap. Therefore <code>total</code> lives on the heap too, as part of the object&rsquo;s body.</p>
+
+    <p>The rule: &ldquo;primitives on stack&rdquo; only applies when the primitive is a <strong>local variable inside a method</strong>. If it&rsquo;s a field of an object, it lives wherever the object lives &mdash; which is the heap.</p>
+
+    <div class="check">
+      <span class="check-tag">QUICK CHECK</span>
+      <p>You have <code>class Car { int speed; }</code>. Inside <code>main()</code> you write <code>Car c = new Car(); c.speed = 80;</code></p>
+      <p>Where does the value <code>80</code> end up? Where does the variable <code>c</code> live? They are <em>not</em> in the same place.</p>
+    </div>
+  </div>
+
+  <!-- STAGE 4 -->
+  <div class="stage">
+    <span class="stage-tag">STAGE 4 <span class="time">8 MIN</span></span>
+    <h2>Side-by-side comparison</h2>
+
+    <p>Now let&rsquo;s lock it in with a direct comparison. Read every row.</p>
+
+    <table class="compare">
+      <thead>
+        <tr><th>Property</th><th>Stack</th><th>Heap</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Who can access it?</td><td>Only the owning thread</td><td>All threads (shared)</td></tr>
+        <tr><td>What&rsquo;s stored?</td><td>Local primitives + references</td><td>Objects + arrays</td></tr>
+        <tr><td>Lifetime of an entry</td><td>Until the method returns</td><td>Until no references remain (then GC)</td></tr>
+        <tr><td>Cleanup mechanism</td><td>Automatic (pop on return)</td><td>Garbage Collector</td></tr>
+        <tr><td>Allocation cost</td><td>Near-zero (pointer bump)</td><td>Higher (GC bookkeeping)</td></tr>
+        <tr><td>Typical size</td><td>512KB &ndash; 1MB per thread</td><td>Hundreds of MB to many GB</td></tr>
+        <tr><td>Failure when full</td><td><code>StackOverflowError</code></td><td><code>OutOfMemoryError</code></td></tr>
+        <tr><td>Order of operations</td><td>Strict LIFO</td><td>Any order</td></tr>
+      </tbody>
+    </table>
+
+    <p>Notice the symmetry of trade-offs. The stack is fast and self-cleaning, but small and rigid. The heap is flexible and large, but expensive and needs a GC. <strong>Neither is better.</strong> Each exists because each is right for what it stores.</p>
+  </div>
+
+  <!-- STAGE 5 — Architect implications + interactive challenge -->
+  <div class="stage">
+    <span class="stage-tag">STAGE 5 <span class="time">15 MIN</span></span>
+    <h2>Why an architect must internalize this</h2>
+
+    <p>If you only needed to write working code, &ldquo;objects on heap, locals on stack&rdquo; would be enough. But you&rsquo;re training for architecture decisions. Here&rsquo;s where this knowledge starts paying back.</p>
+
+    <h4>1. Diagnosing production failures</h4>
+    <p>You will, eventually, get paged at 2 AM because production crashed with one of these two errors. The cause and the fix are completely different:</p>
+
+    <table class="compare">
+      <thead>
+        <tr><th>Error</th><th>What it means</th><th>Where to look</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>StackOverflowError</code></td>
+          <td>A single thread&rsquo;s stack ran out of frames</td>
+          <td>Recursion that doesn&rsquo;t terminate, or excessively deep call chains</td>
+        </tr>
+        <tr>
+          <td><code>OutOfMemoryError</code></td>
+          <td>The shared heap ran out of room</td>
+          <td>Memory leaks, oversized caches, large in-memory data</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h4>2. Capacity planning for high-throughput services</h4>
+    <p>Consider a server handling 10,000 concurrent requests. If each request runs on its own platform thread with a 1MB stack:</p>
+
+<pre><code>10,000 threads &times; 1MB stack = 10 GB <span class="cmt">just for stacks</span>
+                                   <span class="cmt">// before a single object is allocated on the heap</span></code></pre>
+
+    <p>This is a real production-scale calculation. It&rsquo;s exactly why <strong>virtual threads</strong> (Project Loom, Day 12) were invented &mdash; they have tiny stacks that live <em>on the heap</em>, sidestepping this entire problem.</p>
+
+    <h4>3. Allocation patterns affect GC pressure</h4>
+    <p>Every object you create on the heap eventually needs to be collected. Code that creates millions of short-lived objects per second forces the GC to run constantly, which steals CPU and causes latency spikes.</p>
+
+    <h4>4. Concurrency safety follows from location</h4>
+    <p>Stack data is private to one thread &mdash; it is <em>automatically thread-safe</em>. Heap data is shared &mdash; it needs locks, atomics, or immutability to stay safe.</p>
+
+    <!-- ── INTERACTIVE CHALLENGE ─────────────────────────── -->
+    <div class="challenge-form" id="challenge-1-1">
+      <span class="challenge-tag">INTERACTIVE CHALLENGE · STAGE 5</span>
+      <h3>Where does each piece of data live?</h3>
+
+      <p>Given this code:</p>
+<pre><code><span class="kw">public void</span> m() {
+    <span class="kw">int</span> a = <span class="num-lit">5</span>;
+    <span class="typ">String</span> s = <span class="kw">new</span> <span class="typ">String</span>(<span class="str">"hi"</span>);
+}</code></pre>
+
+      <p>Tell me where <strong>three</strong> things live. Use the dropdowns &mdash; only two regions are possible here (Metaspace doesn&rsquo;t apply).</p>
+
+      <div class="form-rows">
+        <!-- q1 -->
+        <div class="form-row">
+          <label class="form-label">
+            <strong>(1)</strong> The value <code>5</code>
+          </label>
+          <select class="select-answer" name="q1">
+            <option value="">— choose —</option>
+            <option value="STACK">STACK</option>
+            <option value="HEAP">HEAP</option>
+          </select>
+          <span class="result-icon" id="r-1-1-q1"></span>
+          <p class="hint-text" id="h-1-1-q1"></p>
+          <p class="explanation-text" id="e-1-1-q1">Local primitive <code>int a = 5</code> — the value lives directly in the method's stack frame.</p>
+        </div>
+        <!-- q2 -->
+        <div class="form-row">
+          <label class="form-label">
+            <strong>(2)</strong> The variable <code>s</code> (the reference itself)
+          </label>
+          <select class="select-answer" name="q2">
+            <option value="">— choose —</option>
+            <option value="STACK">STACK</option>
+            <option value="HEAP">HEAP</option>
+          </select>
+          <span class="result-icon" id="r-1-1-q2"></span>
+          <p class="hint-text" id="h-1-1-q2"></p>
+          <p class="explanation-text" id="e-1-1-q2">The reference variable <code>s</code> is a local variable — 8 bytes in the method's stack frame. The object it points to is a separate question.</p>
+        </div>
+        <!-- q3 -->
+        <div class="form-row">
+          <label class="form-label">
+            <strong>(3)</strong> The <code>String</code> object containing <code>&ldquo;hi&rdquo;</code>
+          </label>
+          <select class="select-answer" name="q3">
+            <option value="">— choose —</option>
+            <option value="STACK">STACK</option>
+            <option value="HEAP">HEAP</option>
+          </select>
+          <span class="result-icon" id="r-1-1-q3"></span>
+          <p class="hint-text" id="h-1-1-q3"></p>
+          <p class="explanation-text" id="e-1-1-q3">Every object created with <code>new</code> goes to the heap — no exceptions. The <em>variable</em> <code>s</code> is on the stack; the <em>object</em> it references is on the heap.</p>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button class="btn-check" onclick="validateChallenge('1-1')">Check My Answers</button>
+        <button class="btn-show-answers" id="show-btn-1-1" onclick="showAnswers('1-1')" style="display:none">Show Answers</button>
+      </div>
+
+      <div class="score-display" id="score-1-1"></div>
+
+      <div class="unlock-banner" id="unlock-1-1">
+        <strong style="color:var(--green)">✅ Day 1 complete!</strong> Day 2 is now unlocked &mdash;
+        <a href="day-2.html">Static, Instance &amp; Metaspace →</a>
+      </div>
+    </div>
+
+    <p style="margin-top: 30px; color: var(--ink-faint); font-size: 14px; font-style: italic; text-align: center;">Nail this and you&rsquo;ve fully internalized Stack vs Heap. Day 2 builds on it: <code>static</code> fields, instance fields, and the full 7-row Metaspace challenge.</p>
+  </div>
+
+  <footer>
+    DAY 1 OF 154 &middot; STACK VS HEAP &middot; PHASE 1 / 6
+  </footer>
+
+</div>
+
+<script src="../data/curriculum.js"></script>
+<script src="../assets/app.js"></script>
+</body>
+</html>
