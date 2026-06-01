@@ -358,7 +358,54 @@
       </div>
     </div>
 
-    <p style="margin-top: 30px; color: var(--ink-faint); font-size: 14px; font-style: italic; text-align: center;">Nail this and you&rsquo;ve fully internalized Stack vs Heap. Day 2 builds on it: <code>static</code> fields, instance fields, and the full 7-row Metaspace challenge.</p>
+    
+  <!-- ── REFLECTION ──────────────────────────────────────── -->
+  <div class="reflection">
+    <div class="reflection-header" onclick="toggleReflection(this)">
+      <span class="reflection-icon">🪞</span>
+      <span class="reflection-title">Reflection &amp; Self-Assessment</span>
+      <span class="reflection-chevron">▾</span>
+    </div>
+    <div class="reflection-body">
+
+      <div class="takeaways">
+        <div class="takeaways-label">Key Takeaways</div>
+        <ul>
+          <li>Every <strong>local variable</strong> (primitive or reference) lives on the <strong>stack</strong> — the stack frame is destroyed when the method returns.</li>
+          <li>Every <strong>object created with <code>new</code></strong> lives on the <strong>heap</strong> — it outlives the method that created it.</li>
+          <li>A reference on the stack is just a pointer (8 bytes) — the object it points to is a separate heap allocation. <em>Never confuse the two.</em></li>
+        </ul>
+      </div>
+
+      <div class="reflection-prompts">
+        <div class="reflection-prompt">
+          <span class="prompt-num">01</span>
+          <p class="prompt-text">Without looking at the diagram, draw the JVM memory regions from memory and label what each stores. Could you do it in a system design interview right now?</p>
+        </div>
+        <div class="reflection-prompt">
+          <span class="prompt-num">02</span>
+          <p class="prompt-text">A colleague's service throws <code>OutOfMemoryError: Java heap space</code> — but only at peak trading hours, not off-peak. What's your first hypothesis? What data would you look for?</p>
+        </div>
+        <div class="reflection-prompt">
+          <span class="prompt-num">03</span>
+          <p class="prompt-text">In your own codebase, which object do you think has the longest heap lifetime? Is it intentional, or could it be a hidden leak?</p>
+        </div>
+      </div>
+
+      <div class="confidence-block">
+        <div class="confidence-label">How confident do you feel about today's material?</div>
+        <div class="confidence-btns">
+          <button class="conf-btn" data-day="1-1" data-level="1" onclick="saveConfidence('1-1', 1)">😕 Not yet — need another pass</button>
+          <button class="conf-btn" data-day="1-1" data-level="2" onclick="saveConfidence('1-1', 2)">🤔 Getting there — mostly clear</button>
+          <button class="conf-btn" data-day="1-1" data-level="3" onclick="saveConfidence('1-1', 3)">✅ Solid — I could explain this</button>
+        </div>
+        <div class="confidence-saved" id="conf-saved-1-1"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <p style="margin-top: 30px; color: var(--ink-faint); font-size: 14px; font-style: italic; text-align: center;">Nail this and you&rsquo;ve fully internalized Stack vs Heap. Day 2 builds on it: <code>static</code> fields, instance fields, and the full 7-row Metaspace challenge.</p>
   </div>
 
   <footer>
@@ -369,5 +416,8 @@
 
 <script src="../data/curriculum.js"></script>
 <script src="../assets/app.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', () => { initReflection('1-1'); });
+</script>
 </body>
 </html>

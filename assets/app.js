@@ -360,6 +360,34 @@ function triggerConfetti() {
   setTimeout(() => container.remove(), 3500);
 }
 
+/* ── Reflection section ──────────────────────────────────── */
+
+function toggleReflection(header) {
+  const body = header.nextElementSibling;
+  const open = header.classList.toggle('open');
+  body.classList.toggle('open', open);
+}
+
+function saveConfidence(dayKey, level) {
+  localStorage.setItem(`reflect-conf-${dayKey}`, level);
+  // Update button states
+  document.querySelectorAll(`.conf-btn[data-day="${dayKey}"]`).forEach(btn => {
+    btn.classList.remove('selected-1', 'selected-2', 'selected-3');
+    if (btn.dataset.level === String(level)) btn.classList.add(`selected-${level}`);
+  });
+  const saved = document.getElementById(`conf-saved-${dayKey}`);
+  if (saved) {
+    const labels = { 1: 'Saved — revisit this tomorrow.', 2: 'Saved — one more pass will lock it in.', 3: 'Saved — great work! 🎉' };
+    saved.textContent = labels[level];
+    saved.classList.add('visible');
+  }
+}
+
+function initReflection(dayKey) {
+  const stored = localStorage.getItem(`reflect-conf-${dayKey}`);
+  if (stored) saveConfidence(dayKey, parseInt(stored));
+}
+
 /* ── Lesson navigation (bottom nav + floating bar) ──────── */
 
 function initLessonNav() {

@@ -370,7 +370,54 @@
       </div>
     </div>
 
-    <p style="margin-top: 30px; color: var(--ink-faint); font-size: 14px; font-style: italic; text-align: center;">Once you&rsquo;ve defended your answers, Day 4 unlocks &mdash; 3 hours, holiday mode: GC algorithms (Serial, Parallel, G1, ZGC, Shenandoah), real tuning flags, JFR profiling, and a production diagnosis exercise.</p>
+    
+  <!-- ── REFLECTION ──────────────────────────────────────── -->
+  <div class="reflection">
+    <div class="reflection-header" onclick="toggleReflection(this)">
+      <span class="reflection-icon">🪞</span>
+      <span class="reflection-title">Reflection &amp; Self-Assessment</span>
+      <span class="reflection-chevron">▾</span>
+    </div>
+    <div class="reflection-body">
+
+      <div class="takeaways">
+        <div class="takeaways-label">Key Takeaways</div>
+        <ul>
+          <li><strong>Minor GC</strong> is fast (single-digit ms) and happens frequently — it cleans the young generation. <strong>Major GC</strong> is slower (tens to hundreds of ms) and cleans the old generation.</li>
+          <li>The <strong>generational hypothesis</strong> is the foundation of modern GC: most objects die young. Your job as architect is to design systems that respect this hypothesis.</li>
+          <li>p50 latency can look fine while p99 is on fire. GC pauses live in the tail — always measure p99 and p999 for latency-sensitive services.</li>
+        </ul>
+      </div>
+
+      <div class="reflection-prompts">
+        <div class="reflection-prompt">
+          <span class="prompt-num">01</span>
+          <p class="prompt-text">In your trading system, which objects are most likely getting <strong>promoted to the old generation</strong> instead of dying young? Order books? Session state? Cached market data? What would you do to verify this?</p>
+        </div>
+        <div class="reflection-prompt">
+          <span class="prompt-num">02</span>
+          <p class="prompt-text">A PM says: <em>"p50 is 8ms, totally fine — ship it."</em> You know p99 is 350ms every 45 seconds. Write your response in 3 sentences. Be specific about the business impact.</p>
+        </div>
+        <div class="reflection-prompt">
+          <span class="prompt-num">03</span>
+          <p class="prompt-text">If the memory leak causing the 45-second GC interval were doubled — would the interval halve to ~22 seconds, or would the behaviour change differently? What does that tell you about how to diagnose leak rate?</p>
+        </div>
+      </div>
+
+      <div class="confidence-block">
+        <div class="confidence-label">How confident do you feel about today's material?</div>
+        <div class="confidence-btns">
+          <button class="conf-btn" data-day="1-3" data-level="1" onclick="saveConfidence('1-3', 1)">😕 Not yet — need another pass</button>
+          <button class="conf-btn" data-day="1-3" data-level="2" onclick="saveConfidence('1-3', 2)">🤔 Getting there — mostly clear</button>
+          <button class="conf-btn" data-day="1-3" data-level="3" onclick="saveConfidence('1-3', 3)">✅ Solid — I could explain this</button>
+        </div>
+        <div class="confidence-saved" id="conf-saved-1-3"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <p style="margin-top: 30px; color: var(--ink-faint); font-size: 14px; font-style: italic; text-align: center;">Once you&rsquo;ve defended your answers, Day 4 unlocks &mdash; 3 hours, holiday mode: GC algorithms (Serial, Parallel, G1, ZGC, Shenandoah), real tuning flags, JFR profiling, and a production diagnosis exercise.</p>
   </div>
 
   <footer>
@@ -382,9 +429,9 @@
 <script src="../data/curriculum.js"></script>
 <script src="../assets/app.js"></script>
 <script>
-  // Init open-ended challenge after DOM + curriculum loaded
   document.addEventListener('DOMContentLoaded', () => {
     initOpenEndedChallenge('1-3');
+    initReflection('1-3');
   });
 </script>
 </body>

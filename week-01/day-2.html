@@ -382,7 +382,54 @@ u.name = <span class="str">"Ana"</span>;</code></pre>
       </div>
     </div>
 
-    <p style="margin-top: 30px; color: var(--ink-faint); font-size: 14px; font-style: italic; text-align: center;">Nail this and you&rsquo;ve fully internalized the JVM memory model. Day 3 unlocks: Garbage Collection Fundamentals (1 hr). Day 4 (3 hr, holiday mode): GC algorithms, tuning, and profiling.</p>
+    
+  <!-- ── REFLECTION ──────────────────────────────────────── -->
+  <div class="reflection">
+    <div class="reflection-header" onclick="toggleReflection(this)">
+      <span class="reflection-icon">🪞</span>
+      <span class="reflection-title">Reflection &amp; Self-Assessment</span>
+      <span class="reflection-chevron">▾</span>
+    </div>
+    <div class="reflection-body">
+
+      <div class="takeaways">
+        <div class="takeaways-label">Key Takeaways</div>
+        <ul>
+          <li><strong>Static fields</strong> belong to the class and live in <strong>Metaspace</strong> — they're never GC'd as long as the class is loaded. Static collections are a classic memory leak pattern.</li>
+          <li><strong>Instance fields</strong> are part of the object — they live wherever the object lives (always the heap).</li>
+          <li>Metaspace holds class metadata, not objects — it can grow unbounded by default. Always set <code>-XX:MaxMetaspaceSize</code> in production.</li>
+        </ul>
+      </div>
+
+      <div class="reflection-prompts">
+        <div class="reflection-prompt">
+          <span class="prompt-num">01</span>
+          <p class="prompt-text">Have you ever seen a <code>static</code> field cause a memory leak or a concurrency bug in production? If not — scan your current codebase for static collections right now.</p>
+        </div>
+        <div class="reflection-prompt">
+          <span class="prompt-num">02</span>
+          <p class="prompt-text">If you deploy 30 microservices on a single JVM host and each has 200 classes loaded, what happens to Metaspace over time? What flag would you add to prevent surprise OOM?</p>
+        </div>
+        <div class="reflection-prompt">
+          <span class="prompt-num">03</span>
+          <p class="prompt-text">Explain in one sentence — without using the word "address" — why a String reference on the stack doesn't prevent the String object from being GC'd… except that it does, as long as the method hasn't returned. Spot the nuance?</p>
+        </div>
+      </div>
+
+      <div class="confidence-block">
+        <div class="confidence-label">How confident do you feel about today's material?</div>
+        <div class="confidence-btns">
+          <button class="conf-btn" data-day="1-2" data-level="1" onclick="saveConfidence('1-2', 1)">😕 Not yet — need another pass</button>
+          <button class="conf-btn" data-day="1-2" data-level="2" onclick="saveConfidence('1-2', 2)">🤔 Getting there — mostly clear</button>
+          <button class="conf-btn" data-day="1-2" data-level="3" onclick="saveConfidence('1-2', 3)">✅ Solid — I could explain this</button>
+        </div>
+        <div class="confidence-saved" id="conf-saved-1-2"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <p style="margin-top: 30px; color: var(--ink-faint); font-size: 14px; font-style: italic; text-align: center;">Nail this and you&rsquo;ve fully internalized the JVM memory model. Day 3 unlocks: Garbage Collection Fundamentals (1 hr). Day 4 (3 hr, holiday mode): GC algorithms, tuning, and profiling.</p>
   </div>
 
   <footer>
@@ -393,5 +440,8 @@ u.name = <span class="str">"Ana"</span>;</code></pre>
 
 <script src="../data/curriculum.js"></script>
 <script src="../assets/app.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', () => { initReflection('1-2'); });
+</script>
 </body>
 </html>
