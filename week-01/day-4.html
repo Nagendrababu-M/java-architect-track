@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Week 1 · Day 4 — GC Algorithms Deep Dive + Tuning + Profiling</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,800&family=JetBrains+Mono:wght@400;500;700&family=Inter+Tight:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/styles.css">
+<link rel="stylesheet" href="../assets/audio-player.css">
+<style>
+  body {
+    background-image:
+      radial-gradient(ellipse 800px 600px at 20% 0%, rgba(110,211,168,0.07), transparent 60%),
+      radial-gradient(ellipse 600px 400px at 90% 100%, rgba(110,211,168,0.04), transparent 60%);
+  }
+  .weekly-synthesis {
+    margin: 48px 0 0;
+    padding: 28px 32px;
+    border-left: 3px solid var(--accent);
+    background: rgba(255,122,61,0.04);
+    border-radius: 0 8px 8px 0;
+  }
+  .weekly-synthesis h3 {
+    margin: 0 0 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: var(--accent);
+    text-transform: uppercase;
+  }
+  .weekly-synthesis p {
+    margin: 0 0 12px;
+    color: var(--ink-dim);
+    line-height: 1.7;
+  }
+  .weekly-synthesis .compare-wrap { margin: 16px 0; }
+</style>
+</head>
+<body>
+<div class="grain"></div>
+
+<div class="container">
+
+  <header class="lesson-header">
+    <a href="../index.html" class="back-link">&larr; Back to curriculum</a>
+    <div class="meta">
+      <span class="dot"></span>
+      <span class="phase">Phase 1 &middot; Advanced Java</span>
+      <span>&middot;</span>
+      <span>Week 1 / Day 4</span>
+    </div>
+    <h1>
+      GC Algorithms Deep Dive + Tuning + Profiling
+      <span class="sub">From Serial to ZGC &mdash; picking the right collector and tuning it for production.</span>
+    </h1>
+    <div class="scope"><strong>SCOPE</strong> &middot; 180 min &middot; 6 stages &mdash; heavy session, take breaks between stages</div>
+  <div id="play-full-lesson-mount"></div>
+  </header>
+
+  <div class="recap">
+    <span class="recap-tag">RECAP FROM DAY 3</span>
+    <p>You know <strong>reachability</strong> and GC roots. You understand the <strong>generational heap</strong>: Eden &rarr; Survivor &rarr; Old Gen, driven by the weak generational hypothesis. You know the difference between <strong>Minor, Major, and Full GC</strong>, and why <strong>Stop-the-World pauses</strong> are the primary source of production latency spikes. Today we open the hood on the actual algorithms &mdash; how Serial, Parallel, G1, and ZGC actually work, how to tune them, and how to read the evidence they leave in GC logs.</p>
+  </div>
+
+  <!-- STAGE 1 -->
+  <div class="stage" data-section="1">
+    <span class="stage-tag">STAGE 1 <span class="time">20 MIN</span></span>
+    <h2>Five collectors, one question: throughput vs latency</h2>
+
+    <p>Every GC algorithm ever written faces the same fundamental trade-off, and there is no escape from it:</p>
+
+    <div class="key-rule insight">
+      <p><strong>Throughput vs Latency &mdash; the GC impossibility triangle.</strong></p>
+      <p><strong>Throughput:</strong> maximize total work done per second. Tolerate occasional long pauses &mdash; batch work finishes faster overall even if there are 2-second hiccups. <strong>Latency:</strong> minimize the worst-case pause time. Accept some throughput loss to keep every pause under a ceiling. No collector wins both. Every algorithm makes an explicit choice about which side of this line to stand on.</p>
+    </div>
+
+    <p>Five collectors exist in the modern JVM. Each makes a different choice:</p>
+
+    <div class="compare-wrap"><table class="compare">
+      <thead>
+        <tr><th>Collector</th><th>Java version</th><th>Pause model</th><th>Best for</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Serial</strong></td>
+          <td>All</td>
+          <td>Stop-the-world (single thread)</td>
+          <td>Single-core, small heaps, containers with 1 CPU</td>
+        </tr>
+        <tr>
+          <td><strong>Parallel (Throughput)</strong></td>
+          <td>All</td>
+          <td>Stop-the-world (parallel threads)</td>
+          <td>Batch jobs, max throughput, pause-tolerant workloads</td>
+        </tr>
+        <tr>
+          <td><strong>CMS</strong></td>
+          <td>Deprecated Java 9, removed Java 14</td>
+          <td>Mostly concurrent</td>
+          <td>Legacy &mdash; do not use in new systems</td>
+        </tr>
+        <tr>
+          <td><strong>G1</strong></td>
+          <td>Default since Java 9</td>
+          <td>Short STW + concurrent phases</td>
+          <td>General purpose, balanced latency/throughput</td>
+        </tr>
+        <tr>
+          <td><strong>ZGC</strong></td>
+          <td>Production Java 15+</td>
+          <td>Sub-millisecond STW</td>
+          <td>Low-latency services, large heaps</td>
+        </tr>
+        <tr>
+          <td><strong>Shenandoah</strong></td>
+          <td>OpenJDK 12+</td>
+          <td>Sub-millisecond STW</td>
+          <td>Same as ZGC, different algorithm approach (concurrent compaction via Brooks pointers)</td>
+        </tr>
+      </tbody>
+    </table></div>
+
+    <h4>Serial GC</h4>
+    <p>Uses a single GC thread. When a collection is needed, the entire application stops, one thread does all the work, then the application resumes. Simple, predictable, low overhead. Great for containers with a single CPU &mdash; there is no benefit to parallel GC when you only have one core. Activated with <code>-XX:+UseSerialGC</code>.</p>
+
+    <h4>Parallel GC</h4>
+    <p>Uses multiple GC threads during STW phases &mdash; all application threads still pause, but the GC work itself is parallelized across all available cores. If you have 8 cores, 8 threads compact your heap simultaneously. This maximizes throughput: the overall pause duration is shorter than Serial because the work is split, and application threads spend more time running. The downside: pauses on large heaps can still reach seconds, because you&rsquo;re stopping the world &mdash; just with more workers. Activated with <code>-XX:+UseParallelGC</code>.</p>
+
+    <div class="check">
+      <span class="check-tag">QUICK CHECK</span>
+      <p>A nightly batch job processes 10 million records. It runs for 4 hours overnight with no SLA on response time &mdash; it just needs to finish as fast as possible. Which collector do you choose: Serial, Parallel, or ZGC? Why is the other option actively wrong here?</p>
+    </div>
+  </div>
+
+  <!-- STAGE 2 -->
+  <div class="stage" data-section="2">
+    <span class="stage-tag">STAGE 2 <span class="time">30 MIN</span></span>
+    <h2>G1 &mdash; the region-based collector that changed everything</h2>
+
+    <p>G1 (&ldquo;Garbage First&rdquo;) replaced the old fixed generational layout with a completely different design. Instead of one large contiguous Eden, one Survivor, and one large Old Gen, G1 divides the entire heap into hundreds of equal-sized <strong>regions</strong> &mdash; each between 1MB and 32MB (a power of 2, chosen by the JVM based on heap size, or set with <code>-XX:G1HeapRegionSize</code>).</p>
+
+    <p>Regions are labeled dynamically. At any moment, a region is either Eden, Survivor, Old Gen, or <strong>Humongous</strong> (for objects larger than 50% of a region). There&rsquo;s no fixed boundary between generations &mdash; G1 decides at runtime how many regions to allocate to each role.</p>
+
+    <div class="diagram-svg">
+      <svg viewBox="0 0 760 260" xmlns="http://www.w3.org/2000/svg" width="100%" preserveAspectRatio="xMidYMid meet" role="img" aria-label="G1 heap region layout">
+        <defs>
+          <marker id="arrG1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="#6ed3a8"/>
+          </marker>
+        </defs>
+        <text x="380" y="25" fill="#ff7a3d" font-family="JetBrains Mono, monospace" font-size="12" font-weight="700" text-anchor="middle" letter-spacing="2">G1 HEAP — REGION GRID</text>
+        <!-- Row 1 -->
+        <rect x="40"  y="45" width="60" height="50" rx="3" fill="#1a3028" stroke="#6ed3a8" stroke-opacity="0.7"/>
+        <text x="70"  y="75" fill="#6ed3a8" font-family="JetBrains Mono, monospace" font-size="10" text-anchor="middle">Eden</text>
+        <rect x="110" y="45" width="60" height="50" rx="3" fill="#1a3028" stroke="#6ed3a8" stroke-opacity="0.7"/>
+        <text x="140" y="75" fill="#6ed3a8" font-family="JetBrains Mono, monospace" font-size="10" text-anchor="middle">Eden</text>
+        <rect x="180" y="45" width="60" height="50" rx="3" fill="#2a1f28" stroke="#b18ae0" stroke-opacity="0.6"/>
+        <text x="210" y="72" fill="#b18ae0" font-family="JetBrains Mono, monospace" font-size="10" text-anchor="middle">Surv</text>
+        <rect x="250" y="45" width="60" height="50" rx="3" fill="#1a2030" stroke="#7ab8e8" stroke-opacity="0.5"/>
+        <text x="280" y="72" fill="#7ab8e8" font-family="JetBrains Mono, monospace" font-size="10" text-anchor="middle">Old</text>
+        <rect x="320" y="45" width="60" height="50" rx="3" fill="#1a2030" stroke="#7ab8e8" stroke-opacity="0.5"/>
+        <text x="350" y="72" fill="#7ab8e8" font-family="JetBrains Mono, monospace" font-size="10" text-anchor="middle">Old</text>
+        <rect x="390" y="45" width="60" height="50" rx="3" fill="#1a2030" stroke="#7ab8e8" stroke-opacity="0.5"/>
+        <text x="420" y="72" fill="#7ab8e8" font-family="JetBrains Mono, monospace" font-size="10" text-anchor="middle">Old</text>
+        <rect x="460" y="45" width="130" height="50" rx="3" fill="#2a1a12" stroke="#ff7a3d" stroke-opacity="0.7"/>
+        <text x="525" y="68" fill="#ff7a3d" font-family="JetBrains Mono, monospace" font-size="10" text-anchor="middle">Humongous</text>
+        <text x="525" y="85" fill="#5e6473" font-family="Inter Tight, sans-serif" font-size="9" text-anchor="middle">(spans 2+ regions)</text>
+        <rect x="600" y="45" width="60" height="50" rx="3" fill="#0f1115" stroke="#3a3f4a" stroke-opacity="0.5"/>
+        <text x="630" y="72" fill="#3a3f4a" font-family="JetBrains Mono, monospace" font-size="10" text-anchor="middle">Free</text>
+        <rect x="670" y="45" width="60" height="50" rx="3" fill="#0f1115" stroke="#3a3f4a" stroke-opacity="0.5"/>
+        <text x="700" y="72" fill="#3a3f4a" font-family="JetBrains Mono, monospace" font-size="10" text-anchor="middle">Free</text>
+        <!-- Row 2 -->
+        <rect x="40"  y="110" width="60" height="50" rx="3" fill="#1a2030" stroke="#7ab8e8" stroke-opacity="0.5"/>
+        <text x="70"  y="137" fill="#7ab8e8" font-family="JetBrains Mono, monospace" font-size="10" text-anchor="middle">Old</text>
+        <rect x="110" y="110" width="60" height="50" rx="3" fill="#1a3028" stroke="#6ed3a8" stroke-opacity="0.7"/>
+        <text x="140" y="137" fill="#6ed3a8" font-family="JetBrains Mono, monospace" font-size="10" text-anchor="middle">Eden</text>
+        <rect x="180" y="110" width="60" height="50" rx="3" fill="#1a2030" stroke="#7ab8e8" stroke-opacity="0.5"/>
+        <text x="210" y="137" fill="#7ab8e8" font-family="JetBrains Mono, monospace" font-size="10" text-anchor="middle">Old</text>
+        <rect x="250" y="110" width="60" height="50" rx="3" fill="#1a3028" stroke="#6ed3a8" stroke-opacity="0.7"/>
+        <text x="280" y="137" fill="#6ed3a8" font-family="JetBrains Mono, monospace" font-size="10" text-anchor="middle">Eden</text>
+        <rect x="320" y="110" width="60" height="50" rx="3" fill="#0f1115" stroke="#3a3f4a" stroke-opacity="0.5"/>
+        <text x="350" y="137" fill="#3a3f4a" font-family="JetBrains Mono, monospace" font-size="10" text-anchor="middle">Free</text>
+        <rect x="390" y="110" width="60" height="50" rx="3" fill="#2a1f28" stroke="#b18ae0" stroke-opacity="0.6"/>
+        <text x="420" y="137" fill="#b18ae0" font-family="JetBrains Mono, monospace" font-size="10" text-anchor="middle">Surv</text>
+        <rect x="460" y="110" width="60" height="50" rx="3" fill="#1a2030" stroke="#7ab8e8" stroke-opacity="0.5"/>
+        <text x="490" y="137" fill="#7ab8e8" font-family="JetBrains Mono, monospace" font-size="10" text-anchor="middle">Old</text>
+        <rect x="530" y="110" width="60" height="50" rx="3" fill="#1a2030" stroke="#7ab8e8" stroke-opacity="0.5"/>
+        <text x="560" y="137" fill="#7ab8e8" font-family="JetBrains Mono, monospace" font-size="10" text-anchor="middle">Old</text>
+        <rect x="600" y="110" width="60" height="50" rx="3" fill="#1a3028" stroke="#6ed3a8" stroke-opacity="0.7"/>
+        <text x="630" y="137" fill="#6ed3a8" font-family="JetBrains Mono, monospace" font-size="10" text-anchor="middle">Eden</text>
+        <rect x="670" y="110" width="60" height="50" rx="3" fill="#0f1115" stroke="#3a3f4a" stroke-opacity="0.5"/>
+        <text x="700" y="137" fill="#3a3f4a" font-family="JetBrains Mono, monospace" font-size="10" text-anchor="middle">Free</text>
+        <!-- Legend -->
+        <rect x="40"  y="185" width="12" height="12" fill="#1a3028" stroke="#6ed3a8"/>
+        <text x="58"  y="196" fill="#9aa0ad" font-family="Inter Tight, sans-serif" font-size="11">Eden (young)</text>
+        <rect x="160" y="185" width="12" height="12" fill="#2a1f28" stroke="#b18ae0"/>
+        <text x="178" y="196" fill="#9aa0ad" font-family="Inter Tight, sans-serif" font-size="11">Survivor</text>
+        <rect x="270" y="185" width="12" height="12" fill="#1a2030" stroke="#7ab8e8"/>
+        <text x="288" y="196" fill="#9aa0ad" font-family="Inter Tight, sans-serif" font-size="11">Old Gen</text>
+        <rect x="370" y="185" width="12" height="12" fill="#2a1a12" stroke="#ff7a3d"/>
+        <text x="388" y="196" fill="#9aa0ad" font-family="Inter Tight, sans-serif" font-size="11">Humongous (&gt;50% region)</text>
+        <rect x="560" y="185" width="12" height="12" fill="#0f1115" stroke="#3a3f4a"/>
+        <text x="578" y="196" fill="#9aa0ad" font-family="Inter Tight, sans-serif" font-size="11">Free</text>
+        <text x="380" y="240" fill="#5e6473" font-family="Inter Tight, sans-serif" font-size="11" font-style="italic" text-anchor="middle">Regions are non-contiguous and reassigned dynamically. No fixed boundary between Young and Old.</text>
+      </svg>
+    </div>
+
+    <h4>The four G1 concepts that matter</h4>
+
+    <p><strong>1. Remembered Sets (RSets)</strong> &mdash; Each region maintains a small table recording which <em>other</em> regions hold references into it. When G1 collects a region, it only needs to scan that region&rsquo;s RSet to find all external pointers &mdash; it doesn&rsquo;t need to scan the entire heap. This is what makes region-level collection possible without scanning everything.</p>
+
+    <p><strong>2. Collection Sets (CSets)</strong> &mdash; G1 doesn&rsquo;t collect the whole heap at once. It selects a subset of regions &mdash; the ones with the highest proportion of garbage &mdash; and collects only those. That&rsquo;s the literal meaning of &ldquo;Garbage First&rdquo;: collect the regions with the most garbage first to maximize reclaim rate per unit of pause time.</p>
+
+    <p><strong>3. Concurrent Marking</strong> &mdash; G1 marks live objects concurrently while your application runs. The initial mark (just scanning roots) is a short STW. The bulk of marking happens alongside your app. A second short STW &mdash; called the Remark &mdash; finalizes what changed during concurrent marking. Then a short Cleanup STW accounts for the results.</p>
+
+    <p><strong>4. Pause Target</strong> &mdash; G1&rsquo;s killer feature. You specify <code>-XX:MaxGCPauseMillis=200</code> and G1 uses historical pause data to predict how many regions it can collect within that budget. It adjusts the CSet size accordingly. This is a soft goal, not a hard guarantee &mdash; if Old Gen is nearly full, G1 may overshoot to avoid an OOM.</p>
+
+    <h4>Mixed GC &mdash; how G1 handles Old Gen</h4>
+    <p>When the Old Gen reaches a certain occupancy (default 45%, controlled by <code>-XX:InitiatingHeapOccupancyPercent</code>), G1 starts a concurrent marking cycle. After marking completes, G1 enters &ldquo;mixed&rdquo; collection mode: it collects Young regions <em>plus</em> a selection of Old Gen regions, targeting the most garbage-dense ones. Mixed GC continues for several cycles until Old Gen is sufficiently cleaned, then returns to normal Young-only collection.</p>
+
+    <h4>Humongous allocations &mdash; G1&rsquo;s weakness</h4>
+    <p>Objects larger than 50% of a region size (large arrays, big byte buffers) skip Young Gen entirely and go straight to Old Gen as Humongous objects, spanning one or more contiguous regions. This bypasses the generational design entirely. If your application allocates a lot of large objects, G1&rsquo;s advantage over Parallel GC diminishes. Increase region size (<code>-XX:G1HeapRegionSize=16m</code>) to push the Humongous threshold higher.</p>
+
+    <h4>Key G1 flags</h4>
+    <pre><code><span class="cmt"># Enable G1 (default Java 9+, explicit for clarity)</span>
+<span class="kw">-XX:+UseG1GC</span>
+
+<span class="cmt"># Pause target — soft goal in milliseconds</span>
+<span class="kw">-XX:MaxGCPauseMillis</span>=<span class="num-lit">200</span>
+
+<span class="cmt"># Region size — power of 2, 1–32 MB</span>
+<span class="kw">-XX:G1HeapRegionSize</span>=<span class="num-lit">16m</span>
+
+<span class="cmt"># Start concurrent marking when heap is N% occupied</span>
+<span class="kw">-XX:InitiatingHeapOccupancyPercent</span>=<span class="num-lit">45</span>
+
+<span class="cmt"># GC log — always enable in production</span>
+<span class="kw">-Xlog:gc*:file=gc.log:time,uptime,level,tags</span>
+</code></pre>
+
+    <h4>Reading a G1 GC log line</h4>
+    <p>With <code>-Xlog:gc*</code> enabled, a typical Minor GC line looks like:</p>
+    <pre><code>[<span class="num-lit">2.456</span>s][info][gc] <span class="typ">GC(42)</span> <span class="kw">Pause Young (Normal)</span> (G1 Evacuation Pause) <span class="num-lit">512</span>M-&gt;<span class="num-lit">128</span>M(<span class="num-lit">2048</span>M) <span class="num-lit">45.231</span>ms
+</code></pre>
+    <ul>
+      <li><code>2.456s</code> &mdash; JVM uptime at the pause start</li>
+      <li><code>GC(42)</code> &mdash; the 42nd GC event since JVM start (monotonically increasing)</li>
+      <li><code>Pause Young (Normal)</code> &mdash; a normal Young Gen evacuation (Eden + Survivors copied out)</li>
+      <li><code>512M&rarr;128M(2048M)</code> &mdash; heap before &rarr; heap after (max heap capacity)</li>
+      <li><code>45.231ms</code> &mdash; total pause duration, including STW time</li>
+    </ul>
+
+    <div class="check">
+      <span class="check-tag">QUICK CHECK</span>
+      <p>Your service uses a 16GB heap with G1. You set <code>-XX:MaxGCPauseMillis=200</code> but GC logs consistently show 400ms pauses. What are two distinct reasons G1 might be overshooting its own target?</p>
+    </div>
+  </div>
+
+  <!-- STAGE 3 -->
+  <div class="stage" data-section="3">
+    <span class="stage-tag">STAGE 3 <span class="time">25 MIN</span></span>
+    <h2>ZGC &mdash; when even 200ms is too slow</h2>
+
+    <p>ZGC was designed with a single non-negotiable goal: pause times under 1ms regardless of heap size. Not 200ms. Not 50ms. Sub-millisecond, on heaps measured in terabytes. It achieves this through two techniques that are unlike anything in G1.</p>
+
+    <h4>Colored pointers</h4>
+    <p>In a standard 64-bit JVM, a pointer is 64 bits, but modern hardware only addresses 48 bits of that space (or 52 bits on recent CPUs). ZGC steals the spare bits and uses them to embed GC state directly in every reference. Each pointer carries bits indicating: is this object currently being marked? Has it been relocated? Is it in a remapped state? The GC state travels with the pointer itself. This means the GC can communicate with your running application through the pointer values &mdash; no need to stop and scan a separate side table.</p>
+
+    <h4>Load barriers</h4>
+    <p>Every time your Java code reads an object reference (a <em>load</em> instruction), ZGC inserts a tiny check &mdash; a <strong>load barrier</strong> &mdash; that runs inline. The barrier inspects the colored bits. If the pointer is stale (the object was relocated), the barrier fixes it on the fly, updating the reference before returning it to your code. Your code never sees a dangling pointer. This is how ZGC relocates live objects while your application is running without pausing it: relocation and pointer fixup happen lazily, on each load, instead of all at once in a STW stop.</p>
+
+    <h4>What ZGC still stops for</h4>
+    <p>ZGC has three STW phases, all very short:</p>
+    <ol>
+      <li><strong>Pause Mark Start</strong> &mdash; scan GC roots (stacks, static fields). Duration: O(thread count), not O(heap size).</li>
+      <li><strong>Pause Mark End</strong> &mdash; finalize marking. Duration: also O(thread count).</li>
+      <li><strong>Pause Relocate Start</strong> &mdash; start the relocation phase. Very brief.</li>
+    </ol>
+    <p>Because all three pauses scale with the number of threads, not with heap size, pause time stays under 1ms even as you scale from 8GB to 8TB heaps.</p>
+
+    <h4>ZGC trade-offs</h4>
+    <ul>
+      <li><strong>Throughput cost:</strong> load barriers execute on every reference load. The JIT compiles them efficiently, but there is still a real cost: typically 5&ndash;15% lower throughput than G1. For latency-sensitive services this is the right trade.</li>
+      <li><strong>Heap sizing requirement:</strong> ZGC needs room to relocate objects while the app runs. The heap should be at least 8&times; the live set size. If you have 4GB of live data, ZGC wants at least a 32GB heap.</li>
+      <li><strong>64-bit only:</strong> colored pointers require 64-bit address space. No 32-bit JVMs.</li>
+    </ul>
+
+    <h4>Key ZGC flags</h4>
+    <pre><code><span class="cmt"># Enable ZGC</span>
+<span class="kw">-XX:+UseZGC</span>
+
+<span class="cmt"># ALWAYS set min == max in production — heap resize causes pauses</span>
+<span class="kw">-Xms</span><span class="num-lit">8g</span> <span class="kw">-Xmx</span><span class="num-lit">8g</span>
+
+<span class="cmt"># Soft max — ZGC tries to stay under this, GCs more aggressively if needed</span>
+<span class="kw">-XX:SoftMaxHeapSize</span>=<span class="num-lit">6g</span>
+
+<span class="cmt"># GC collection interval — 0 = adaptive (recommended)</span>
+<span class="kw">-XX:ZCollectionInterval</span>=<span class="num-lit">0</span>
+
+<span class="kw">-Xlog:gc*:file=gc.log:time,uptime,level,tags</span>
+</code></pre>
+
+    <div class="architect-callout">
+      <p>For the Nifty options engine: ZGC is the correct choice. A G1 pause of 200ms during market open is 200ms of missed prices and unprocessed order signals. The market doesn&rsquo;t stop. Your engine does. Every filled order during that 200ms goes to a competitor with a faster JVM.</p>
+      <p>ZGC keeps pauses under 1ms. Set <code>-Xms</code> equal to <code>-Xmx</code> (prevents JVM heap resize, which triggers its own pause). Run the engine on a dedicated host (no noisy neighbours causing OS-level scheduling jitter). With ZGC, your pauses are now in the microsecond range &mdash; small enough that market data latency dominates, not GC.</p>
+    </div>
+  </div>
+
+  <!-- STAGE 4 -->
+  <div class="stage" data-section="4">
+    <span class="stage-tag">STAGE 4 <span class="time">20 MIN</span></span>
+    <h2>The 6 flags every architect must know</h2>
+
+    <p>Most JVM tuning guides list fifty flags. In practice, these six flags cover 90% of what you will ever need to touch in production. Know these cold.</p>
+
+    <div class="compare-wrap"><table class="compare">
+      <thead>
+        <tr><th>Flag</th><th>What it does</th><th>Rule of thumb</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>-Xms</code> / <code>-Xmx</code></td>
+          <td>Minimum and maximum heap size</td>
+          <td>Set equal in production to eliminate heap resize pauses. <code>-Xms8g -Xmx8g</code></td>
+        </tr>
+        <tr>
+          <td><code>-XX:NewRatio=N</code></td>
+          <td>Old:Young size ratio (default 2 = Old is 2&times; Young)</td>
+          <td>Lower value = larger Young Gen = fewer premature promotions to Old</td>
+        </tr>
+        <tr>
+          <td><code>-XX:MaxGCPauseMillis</code></td>
+          <td>G1 pause target in milliseconds</td>
+          <td>200ms general-purpose; 50ms for latency-sensitive services; ignored by ZGC</td>
+        </tr>
+        <tr>
+          <td><code>-XX:+UseZGC</code></td>
+          <td>Enable ZGC collector</td>
+          <td>Use for latency-sensitive services on Java 15+. Check heap is 8&times; live set.</td>
+        </tr>
+        <tr>
+          <td><code>-Xlog:gc*:file=gc.log:time,uptime,level,tags</code></td>
+          <td>Enable structured GC logging to file</td>
+          <td>Always enable in production &mdash; non-negotiable. Zero performance cost.</td>
+        </tr>
+        <tr>
+          <td><code>-XX:+HeapDumpOnOutOfMemoryError</code></td>
+          <td>Write a heap dump when OOM occurs</td>
+          <td>Always enable &mdash; you cannot diagnose a dead JVM without the heap dump.</td>
+        </tr>
+      </tbody>
+    </table></div>
+
+    <h4>Sizing Young Gen &mdash; the highest-impact tuning for high-throughput services</h4>
+
+    <p>The most common production GC problem &mdash; and the one with the highest return on tuning effort &mdash; is Young Gen sized too small. When Eden fills faster than Minor GC can clear it, objects get promoted to Old Gen before they would naturally die. Old Gen fills. Major GC fires. Latency spikes.</p>
+
+    <ul>
+      <li><strong>Young Gen too small</strong> &rarr; objects promoted before they die &rarr; Old Gen fills fast &rarr; frequent Major GC</li>
+      <li><strong>Young Gen too large</strong> &rarr; Minor GC takes longer (more live objects to copy) &rarr; longer individual pauses</li>
+      <li><strong>Goal:</strong> Young Gen should be large enough that 95%+ of allocations die before surviving to Old Gen. If 95% of your objects die within 500ms, your Eden should hold at least 500ms of allocation rate.</li>
+    </ul>
+
+    <div class="key-rule">
+      <p><strong>Concrete sizing example</strong></p>
+      <p>Your service allocates at 100 MB/s. Average object lifetime is 500ms. To ensure objects die in Young Gen before a Minor GC promotes them:</p>
+      <pre><code><span class="cmt"># Minimum Eden to hold 500ms of allocation</span>
+<span class="num-lit">100</span> MB/s &times; <span class="num-lit">0.5</span>s = <span class="num-lit">50</span> MB minimum Eden
+
+<span class="cmt"># Add 2× headroom for allocation bursts</span>
+<span class="kw">-XX:NewSize</span>=<span class="num-lit">128m</span> <span class="kw">-XX:MaxNewSize</span>=<span class="num-lit">256m</span>
+</code></pre>
+    </div>
+
+    <div class="analogy">
+      <p>Think of Young Gen as the inbox on your desk. If your inbox holds 2 hours of mail but the postman delivers every 30 minutes, some letters will sit overnight and get &ldquo;promoted&rdquo; to the filing cabinet (Old Gen) even though you would have thrown them away tomorrow. A bigger inbox means letters stay visible longer and get thrown away before filing. The filing cabinet fills more slowly. You clean your desk (Major GC) less often.</p>
+    </div>
+  </div>
+
+  <!-- STAGE 5 -->
+  <div class="stage" data-section="5">
+    <span class="stage-tag">STAGE 5 <span class="time">30 MIN</span></span>
+    <h2>You can&rsquo;t tune what you can&rsquo;t see</h2>
+
+    <p>GC flags without GC logs are guesswork. This stage teaches you to read the evidence and gather more of it.</p>
+
+    <h4>Part A &mdash; Reading GC Logs</h4>
+    <p>A healthy G1 service looks like this &mdash; short Young GC pauses, heap recovers well after each:</p>
+    <pre><code>[<span class="num-lit">2.456</span>s][info][gc] <span class="typ">GC(42)</span> Pause Young (Normal) (G1 Evacuation Pause)
+                   <span class="num-lit">512</span>M-&gt;<span class="num-lit">128</span>M(<span class="num-lit">2048</span>M) <span class="num-lit">45.231</span>ms
+</code></pre>
+
+    <p>Fields decoded: <code>2.456s</code> = JVM uptime. <code>GC(42)</code> = 42nd GC event. <code>Pause Young (Normal)</code> = normal Minor GC. <code>512M&rarr;128M</code> = heap reduced from 512MB to 128MB. <code>(2048M)</code> = heap capacity. <code>45.231ms</code> = total pause.</p>
+
+    <p>Now the concerning log &mdash; this is what a memory leak looks like in a GC log:</p>
+    <pre><code>[<span class="num-lit">847.2</span>s][info][gc] <span class="typ">GC(891)</span> Pause Full (Ergonomics)
+                   <span class="num-lit">1890</span>M-&gt;<span class="num-lit">1820</span>M(<span class="num-lit">2048</span>M) <span class="num-lit">4823</span>.ms
+</code></pre>
+
+    <p>Walk through the diagnosis:</p>
+    <ul>
+      <li><code>Pause Full</code> &mdash; a Full GC. All other work stops. This is never good.</li>
+      <li><code>Ergonomics</code> &mdash; triggered by the JVM&rsquo;s internal heuristics, not you. Heap was almost full.</li>
+      <li><code>1890M&rarr;1820M(2048M)</code> &mdash; the Full GC freed only 70MB from a 2048MB heap. That&rsquo;s 3.5% reclaimed after 4.8 seconds of the world being stopped.</li>
+      <li><code>4823.ms</code> &mdash; 4.8 seconds. Your service was completely unresponsive for 4.8 seconds.</li>
+    </ul>
+
+    <div class="key-rule insight">
+      <p><strong>A Full GC that barely frees memory is not a GC sizing problem. It is a memory leak.</strong></p>
+      <p>Old Gen is full of live objects &mdash; things the GC can still reach, so it can&rsquo;t collect them. The GC is working correctly. Your code is holding references it shouldn&rsquo;t. The fix is not more heap or a different GC &mdash; it&rsquo;s finding and fixing the leak. A heap dump at the time of OOM (enabled by <code>-XX:+HeapDumpOnOutOfMemoryError</code>) is your starting point.</p>
+    </div>
+
+    <h4>Part B &mdash; Java Flight Recorder (JFR)</h4>
+    <p>JFR is the JVM&rsquo;s built-in continuous profiling system. Since Java 11 it is completely free and always-on has near-zero overhead (well under 1% in most workloads). It records a continuous ring buffer of JVM events. You can dump it at any time &mdash; even on a production service that&rsquo;s currently behaving badly.</p>
+
+    <pre><code><span class="cmt"># Attach to a running process and record for 60 seconds</span>
+jcmd &lt;PID&gt; JFR.start duration=60s filename=recording.jfr
+
+<span class="cmt"># Or enable at JVM startup</span>
+java <span class="kw">-XX:StartFlightRecording</span>=duration=60s,filename=recording.jfr MyApp
+
+<span class="cmt"># Stop and dump an ongoing recording</span>
+jcmd &lt;PID&gt; JFR.stop name=1 filename=recording.jfr
+</code></pre>
+
+    <p>Open the <code>.jfr</code> file in <strong>JDK Mission Control (JMC)</strong>. The four views you always check first:</p>
+    <ul>
+      <li><strong>GC events</strong> &mdash; pause duration per event, GC type, heap occupancy before and after, which collector phase fired</li>
+      <li><strong>Memory allocation</strong> &mdash; which classes are allocating most bytes, allocation rate over time (look for sustained climbs that indicate leaks)</li>
+      <li><strong>Hot methods (flame graph)</strong> &mdash; where CPU time is spent. Find hot loops, unexpected serialization, regex compilation</li>
+      <li><strong>Lock contention</strong> &mdash; which locks are blocking which threads for how long</li>
+    </ul>
+
+    <h4>async-profiler &mdash; for when JFR isn&rsquo;t enough</h4>
+    <pre><code><span class="cmt"># Profile for 30 seconds and write an interactive flame graph</span>
+./profiler.sh -d 30 -f flamegraph.html &lt;PID&gt;
+</code></pre>
+
+    <p>JFR has a subtle weakness called <strong>safepoint bias</strong>. The JVM can only sample at safepoints &mdash; points where all threads are in a known state. If your hot code path never naturally hits a safepoint, JFR never samples it, and it disappears from the profile. async-profiler uses OS signals (SIGPROF) to interrupt threads at arbitrary points, regardless of safepoints. It catches what JFR misses. For CPU profiling of tight loops and JNI-heavy code, async-profiler is the tool.</p>
+  </div>
+
+  <!-- STAGE 6 -->
+  <div class="stage" data-section="6">
+    <span class="stage-tag">STAGE 6 <span class="time">35 MIN</span></span>
+    <h2>The full diagnosis challenge</h2>
+
+    <p>This is the capstone of the session. Read the scenario carefully, then answer all three questions. There is no auto-check &mdash; these are open-ended architect-level diagnoses. Write a minimum of 50 characters per answer, then reveal the model answer to compare.</p>
+
+    <div class="challenge">
+      <span class="challenge-tag">SCENARIO &middot; READ CAREFULLY BEFORE ANSWERING</span>
+      <h3>The 3-second freeze &mdash; every 20 minutes</h3>
+
+      <p><strong>System:</strong> REST API service, 4GB heap, G1GC, Java 17, 8 CPU cores.<br>
+      <strong>Traffic:</strong> 2,000 requests/sec, average response time 12ms.<br>
+      <strong>Problem:</strong> &ldquo;Service becomes completely unresponsive for 3&ndash;5 seconds every ~20 minutes.&rdquo;</p>
+
+      <p>A colleague pulls the GC log and sends you this excerpt:</p>
+
+      <pre><code>[<span class="num-lit">1187.3</span>s][info][gc] <span class="typ">GC(2341)</span> Pause Young (Normal) <span class="num-lit">512</span>M-&gt;<span class="num-lit">180</span>M(<span class="num-lit">4096</span>M) <span class="num-lit">18</span>.ms
+[<span class="num-lit">1187.8</span>s][info][gc] <span class="typ">GC(2342)</span> Pause Young (Normal) <span class="num-lit">568</span>M-&gt;<span class="num-lit">192</span>M(<span class="num-lit">4096</span>M) <span class="num-lit">22</span>.ms
+[<span class="num-lit">1188.1</span>s][info][gc] Concurrent Mark Cycle
+[<span class="num-lit">1188.1</span>s][info][gc] <span class="typ">GC(2343)</span> Pause Remark <span class="num-lit">2890</span>M-&gt;<span class="num-lit">2890</span>M(<span class="num-lit">4096</span>M) <span class="num-lit">45</span>.ms
+[<span class="num-lit">1188.2</span>s][info][gc] <span class="typ">GC(2344)</span> Pause Cleanup <span class="num-lit">2890</span>M-&gt;<span class="num-lit">2340</span>M(<span class="num-lit">4096</span>M) <span class="num-lit">8</span>.ms
+[<span class="num-lit">1189.4</span>s][info][gc] <span class="typ">GC(2345)</span> Pause Young (Mixed) <span class="num-lit">2340</span>M-&gt;<span class="num-lit">1890</span>M(<span class="num-lit">4096</span>M) <span class="num-lit">89</span>.ms
+[<span class="num-lit">1189.9</span>s][info][gc] <span class="typ">GC(2346)</span> Pause Young (Mixed) <span class="num-lit">1890</span>M-&gt;<span class="num-lit">1560</span>M(<span class="num-lit">4096</span>M) <span class="num-lit">95</span>.ms
+[<span class="num-lit">1190.8</span>s][info][gc] <span class="typ">GC(2347)</span> Pause Full (Ergonomics) <span class="num-lit">3980</span>M-&gt;<span class="num-lit">3820</span>M(<span class="num-lit">4096</span>M) <span class="num-lit">4241</span>.ms
+[<span class="num-lit">1192.1</span>s][info][gc] <span class="typ">GC(2348)</span> Pause Full (Ergonomics) <span class="num-lit">3820</span>M-&gt;<span class="num-lit">3790</span>M(<span class="num-lit">4096</span>M) <span class="num-lit">3987</span>.ms</code></pre>
+    </div>
+
+    <!-- INTERACTIVE OPEN-ENDED CHALLENGE -->
+    <div class="challenge-form" id="challenge-1-4">
+      <span class="challenge-tag">YOUR ANSWERS &middot; MINIMUM 50 CHARS EACH TO UNLOCK MODEL ANSWER</span>
+
+      <!-- Q1 -->
+      <div class="textarea-row">
+        <label class="textarea-label" for="ta-1-4-gc1">
+          Q1 &mdash; Walk through exactly what happened in this log from line 1 to line 9. What does each phase mean, and when did things go wrong?
+        </label>
+        <textarea class="answer-textarea" id="ta-1-4-gc1" placeholder="Trace through each GC event in order. What is G1 trying to do? Where does the plan fall apart?"></textarea>
+        <div class="char-count" id="cc-1-4-gc1">0 / 50 characters</div>
+        <div style="margin-top:12px">
+          <button class="btn-reveal" id="reveal-1-4-gc1" onclick="revealModelAnswer('1-4','gc1')" disabled>Reveal model answer</button>
+        </div>
+        <div class="model-answer" id="ma-1-4-gc1">
+          <span class="model-answer-tag">MODEL ANSWER</span>
+          <p><strong>Lines 1&ndash;2:</strong> Normal Young GCs. Eden fills, gets cleared. Heap is growing fast (512M&rarr;568M between two GCs less than 500ms apart). <strong>Line 3:</strong> G1 starts a Concurrent Mark Cycle &mdash; Old Gen has crossed the IHOP threshold (default 45% of 4096M = ~1843M). At this point heap is already at 2890M (70% full). G1 is behind. <strong>Line 4 (Remark):</strong> Short STW to finalize marking. No heap reduction &mdash; marking just identifies live objects. <strong>Line 5 (Cleanup):</strong> Short STW to account for region liveness data. 2890M&rarr;2340M &mdash; G1 identified ~550M of recoverable space. <strong>Lines 6&ndash;7 (Mixed GCs):</strong> G1 enters mixed mode, collecting Young + Old regions. Good &mdash; heap drops 2340M&rarr;1560M. But the service is still allocating fast. <strong>Line 8 (Full GC, 4241ms):</strong> Before the next Mixed GC fires, the heap shoots back to 3980M. G1 can&rsquo;t keep up. JVM has no choice: Full GC. 4.2 seconds. Heap goes 3980M&rarr;3820M. Only 160MB freed. <strong>Line 9 (Full GC again, 3987ms):</strong> The heap immediately fills again after the first Full GC. Another Full GC 1.3 seconds later. Also frees almost nothing. This is the &ldquo;back-to-back Full GC&rdquo; pattern &mdash; the application is lost.</p>
+        </div>
+      </div>
+
+      <!-- Q2 -->
+      <div class="textarea-row" style="margin-top:28px">
+        <label class="textarea-label" for="ta-1-4-gc2">
+          Q2 &mdash; The Full GC at line 8 freed only 160MB from a 3980MB heap. What does this tell you about the objects living in Old Gen?
+        </label>
+        <textarea class="answer-textarea" id="ta-1-4-gc2" placeholder="Think about what 'live object' means to the GC. If GC can't free it, something must still reference it…"></textarea>
+        <div class="char-count" id="cc-1-4-gc2">0 / 50 characters</div>
+        <div style="margin-top:12px">
+          <button class="btn-reveal" id="reveal-1-4-gc2" onclick="revealModelAnswer('1-4','gc2')" disabled>Reveal model answer</button>
+        </div>
+        <div class="model-answer" id="ma-1-4-gc2">
+          <span class="model-answer-tag">MODEL ANSWER</span>
+          <p>A Full GC is the most thorough collection the JVM can do &mdash; it scans everything, collects everywhere. If it freed only 160MB (4% of the heap), 96% of that heap is <strong>reachable</strong>. Not just surviving by chance &mdash; actually reachable from live roots. Something is holding references to ~3.8GB of objects. Classic symptoms: an unbounded cache that never evicts, a session store that grows with traffic but never expires, an event listener that accumulates registered objects, or a static collection that is appended to but never cleared. This is a <strong>memory leak</strong>, not a heap sizing problem. Adding heap just delays the OOM by a few more minutes. You need a heap dump, load it into Eclipse MAT or VisualVM, and find the largest retained heap path from GC roots.</p>
+        </div>
+      </div>
+
+      <!-- Q3 -->
+      <div class="textarea-row" style="margin-top:28px">
+        <label class="textarea-label" for="ta-1-4-gc3">
+          Q3 &mdash; Propose three specific changes &mdash; flags, architecture, or code &mdash; to prevent this exact pattern from recurring.
+        </label>
+        <textarea class="answer-textarea" id="ta-1-4-gc3" placeholder="Think at three levels: GC configuration, application architecture, and code-level causes. Be specific."></textarea>
+        <div class="char-count" id="cc-1-4-gc3">0 / 50 characters</div>
+        <div style="margin-top:12px">
+          <button class="btn-reveal" id="reveal-1-4-gc3" onclick="revealModelAnswer('1-4','gc3')" disabled>Reveal model answer</button>
+        </div>
+        <div class="model-answer" id="ma-1-4-gc3">
+          <span class="model-answer-tag">MODEL ANSWER</span>
+          <p><strong>1. Fix the leak (code).</strong> Take a heap dump: add <code>-XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/var/log/app/</code> and wait for the next OOM, or run <code>jcmd &lt;PID&gt; VM.heap_dump</code> now. Open in Eclipse MAT: &ldquo;Leak Suspects&rdquo; report will identify the largest retained heap holders. Find the unbounded collection or cache, add eviction (Guava Cache / Caffeine with <code>maximumSize</code> or <code>expireAfterAccess</code>), or fix the listener that never deregisters.</p>
+          <p><strong>2. Lower IHOP so G1 starts marking earlier (flags).</strong> Set <code>-XX:InitiatingHeapOccupancyPercent=30</code> (down from 45). G1 will start concurrent marking when the heap is 30% full, giving it more lead time to clean Old Gen before things get critical. This doesn&rsquo;t fix the leak, but it delays the Full GC for a while.</p>
+          <p><strong>3. Add a heap utilization alert (operations).</strong> If <code>Old Gen occupancy &gt; 70% for &gt; 60s</code>, page the on-call engineer. The leak grows over time &mdash; catching it at 70% heap gives you time to take a heap dump before the service OOMs, when you still have a live JVM to inspect. A dead JVM gives you nothing but the heap dump file; a live JVM gives you thread dumps, JFR recordings, and the ability to trigger a GC and observe what survives.</p>
+        </div>
+      </div>
+
+      <div class="unlock-banner" id="unlock-1-4" style="margin-top:24px">
+        <strong style="color:var(--green)">&#x2705; Day 4 complete!</strong> Day 5 is now unlocked &mdash;
+        <span style="color:var(--ink-dim)">Java Memory Model (JMM), happens-before, volatile &amp; the rules that govern shared heap data</span>
+      </div>
+    </div>
+
+    <!-- WEEKLY SYNTHESIS -->
+    <div class="weekly-synthesis">
+      <h3>Week 1 Synthesis &mdash; The Complete JVM Memory Picture</h3>
+
+      <p>Days 1&ndash;4 form a single cohesive mental model. You can&rsquo;t understand GC without understanding the heap. You can&rsquo;t understand the heap without understanding where data lives. Every concept built on the one before it.</p>
+
+      <div class="compare-wrap"><table class="compare">
+        <thead>
+          <tr><th>Day</th><th>Core model</th><th>Architect decision it enables</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Day 1</strong></td>
+            <td>Stack vs Heap</td>
+            <td>Thread pool sizing, diagnosing StackOverflowError vs OutOfMemoryError, understanding why local variables are free but allocations cost</td>
+          </tr>
+          <tr>
+            <td><strong>Day 2</strong></td>
+            <td>Static / Instance / Metaspace</td>
+            <td>Memory leak patterns (static collections), module system design, understanding why class loading can cause OOM in Metaspace</td>
+          </tr>
+          <tr>
+            <td><strong>Day 3</strong></td>
+            <td>Reachability + Generational GC</td>
+            <td>Cache lifetime design (how long do your cached objects live?), object allocation patterns, diagnosing promotion rate vs allocation rate</td>
+          </tr>
+          <tr>
+            <td><strong>Day 4</strong></td>
+            <td>GC algorithms + tuning</td>
+            <td>Collector selection for workload type, flag tuning for throughput vs latency, reading GC logs to diagnose leaks and sizing issues</td>
+          </tr>
+        </tbody>
+      </table></div>
+
+      <p><strong>The through-line:</strong> every architect decision &mdash; thread pool sizing, cache TTL, Young Gen size, collector choice &mdash; ultimately comes back to one question: <em>where does this data live, and how long does it live?</em> If you can answer that question for any object in your system, you can predict its GC behaviour and tune accordingly.</p>
+
+      <p><strong>What&rsquo;s coming:</strong> Day 5 (Java Memory Model, happens-before, volatile) builds directly on the heap model you now own. You understand that all threads share the same heap. Day 5 explains why that sharing is dangerous and what rules the JVM uses to make concurrent access safe &mdash; or unsafe, if you get it wrong.</p>
+    </div>
+
+    <!-- REFLECTION -->
+    <div class="reflection">
+      <div class="reflection-header" onclick="toggleReflection(this)">
+        <span class="reflection-icon">&#x1FA9E;</span>
+        <span class="reflection-title">Reflection &amp; Self-Assessment</span>
+        <span class="reflection-chevron">&#x25BE;</span>
+      </div>
+      <div class="reflection-body">
+
+        <div class="takeaways">
+          <div class="takeaways-label">Key Takeaways</div>
+          <ul>
+            <li><strong>G1 is the right default</strong> for most services: balanced, predictable, works well on heaps from 4GB to 32GB. The 200ms pause target covers the vast majority of production workloads.</li>
+            <li><strong>ZGC is the right choice when latency is the primary constraint:</strong> trading systems, real-time pricing, gaming backends. Sub-millisecond pauses at the cost of 5&ndash;15% throughput.</li>
+            <li><strong>Always log GC in production</strong> (<code>-Xlog:gc*</code>). The log is zero-cost and invaluable when something goes wrong. The JVM is generating this data regardless &mdash; you just need to write it somewhere.</li>
+            <li><strong>A Full GC that barely frees memory is a memory leak, not a sizing problem.</strong> The fix is a heap dump and code change, not a bigger heap.</li>
+          </ul>
+        </div>
+
+        <div class="reflection-prompts">
+          <div class="reflection-prompt">
+            <span class="prompt-num">01</span>
+            <p class="prompt-text">In your current system, what is the longest-lived object in the Old Gen? Is it there intentionally (a cache, a connection pool, a config object), or is something accumulating unexpectedly? How would you verify which one it is?</p>
+          </div>
+          <div class="reflection-prompt">
+            <span class="prompt-num">02</span>
+            <p class="prompt-text">Without looking anything up, write the 3 JVM flags you would add to <em>every</em> production Java service as a baseline. Not tuning flags &mdash; the baseline flags that every service should always have, regardless of workload.</p>
+          </div>
+          <div class="reflection-prompt">
+            <span class="prompt-num">03</span>
+            <p class="prompt-text">If you saw two Full GCs back-to-back that each freed less than 5% of the heap, what is your 3-step investigation plan? Be specific: what tool, what command, what do you look for in the output?</p>
+          </div>
+        </div>
+
+        <div class="confidence-block">
+          <div class="confidence-label">How confident do you feel about today&rsquo;s material?</div>
+          <div class="confidence-btns">
+            <button class="conf-btn" data-day="1-4" data-level="1" onclick="saveConfidence('1-4', 1)">&#x1F615; Not yet &mdash; need another pass</button>
+            <button class="conf-btn" data-day="1-4" data-level="2" onclick="saveConfidence('1-4', 2)">&#x1F914; Getting there &mdash; mostly clear</button>
+            <button class="conf-btn" data-day="1-4" data-level="3" onclick="saveConfidence('1-4', 3)">&#x2705; Solid &mdash; I could explain this</button>
+          </div>
+          <div class="confidence-saved" id="conf-saved-1-4"></div>
+        </div>
+
+      </div>
+    </div>
+
+  </div><!-- end stage 6 -->
+
+  <footer>
+    DAY 4 OF 158 &middot; GC ALGORITHMS &middot; PHASE 1 / 6
+  </footer>
+
+</div>
+
+<script src="../data/curriculum.js"></script>
+<script src="../assets/app.js"></script>
+<script src="../assets/audio-player.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    initOpenEndedChallenge('1-4');
+    initReflection('1-4');
+    initLessonNav();
+  });
+</script>
+</body>
+</html>

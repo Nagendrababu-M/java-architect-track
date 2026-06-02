@@ -1,0 +1,23 @@
+There are dozens of JVM tuning flags. Most of them you will never need. Let me give you the six that cover ninety percent of real production scenarios — the ones you should add to every deployment and actually understand.
+
+Flag one: Xms and Xmx. These set the minimum and maximum heap size. In production, always set them equal. If Xms is smaller than Xmx, the JVM starts with a smaller heap and expands it as needed. That expansion triggers a pause. On a busy production service, you don't want the heap resizing during peak traffic. Lock it at a fixed size from the start.
+
+Flag two: NewRatio. This controls the ratio of Old Gen to Young Gen. The default is two, meaning Old Gen is twice the size of Young Gen — a two-to-one split. Lowering this ratio makes Young Gen bigger. A bigger Young Gen means objects have more room to die before being promoted. If your service has a high allocation rate and you're seeing too many promotions, try NewRatio=1 to give Young Gen half the heap.
+
+Flag three: MaxGCPauseMillis. Only relevant for G1. This is the pause target — G1 will try to stay under this number. It's a soft goal, not a hard guarantee. 200ms is the default. For latency-sensitive services, try 50ms. For batch workloads, you can raise it — longer pauses mean G1 can collect more in each cycle and run less frequently.
+
+Flag four: UseZGC. Switch to ZGC when latency is the primary constraint. Requires Java 15 or later.
+
+Flag five: Xlog gc star. Enable GC logging. Always. In production. No exceptions. The format I recommend includes timestamp, uptime, and log level, writing to a rolling file. You cannot diagnose a production GC problem you didn't log. I've seen teams spend days debugging a latency issue that would have been obvious in sixty seconds of GC log analysis — if they'd only enabled logging.
+
+Flag six: HeapDumpOnOutOfMemoryError. When the JVM crashes with OutOfMemoryError, it writes a heap dump to disk. This dump contains the full contents of your heap at the moment of the crash — every object, every reference, every piece of data. Without it, OOM crashes are nearly impossible to diagnose. With it, you can load the dump into Eclipse MAT or JDK Mission Control and find the leak in minutes.
+
+Now let's talk about sizing Young Gen specifically, because it's the highest-impact tuning decision for high-throughput services.
+
+Young Gen too small: objects that would have died naturally in Eden survive long enough to be promoted to Old Gen. Old Gen fills faster. Major GC fires more often. Pause times go up.
+
+Young Gen too big: each Minor GC takes longer because there's more to scan and copy. Though this is usually less of a problem than the alternative.
+
+The goal is to size Young Gen so that the vast majority of your short-lived objects die before a Minor GC fires. Here's how to calculate it. Measure your allocation rate — you can get this from JFR or gc logs. Measure your average object lifetime. Young Gen should hold at least that many seconds of allocations.
+
+Example: you allocate at 100 megabytes per second, and your typical request objects live for about 500 milliseconds. That means Eden needs to hold at least 50 megabytes of live objects between Minor GCs. Add two times headroom for safety — set NewSize to 128 megabytes, MaxNewSize to 256 megabytes. At that size, your 500ms objects die in Eden and never see the Old Gen.

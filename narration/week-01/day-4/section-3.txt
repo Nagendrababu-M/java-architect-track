@@ -1,0 +1,21 @@
+ZGC was built with a single engineering goal: pause times under one millisecond, regardless of heap size. Not "under 10ms." Not "under 5ms." Under one millisecond. On heaps up to sixteen terabytes.
+
+To achieve this, ZGC had to rethink something fundamental about how garbage collectors work.
+
+Traditional collectors — including G1 — must pause the application while they relocate objects. Moving an object means updating every reference to it. You can't do that while the application is running, because the app might be reading those references at the same time. So: stop everything, move the objects, fix all the references, resume.
+
+ZGC eliminates this stop by doing two things together: colored pointers and load barriers.
+
+Colored pointers work like this. In a 64-bit system, a pointer is 64 bits. But typical heap addresses only need about 44 of those bits. ZGC uses the spare bits to store GC metadata — is this object currently being marked as live? Has it been relocated? These bits are embedded in every reference in your program.
+
+Load barriers are tiny pieces of code inserted by the JIT compiler at every point where your code reads an object reference. When you do something like "order.getCustomer()", a load barrier runs before returning the customer reference. It checks the colored bits: has this object moved? If yes, it fixes the reference on the fly — updating it to point to the new location. Your code gets the right result, ZGC records the fix, and the whole thing happens without stopping anything.
+
+This is how ZGC relocates objects while your application keeps running. The relocation work is distributed across your application threads, one reference fix at a time, instead of being done in a single stop-the-world burst.
+
+The STW phases that remain in ZGC are just the initial root scan — finding the GC roots in stack frames and static fields — and a brief final marking step. Both take time proportional to the number of threads, not the heap size. On a typical service, these pauses are measured in fractions of a millisecond.
+
+The tradeoffs are real. ZGC requires a 64-bit JVM. Throughput is typically five to fifteen percent lower than G1, because those load barriers aren't free — every reference read has a tiny overhead. And ZGC needs headroom: the heap should be at least eight times the live data size, because ZGC needs room to copy live objects while the old locations are still accessible.
+
+For the flags: always set Xms equal to Xmx in production. If the heap can resize, resizing causes a pause. Lock it at a fixed size. Use SoftMaxHeapSize to give ZGC a soft target — it will try to stay under that before going to the hard max.
+
+And for a trading system — Nifty options engine, HFT, anything where latency is the primary constraint — ZGC is the clear choice. G1 at 200ms is two hundred milliseconds of missed prices. ZGC at under 1ms means your engine stays live through every GC cycle. The throughput cost is worth it because latency is your competitive edge.

@@ -1,0 +1,25 @@
+G1 is the collector you'll use most often — it's the default since Java 9 — so understanding it deeply is worth the time.
+
+The old generational GC design had a fixed layout: a contiguous Eden space, two fixed Survivor spaces, and a contiguous Old Gen. G1 threw that away and replaced it with regions.
+
+The entire heap is divided into equal-sized regions — between 1 and 32 megabytes each, always a power of two. At any given moment, some regions are Eden, some are Survivor, some are Old Gen, and some are empty. G1 dynamically reassigns regions based on what's needed. There's no fixed Eden boundary — if more Eden is needed, G1 claims empty regions. If Old Gen grows, it claims others.
+
+This flexibility is the foundation of G1's ability to meet pause targets.
+
+Now — how does G1 know which regions are worth collecting? Enter Remembered Sets. Each region maintains a data structure that tracks which other regions have references into it. Instead of scanning the entire heap to find live objects in a region, G1 only needs to look at that region's Remembered Set. This makes collection of individual regions fast.
+
+G1 uses this to build a Collection Set — the group of regions it will collect in the next pause. It ranks regions by how much garbage they contain and picks the ones with the most garbage first. That's where the name comes from: Garbage First.
+
+The collection cycle has three phases.
+
+Concurrent Marking runs while your application runs. G1 traces the live object graph from GC roots and marks what's alive. Your app keeps running during this — there's a small stop-the-world at the start and end of marking, but the bulk happens concurrently.
+
+Then comes the Mixed GC. Once marking is done, G1 does a series of mixed collections — collecting the entire Young Generation plus the most garbage-dense Old Gen regions together, staying within your pause target.
+
+If the Old Gen fills up before concurrent marking can keep up, G1 falls back to a Full GC — a single-threaded stop-the-world collection of everything. This is the failure mode you want to avoid. It appears in the GC log as "Pause Full (Ergonomics)" or "Pause Full (Allocation Failure)".
+
+One thing to watch out for: Humongous objects. If you allocate an object larger than fifty percent of a G1 region size, it's classified as Humongous and goes directly to the Old Gen — it never passes through Eden or Survivor. Too many humongous allocations — typically large byte arrays or buffers — can fill the Old Gen directly and cause Full GCs regardless of how well-tuned your Young Gen is.
+
+The most important G1 flags: use minus XX colon plus UseG1GC to enable it (already the default). Set minus XX colon MaxGCPauseMillis to your pause target — 200ms is the default, lower it if you need better latency. Use minus Xlog gc star to enable GC logging — always do this in production, you cannot diagnose a production problem you didn't log.
+
+Quick check: your service runs with a 16 gigabyte heap and G1. Pauses are consistently 400ms even though you set MaxGCPauseMillis to 200. What are two possible reasons G1 is overshooting the pause target?

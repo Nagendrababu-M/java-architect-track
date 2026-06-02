@@ -1,0 +1,27 @@
+You now know the algorithms and the flags. Stage 5 is about observation — how to see what's actually happening in your running JVM. Because you cannot tune what you cannot see.
+
+Let's start with GC logs, because they're the first thing you should look at when something goes wrong.
+
+A typical healthy G1 log line looks like this. It starts with a timestamp — how many seconds since the JVM started. Then the GC number in parentheses — GC 42 means this is the forty-second collection. Then the pause type: "Pause Young (Normal)" means a routine Minor GC, "G1 Evacuation Pause" is the technical name for copying Eden to Survivor. Then "512M arrow 128M" means heap went from 512 megabytes used to 128 megabytes — a successful collection that freed 384 megabytes. The total heap size is in parentheses. And the final number is pause duration — 45 milliseconds.
+
+That's a healthy line. Short pause, lots freed, Young Gen cleaned up.
+
+Now here's a concerning pattern. "Pause Full (Ergonomics)" — that's a Full GC, triggered because G1 couldn't keep up with allocation. The heap is at 1890 megabytes before the GC. After the GC: 1820 megabytes. The GC ran for 4.8 seconds and freed 70 megabytes.
+
+Read that again. 4.8 seconds of stop-the-world. 70 megabytes freed. On a 2 gigabyte heap. That's not a sizing problem. That's a memory leak. The Old Gen is full of objects that are still referenced — still alive in the GC's view — so the collector has nothing to collect. The heap is being held hostage by data you've forgotten to release.
+
+This is the pattern: Full GC with very small freed bytes = memory leak investigation time.
+
+Now let's talk about Java Flight Recorder, JFR. It's built into the JVM since Java 11, it's free, and it has extremely low overhead — it's designed to be always on in production.
+
+To start a recording on a running process, you use jcmd with the process ID and the JFR.start command, specifying a duration and output filename. You can also enable it at JVM startup with the StartFlightRecording flag.
+
+Once you have a recording file, you open it in JDK Mission Control — JMC — which is free and available from the OpenJDK downloads page. The four views I always look at first are: GC events to see pause times and heap occupancy, memory allocation to see which classes are the biggest allocators, hot methods to see where CPU time is actually going, and lock contention to see if threads are spending time waiting for each other.
+
+One important nuance about JFR sampling: JFR can only capture thread stack traces at safepoints — specific points in the code where the JVM knows the state of all threads. If a hot method never reaches a safepoint, JFR will undercount its CPU usage. This is called safepoint bias.
+
+async-profiler solves this by using operating system signals to interrupt threads at any point — not just safepoints. It gives a more accurate picture of where CPU time is actually going. You run it against a live process with a duration flag and an output filename, and it produces an interactive flame graph.
+
+In a flame graph, width represents time — a wide bar is a hot method. Stack depth goes upward — the bottom is the entry point, the top is the most specific call. You're looking for wide bars high in the stack: those are the hot leaf methods where your CPU is actually spending its time.
+
+When you're diagnosing a latency problem, start with the GC logs. If you see frequent Major GCs or Full GCs, look at what's in the Old Gen using a heap dump or JFR memory allocation view. If the GC is fine but latency is still high, move to async-profiler to find the CPU hotspot. These two tools together — GC logs and async-profiler — cover the majority of Java performance investigations you'll face.

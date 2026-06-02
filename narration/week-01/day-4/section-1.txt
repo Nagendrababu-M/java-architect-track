@@ -1,0 +1,27 @@
+Welcome to Day 4. This is the heavy session of Week 1 — three hours, six stages. I'd recommend a short break between every two stages. Don't try to absorb all of this in one sitting without pausing.
+
+Today we go inside the actual GC algorithms. You know what GC does from Day 3. Now we're going to understand how it does it, and critically — which algorithm to choose for which workload.
+
+Let's start with the fundamental tension that every garbage collector in existence must navigate: throughput versus latency.
+
+Throughput means: how much useful work does your application get done per unit of time? A high-throughput GC might pause your application for two full seconds every few minutes — but between those pauses, the app runs at full speed. If you're running a nightly batch job that processes fifty million records and doesn't need to respond to anyone, those two-second pauses are completely acceptable. What matters is total processing time.
+
+Latency means: what is the worst-case pause your application experiences? A low-latency GC might sacrifice five to fifteen percent of your throughput to guarantee that no pause ever exceeds one millisecond. If you're running a trading system or a real-time API, that tradeoff is absolutely worth it.
+
+No collector wins both. That's the core insight. Every GC algorithm is a specific point on the throughput-latency curve.
+
+Here are your five options.
+
+Serial GC uses a single thread for all garbage collection work. Everything stops, one thread does the job, application resumes. It sounds primitive, but it's actually the right choice for single-CPU containers or small heaps — adding more threads wouldn't help if there's only one CPU anyway, and Serial has almost no overhead.
+
+Parallel GC — also called the Throughput Collector — uses multiple threads during stop-the-world pauses. It can collect much faster than Serial on multi-core machines, but the pauses can still be substantial on large heaps. It's the right choice for batch jobs, data pipelines, anything that can tolerate pauses and just wants maximum throughput.
+
+CMS — Concurrent Mark Sweep — was an attempt at concurrent collection. It was deprecated in Java 9 and removed in Java 14. Don't use it. If you're maintaining a legacy system that still uses CMS, migrating to G1 is the right move.
+
+G1 — Garbage First — has been the default collector since Java 9. It uses a region-based heap design and tries to meet a configurable pause target. It's the right default for almost everything: general-purpose services, web APIs, microservices. Balanced latency and throughput.
+
+ZGC — introduced as production-ready in Java 15 — achieves sub-millisecond pause times on heaps of any size. The tradeoff is slightly lower throughput. It's the right choice for latency-sensitive services: trading systems, gaming backends, real-time APIs.
+
+Shenandoah takes a similar approach to ZGC but uses a different internal algorithm. Both are excellent low-latency options — ZGC is more commonly referenced in interviews, but they're equivalent in purpose.
+
+Quick check: a nightly batch job processes ten million records. It runs for four hours. Nobody is waiting for responses during that time. Which collector would you choose — Serial, Parallel, or ZGC? And why? Have your answer ready before moving to Stage 2.

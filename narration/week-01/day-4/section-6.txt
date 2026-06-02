@@ -1,0 +1,37 @@
+Stage 6 is your synthesis stage. We have a full GC log diagnosis challenge, and then we close the week with a synthesis of everything Days 1 through 4 have built.
+
+Let me walk you through the challenge scenario before you write your answers.
+
+The situation: a REST API on Java 17, 4 gigabyte heap, G1GC, 8 CPU cores, 2000 requests per second, average response time 12 milliseconds. The complaint: "Service becomes unresponsive for 3 to 5 seconds every 20 minutes."
+
+You have nine lines of GC log. Let me narrate what's happening.
+
+Lines 1 and 2: two normal Young GC pauses. 18ms and 22ms — healthy, within G1's pause target. The heap is around 500 to 570 megabytes used. Everything looks fine here.
+
+Line 3: G1 starts a Concurrent Mark Cycle. This means G1 has decided Old Gen is getting full enough to warrant concurrent marking. The fact that this triggers so soon after normal Young GCs suggests Old Gen occupancy is crossing the initiating heap occupancy threshold — probably around 45% of 4GB, so roughly 1.8 gigabytes in Old Gen already.
+
+Lines 4 and 5: the Remark and Cleanup phases — the stop-the-world bookends of concurrent marking. Short pauses, 45ms and 8ms. Normal.
+
+Lines 6 and 7: Mixed GCs. G1 is now collecting Young Generation plus some Old Gen regions together. Pauses are 89ms and 95ms — getting longer because Old Gen regions are harder to collect than Eden. Heap drops from 2340MB to 1560MB. Good progress — but notice the heap was at 2340MB. That means Old Gen was huge.
+
+Line 8: Full GC. "Pause Full (Ergonomics)" — G1 gave up trying to keep up concurrently and fell back to a full stop-the-world collection. Duration: 4241 milliseconds. Four point two seconds. This is what the user reported as "unresponsive."
+
+Line 9: another Full GC immediately after, 3987 milliseconds. The heap barely shrank between them: 3980MB to 3820MB to 3790MB. Two consecutive Full GCs freed a total of 190 megabytes from a nearly full 4 gigabyte heap.
+
+That is the diagnostic signature of a memory leak. The Old Gen is full of live objects — objects with at least one reference keeping them alive. The GC cannot collect them because they're reachable. Your heap is not too small; it's being held hostage.
+
+Now for your three questions: walk through the log, diagnose what the Full GC tells you, and propose fixes. Write those answers before looking at the model answers. Make them substantive. The reasoning matters more than the conclusion.
+
+For the third question — the fixes — think about three levels. First, a short-term operational fix: what flag change or restart gets the service stable right now? Second, an investigative step: what tool do you reach for to find the leak? Third, a code or architecture change: what patterns commonly cause objects to accumulate in Old Gen, and how do you design against them?
+
+After you complete the challenge, take a moment with the Weekly Synthesis section.
+
+Days 1 through 4 form a complete picture. Day 1 gave you the regions: stack, heap, Metaspace. Day 2 showed you where specific data goes: locals on stack, objects on heap, static fields in Metaspace, instance fields with their object. Day 3 gave you GC mechanics: reachability, the generational hypothesis, Minor and Major GC, stop-the-world pauses. And today you went inside the algorithms: Serial for simplicity, Parallel for batch throughput, G1 for the general case, ZGC for when latency is everything.
+
+Every architect decision you'll make about JVM services traces back to this model. Thread pool sizing — how many threads fit before stacks exhaust your RAM? Cache design — are your cached objects dying in Young Gen or living in Old Gen forever? Collector selection — is this service throughput-sensitive or latency-sensitive? Log analysis — is this pause pattern a sizing problem or a leak?
+
+The through-line connecting all four days is this: know where your data lives, know how long it lives, and design accordingly.
+
+Day 5 builds directly on the heap model from a new angle: why does shared heap data need careful synchronization? That's the Java Memory Model — happens-before, volatile, final field semantics. Everything you've learned about the heap being shared between threads sets up exactly why the JMM exists.
+
+See you there.
