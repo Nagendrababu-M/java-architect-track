@@ -95,6 +95,7 @@ function renderDayCard(weekNum, day, progress) {
 
   const statusIcon = isDone ? '✅' : isCurrent ? '🔵' : isLocked ? '🔒' : '🔵';
   const durLabel   = (isDone || isCurrent) && day.duration ? `${day.duration} min` : '';
+  const audioBadge = (day.audio && day.audio.available) ? '<span class="day-audio-badge" title="Audio narration available">🎧</span>' : '';
   const classes    = ['day-card', status, isComingSoon ? 'coming-soon' : ''].filter(Boolean).join(' ');
   const tooltip    = isLocked ? 'data-tooltip="Complete previous days first"' : '';
   const href       = (!isLocked && day.file) ? day.file : '#';
@@ -102,7 +103,7 @@ function renderDayCard(weekNum, day, progress) {
 
   return `
   <${tag} class="${classes}" ${tag==='a' ? `href="${href}"` : ''} ${tooltip}>
-    <div class="day-number">DAY ${day.day}</div>
+    <div class="day-number">DAY ${day.day}${audioBadge}</div>
     <div class="day-title">${day.title}</div>
     <div class="day-footer">
       ${durLabel ? `<span class="day-duration">${durLabel}</span>` : ''}

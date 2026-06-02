@@ -1,0 +1,425 @@
+/* ============================================================
+   Java Architect Track — Audio Player Styles
+   Companion to audio-player.js
+   Design tokens from styles.css: --bg, --bg-elev, --bg-code,
+   --accent, --accent-soft, --green, --line, --ink, --ink-dim,
+   --ink-faint, --red, --yellow, --radius-md, --radius-lg
+   ============================================================ */
+
+/* ── Section play buttons (inline with stage-tag) ─────────── */
+
+.section-play-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid var(--accent);
+  background: var(--bg-code);
+  color: var(--accent);
+  font-size: 11px;
+  cursor: pointer;
+  margin-left: 10px;
+  vertical-align: middle;
+  flex-shrink: 0;
+  transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease, transform 0.15s ease;
+  position: relative;
+  outline: none;
+}
+.section-play-btn:hover:not(:disabled) {
+  background: var(--accent);
+  color: #0f1115;
+  transform: scale(1.08);
+}
+.section-play-btn:focus-visible {
+  box-shadow: 0 0 0 3px rgba(255,122,61,0.3);
+}
+.section-play-btn.is-playing {
+  background: var(--accent);
+  color: #0f1115;
+  border-color: var(--accent);
+  animation: btn-pulse 1.8s ease-in-out infinite;
+}
+.section-play-btn:disabled {
+  border-color: var(--line);
+  color: var(--ink-faint);
+  background: transparent;
+  cursor: not-allowed;
+  transform: none;
+}
+.section-play-btn[title]:disabled:hover::after {
+  content: attr(title);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg-elev);
+  border: 1px solid var(--line);
+  color: var(--ink-dim);
+  font-size: 11px;
+  white-space: nowrap;
+  padding: 4px 8px;
+  border-radius: 4px;
+  pointer-events: none;
+  z-index: 100;
+  font-family: 'Inter Tight', sans-serif;
+}
+
+@keyframes btn-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255,122,61,0.5); }
+  50%       { box-shadow: 0 0 0 6px rgba(255,122,61,0); }
+}
+
+/* ── Play Full Lesson button ──────────────────────────────── */
+
+#play-full-lesson-mount {
+  margin: 20px 0 32px;
+}
+
+.play-full-lesson-btn {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-width: 480px;
+  padding: 16px 24px;
+  border-radius: var(--radius-md);
+  border: none;
+  cursor: pointer;
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-soft) 100%);
+  color: #0f1115;
+  text-align: left;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
+  outline: none;
+}
+.play-full-lesson-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(255,122,61,0.35);
+}
+.play-full-lesson-btn:active {
+  transform: translateY(0);
+}
+.play-full-lesson-btn:focus-visible {
+  box-shadow: 0 0 0 3px rgba(255,122,61,0.4);
+}
+.play-full-lesson-btn.is-playing {
+  animation: lesson-btn-pulse 2.2s ease-in-out infinite;
+}
+.play-full-lesson-btn .pfl-label {
+  font-family: 'Inter Tight', sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+.play-full-lesson-btn .pfl-sub {
+  font-family: 'Inter Tight', sans-serif;
+  font-size: 12px;
+  opacity: 0.75;
+}
+
+@keyframes lesson-btn-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255,122,61,0.45); }
+  50%       { box-shadow: 0 0 0 10px rgba(255,122,61,0); }
+}
+
+/* ── Floating mini audio bar ──────────────────────────────── */
+
+.audio-mini-bar {
+  position: fixed;
+  bottom: 80px;
+  right: 20px;
+  width: 280px;
+  background: var(--bg-elev);
+  backdrop-filter: blur(12px) saturate(160%);
+  -webkit-backdrop-filter: blur(12px) saturate(160%);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.45);
+  z-index: 900;
+  padding: 12px 14px;
+  transform: translateY(120px);
+  opacity: 0;
+  pointer-events: none;
+  transition: transform 0.28s cubic-bezier(0.34,1.4,0.64,1), opacity 0.22s ease;
+  user-select: none;
+}
+.audio-mini-bar.visible {
+  transform: translateY(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Top row: now-playing + close */
+.ambar-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.ambar-now-playing {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--accent);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+}
+.ambar-close {
+  background: none;
+  border: none;
+  color: var(--ink-faint);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 2px 4px;
+  border-radius: 4px;
+  line-height: 1;
+  transition: color 0.15s, background 0.15s;
+  flex-shrink: 0;
+}
+.ambar-close:hover {
+  color: var(--ink);
+  background: var(--line);
+}
+
+/* Progress bar */
+.ambar-progress-wrap {
+  position: relative;
+  height: 4px;
+  background: var(--line);
+  border-radius: 2px;
+  cursor: pointer;
+  margin-bottom: 8px;
+  transition: height 0.15s ease;
+}
+.ambar-progress-wrap:hover {
+  height: 8px;
+  border-radius: 4px;
+}
+.ambar-progress-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  background: var(--accent);
+  border-radius: inherit;
+  pointer-events: none;
+  transition: width 0.2s linear;
+}
+.ambar-progress-thumb {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  width: 12px;
+  height: 12px;
+  background: var(--accent);
+  border-radius: 50%;
+  pointer-events: none;
+  transition: transform 0.15s ease;
+}
+.ambar-progress-wrap:hover .ambar-progress-thumb {
+  transform: translate(-50%, -50%) scale(1);
+}
+
+/* Controls row */
+.ambar-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.ambar-time {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--ink-faint);
+  white-space: nowrap;
+}
+.ambar-center {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.ambar-btn {
+  background: none;
+  border: none;
+  color: var(--ink-dim);
+  cursor: pointer;
+  font-size: 16px;
+  padding: 4px;
+  border-radius: 4px;
+  line-height: 1;
+  transition: color 0.15s, background 0.15s;
+}
+.ambar-btn:hover { color: var(--ink); background: var(--line); }
+.ambar-play-pause {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #0f1115;
+  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.ambar-play-pause:hover {
+  transform: scale(1.08);
+  box-shadow: 0 4px 12px rgba(255,122,61,0.4);
+}
+.ambar-speed {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  padding: 3px 7px;
+  border-radius: 20px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink-dim);
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+  white-space: nowrap;
+}
+.ambar-speed:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* ── Resume banner ────────────────────────────────────────── */
+
+.resume-banner {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  margin: 0 0 24px;
+  padding: 14px 20px;
+  border-radius: var(--radius-md);
+  background: var(--bg-elev);
+  border-left: 3px solid var(--green);
+  border: 1px solid var(--line);
+  border-left-width: 3px;
+  border-left-color: var(--green);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  animation: banner-slide-in 0.3s ease;
+}
+.resume-banner-text {
+  font-size: 13px;
+  color: var(--ink-dim);
+  font-family: 'Inter Tight', sans-serif;
+}
+.resume-banner-text strong { color: var(--ink); }
+.resume-banner-btns {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.resume-btn-primary {
+  padding: 6px 14px;
+  border-radius: 6px;
+  border: none;
+  background: var(--accent);
+  color: #0f1115;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: 'Inter Tight', sans-serif;
+  transition: opacity 0.15s;
+}
+.resume-btn-primary:hover { opacity: 0.85; }
+.resume-btn-secondary {
+  padding: 6px 14px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink-dim);
+  font-size: 12px;
+  cursor: pointer;
+  font-family: 'Inter Tight', sans-serif;
+  transition: border-color 0.15s, color 0.15s;
+}
+.resume-btn-secondary:hover { border-color: var(--ink-dim); color: var(--ink); }
+.resume-banner-dismiss {
+  background: none;
+  border: none;
+  color: var(--ink-faint);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 2px;
+  flex-shrink: 0;
+}
+
+@keyframes banner-slide-in {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Toast notifications ──────────────────────────────────── */
+
+.audio-toast {
+  position: fixed;
+  bottom: 100px;
+  right: 20px;
+  background: var(--bg-elev);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 10px 16px;
+  font-family: 'Inter Tight', sans-serif;
+  font-size: 13px;
+  color: var(--ink-dim);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+  z-index: 950;
+  max-width: 240px;
+  animation: toast-in 0.25s ease;
+  pointer-events: none;
+}
+.audio-toast.toast-exit {
+  animation: toast-out 0.3s ease forwards;
+}
+
+@keyframes toast-in {
+  from { opacity: 0; transform: translateX(20px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes toast-out {
+  from { opacity: 1; transform: translateX(0); }
+  to   { opacity: 0; transform: translateX(20px); }
+}
+
+/* ── 🎧 Audio available badge on landing page cards ─────── */
+
+.day-audio-badge {
+  font-size: 12px;
+  margin-left: 4px;
+  opacity: 0.8;
+}
+
+/* ── Mobile overrides (<600px) ───────────────────────────── */
+
+@media (max-width: 600px) {
+  .audio-mini-bar {
+    bottom: 70px;
+    left: 12px;
+    right: 12px;
+    width: auto;
+  }
+  .audio-toast {
+    right: 12px;
+    left: 12px;
+    max-width: none;
+    bottom: 80px;
+  }
+  .play-full-lesson-btn {
+    max-width: 100%;
+  }
+  .resume-banner {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

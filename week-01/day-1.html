@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,800&family=JetBrains+Mono:wght@400;500;700&family=Inter+Tight:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../assets/styles.css">
+<link rel="stylesheet" href="../assets/audio-player.css">
 </head>
 <body>
 <div class="grain"></div>
@@ -27,10 +28,11 @@
       <span class="sub">Part 1 of 2 — Stack vs. Heap, built from first principles.</span>
     </h1>
     <div class="scope"><strong>SCOPE</strong> &middot; 60 min &middot; 5 stages, pause after each</div>
+  <div id="play-full-lesson-mount"></div>
   </header>
 
   <!-- STAGE 1 -->
-  <div class="stage">
+  <div class="stage" data-section="1">
     <span class="stage-tag">STAGE 1 <span class="time">8 MIN</span></span>
     <h2>What does &ldquo;JVM memory&rdquo; actually mean?</h2>
 
@@ -78,7 +80,7 @@
   </div>
 
   <!-- STAGE 2 -->
-  <div class="stage">
+  <div class="stage" data-section="2">
     <span class="stage-tag">STAGE 2 <span class="time">12 MIN</span></span>
     <h2>The Stack: a stack of plates, one per thread</h2>
 
@@ -156,7 +158,7 @@
   </div>
 
   <!-- STAGE 3 -->
-  <div class="stage">
+  <div class="stage" data-section="3">
     <span class="stage-tag">STAGE 3 <span class="time">12 MIN</span></span>
     <h2>The Heap: one shared warehouse for all objects</h2>
 
@@ -220,7 +222,7 @@
   </div>
 
   <!-- STAGE 4 -->
-  <div class="stage">
+  <div class="stage" data-section="4">
     <span class="stage-tag">STAGE 4 <span class="time">8 MIN</span></span>
     <h2>Side-by-side comparison</h2>
 
@@ -245,7 +247,7 @@
   </div>
 
   <!-- STAGE 5 — Architect implications + interactive challenge -->
-  <div class="stage">
+  <div class="stage" data-section="5">
     <span class="stage-tag">STAGE 5 <span class="time">15 MIN</span></span>
     <h2>Why an architect must internalize this</h2>
 
@@ -414,6 +416,7 @@
 
 <script src="../data/curriculum.js"></script>
 <script src="../assets/app.js"></script>
+<script src="../assets/audio-player.js"></script>
 <script>
   document.addEventListener('DOMContentLoaded', () => { initReflection('1-1'); });
 </script>

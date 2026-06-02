@@ -24,6 +24,7 @@ const CURRICULUM = {
         {
           day: 1, title: "Stack vs Heap Fundamentals",
           topic: "JVM Memory", status: "done", duration: 60,
+          audio: { available: false, voice: 'en-US-Wavenet-D', sectionCount: 5, estimatedMinutes: 18 },
           file: "week-01/day-1.html",
           challenge: {
             type: "select",
@@ -44,6 +45,7 @@ const CURRICULUM = {
         {
           day: 2, title: "Static, Instance, Metaspace & Reflection",
           topic: "JVM Memory", status: "done", duration: 75,
+          audio: { available: false, voice: 'en-US-Wavenet-D', sectionCount: 5, estimatedMinutes: 22 },
           file: "week-01/day-2.html",
           challenge: {
             type: "select",
@@ -76,6 +78,7 @@ const CURRICULUM = {
         {
           day: 3, title: "Garbage Collection Fundamentals",
           topic: "Garbage Collection", status: "done", duration: 60,
+          audio: { available: false, voice: 'en-US-Wavenet-D', sectionCount: 5, estimatedMinutes: 20 },
           file: "week-01/day-3.html",
           challenge: {
             type: "open-ended",

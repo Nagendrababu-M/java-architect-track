@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,800&family=JetBrains+Mono:wght@400;500;700&family=Inter+Tight:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../assets/styles.css">
+<link rel="stylesheet" href="../assets/audio-player.css">
 <style>
   body {
     background-image:
@@ -34,6 +35,7 @@
       <span class="sub">Class metadata, runtime inspection, MethodHandles &mdash; and a full 7-row memory challenge.</span>
     </h1>
     <div class="scope"><strong>SCOPE</strong> &middot; 75 min &middot; 5 stages + final challenge</div>
+  <div id="play-full-lesson-mount"></div>
   </header>
 
   <div class="recap">
@@ -42,7 +44,7 @@
   </div>
 
   <!-- STAGE 1 -->
-  <div class="stage">
+  <div class="stage" data-section="1">
     <span class="stage-tag">STAGE 1 <span class="time">12 MIN</span></span>
     <h2>Instance fields live where their object lives</h2>
 
@@ -112,7 +114,7 @@ u.name = <span class="str">"Ana"</span>;</code></pre>
   </div>
 
   <!-- STAGE 2 -->
-  <div class="stage">
+  <div class="stage" data-section="2">
     <span class="stage-tag">STAGE 2 <span class="time">15 MIN</span></span>
     <h2>Static fields &mdash; the rule-breakers</h2>
 
@@ -202,7 +204,7 @@ u.name = <span class="str">"Ana"</span>;</code></pre>
   </div>
 
   <!-- STAGE 3 -->
-  <div class="stage">
+  <div class="stage" data-section="3">
     <span class="stage-tag">STAGE 3 <span class="time">8 MIN</span></span>
     <h2>The unified decision tree</h2>
 
@@ -250,7 +252,7 @@ u.name = <span class="str">"Ana"</span>;</code></pre>
 
 
   <!-- STAGE 4 — Java Reflection & the Runtime Class -->
-  <div class="stage">
+  <div class="stage" data-section="4">
     <span class="stage-tag">STAGE 4 <span class="time">15 MIN</span></span>
     <h2>Java Reflection: reading the class at runtime</h2>
 
@@ -358,7 +360,7 @@ vh.getAndAdd(counter, <span class="num">1</span>);  <span class="cm">// atomic i
   </div>
 
   <!-- STAGE 5 — Full 7-row interactive challenge -->
-  <div class="stage">
+  <div class="stage" data-section="5">
     <span class="stage-tag">STAGE 5 <span class="time">25 MIN</span></span>
     <h2>The full challenge</h2>
 
@@ -548,6 +550,7 @@ vh.getAndAdd(counter, <span class="num">1</span>);  <span class="cm">// atomic i
 
 <script src="../data/curriculum.js"></script>
 <script src="../assets/app.js"></script>
+<script src="../assets/audio-player.js"></script>
 <script>
   document.addEventListener('DOMContentLoaded', () => { initReflection('1-2'); });
 </script>
