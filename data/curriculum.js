@@ -24,7 +24,7 @@ const CURRICULUM = {
         {
           day: 1, title: "Stack vs Heap Fundamentals",
           topic: "JVM Memory", status: "done", duration: 60,
-          audio: { available: false, voice: 'en-US-Wavenet-D', sectionCount: 5, estimatedMinutes: 18 },
+          audio: { available: true,  voice: 'en-US-Wavenet-D', sectionCount: 5, estimatedMinutes: 18 },
           file: "week-01/day-1.html",
           challenge: {
             type: "select",
