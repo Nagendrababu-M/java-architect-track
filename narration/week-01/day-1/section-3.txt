@@ -1,0 +1,21 @@
+Now let's talk about the heap. If the stack is a neat stack of plates — ordered, small, self-cleaning — then the heap is something much bigger and messier. Think of it as a giant shared warehouse.
+
+Every object your program creates with the "new" keyword ends up on the heap. Every String, every ArrayList, every domain object you write, every connection you open. Always the heap, no exceptions.
+
+Unlike the stack, the heap doesn't follow LIFO rules. Objects can be created in any order and freed in any order. An object lives on the heap for as long as something still references it. When nothing references it anymore, the Garbage Collector eventually notices and reclaims the memory. And that "eventually" is doing a lot of work in that sentence — we'll unpack GC in detail on Day 3.
+
+Now here's the idea that trips up most engineers, including experienced ones. When you write this code — "Order order = new Order(100)" — two separate things happen in two separate memory regions.
+
+The "new Order(100)" part creates the actual Order object. That object lives on the heap. It has fields, it has data, it takes up real space in your warehouse.
+
+But the variable named "order" — the thing on the left side of the equals sign — that's a reference. It's not the object. It's a small fixed-size value, typically eight bytes, that says "the Order object lives at this address in the heap." That reference lives in the current method's stack frame.
+
+Here's a good analogy. The reference is like a postal code. The postal code itself is tiny and lives in your pocket. But it points to a house — which could be huge — that lives somewhere else entirely.
+
+Now here's where people get confused about fields inside objects. Say your Order has a field called "total" that's an int. Total is a primitive. So is it on the stack?
+
+No. And this is critical. The "primitives live on the stack" rule only applies when the primitive is a local variable directly inside a method. If it's a field — meaning it's declared inside a class, not inside a method — it lives wherever the object lives. The Order object is on the heap. Therefore total is on the heap too, physically embedded in the Order object's memory.
+
+The rule to tattoo on your brain: references on stack, objects on heap. And fields inside objects live wherever their object lives — which is always the heap.
+
+Quick check before moving on: you have a class Car with an int field called speed. Inside main you write "Car c = new Car(); c.speed = 80". Where does the value 80 end up? Where does the variable c live? They are not in the same place.

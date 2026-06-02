@@ -1,0 +1,19 @@
+We've covered the mechanics. Now let's talk about why an architect — as opposed to just a developer — needs to internalize this model deeply. Because this is where the knowledge starts paying for itself.
+
+First: diagnosing production failures. You will get paged at two in the morning because something crashed. If you see StackOverflowError in the logs, you know immediately: this is a single-thread problem. One thread's stack filled up. Look for runaway recursion or an unexpectedly deep call chain. The heap is not involved. The rest of your application is likely still running fine.
+
+If you see OutOfMemoryError: Java heap space, that's a completely different beast. The shared heap that all threads use is exhausted. Look for memory leaks, oversized caches, data being loaded into memory that should stay in the database. The fix is also completely different — tuning GC, finding the leak, increasing heap size, or redesigning how you hold data.
+
+Knowing which region failed immediately tells you which direction to investigate. That's the value of this model.
+
+Second: capacity planning. Consider a server handling ten thousand concurrent requests. If each request runs on a platform thread with a one megabyte stack, do the math: ten thousand threads times one megabyte equals ten gigabytes of memory — just for stacks. That's before you allocate a single object on the heap.
+
+This is not a hypothetical. It's a real calculation that real architects do when sizing JVM deployments. And it's exactly why Project Loom's virtual threads — which you'll study in detail on Day 12 — were invented. Virtual threads have stacks that live on the heap and can be as small as a few kilobytes. They sidestep this entire multiplication problem.
+
+Third: GC pressure. Every object you create on the heap will eventually need to be collected. If your code creates millions of short-lived objects per second — temporary request context objects, intermediate collections, throwaway strings — the GC runs constantly, stealing CPU from your application and causing latency spikes. Understanding that objects go to the heap, and that the heap needs GC, helps you design allocation-conscious code.
+
+Fourth: concurrency safety. Here's a rule that falls directly out of what you've learned today: stack data is thread-private. It is automatically thread-safe. You don't need locks, you don't need volatile, you don't need atomic variables — because no other thread can even see it. Heap data is shared. It needs deliberate protection — locks, atomics, immutability, or careful visibility.
+
+If you're ever in a design review and someone asks "is this thread-safe?", the first question you should ask back is "where does this data live?" If it's local to a method, it's on the stack — safe by definition. If it's on the heap — in a shared object, in a static field — that's where you need to think about concurrency.
+
+Go ahead and complete the interactive challenge on the page. When you're done, see you on Day 2.

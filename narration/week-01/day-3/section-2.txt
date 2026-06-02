@@ -1,0 +1,27 @@
+Every garbage collector ever written is built on two core algorithms. Understand these two and you understand every GC you'll encounter, whether it's the old Serial collector from the 90s or the cutting-edge ZGC from Java 15.
+
+Algorithm one: Mark and Sweep.
+
+This is the naive foundational approach. It has two phases.
+
+In the mark phase, the GC walks from every root, follows every reference, and marks every reachable object as live.
+
+In the sweep phase, it walks through the entire heap. Anything not marked is garbage — the GC reclaims that memory.
+
+Sounds simple. But there's a serious structural problem. After sweeping, your heap looks like swiss cheese. The reclaimed slots are scattered between the surviving objects. You have free space here, free space there, fragmented through the entire heap. Now try to allocate a large object — say, a byte array for a file you're reading. You might have plenty of total free space, but no single contiguous slot big enough. That's memory fragmentation. Allocation slows down, the GC runs more frequently to try to find space, and your application starts seeing latency.
+
+Algorithm two: Copying collection.
+
+This algorithm solves fragmentation by fundamentally rethinking the layout. You split your available memory into two halves — call them From-Space and To-Space. New objects are allocated into From-Space.
+
+When From-Space fills up, here's what happens. The GC walks from all roots. For every live object it finds, it copies that object into To-Space, packing them tightly with no gaps between them. When it's done copying all the live objects, it discards the entire From-Space — everything left there was garbage anyway.
+
+Then it swaps the roles: the newly filled To-Space becomes the next From-Space, and the old From-Space becomes the empty To-Space for the next cycle.
+
+The result is beautiful. No fragmentation — live objects are always packed contiguously. New allocation is just pointer bumping into empty space. And the cost of the collection is proportional to the number of live objects, not the total heap. If ninety percent of your heap is garbage, the copying algorithm only touches the ten percent that's alive.
+
+But there's an obvious downside. At any given moment, only half your heap is usable. If you have four gigabytes, only two are available for your application. That's a fifty percent overhead purely for the copying mechanism.
+
+Unless — you can be clever about where you apply this algorithm. And that's exactly what the generational approach does, which is Stage 3.
+
+Quick check: you have a four gigabyte heap. Ninety-five percent of objects die within seconds of being created. Which algorithm fits better — mark and sweep, or copying? Think through the tradeoffs before continuing.

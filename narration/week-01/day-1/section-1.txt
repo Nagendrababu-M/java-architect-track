@@ -1,0 +1,15 @@
+Welcome to Day 1 of the Java Architect Track. I'm glad you're here. Over the next 60 minutes, we're going to build a mental model of JVM memory from the ground up — and I mean genuinely from scratch, not just a quick recap you'll forget by next week.
+
+Let's start with a simple question: when you type "java MyApp" and hit enter, what actually happens to your RAM?
+
+The operating system reaches into physical memory and carves out a chunk for your JVM process. Now here's the key insight — the JVM doesn't treat that RAM as one big blob. It would be terribly inefficient if it did. Instead, it deliberately divides that memory into distinct regions, each designed for a specific job.
+
+Why bother dividing? Because different kinds of data have radically different lifetimes and access patterns. Think about it this way: a method call can be done and dusted in microseconds. But an object you store in a cache might need to live for hours. Treating those two things identically in memory would be like storing fresh milk and canned goods on the same shelf — technically possible, but completely impractical.
+
+So the JVM creates three main regions. First, the Heap — a large shared area where every object you create lives. Second, the Stacks — one per thread, holding method call frames. And third, Metaspace — where the JVM stores everything it knows about your classes themselves.
+
+Now there are a couple of other regions — program counter registers, the native method stack — but they're not where you'll spend your architect-level thinking time. These three carry about ninety-five percent of every memory conversation you'll ever have.
+
+Today, we focus on just the first two: heap and stack. Metaspace gets its own deep treatment tomorrow.
+
+Here's a quick self-check before you move on. Can you, right now, say out loud in one sentence each what "heap" means and what "stack" means? Not reading from anything — just from your own head. If you can, you're ready for Stage 2. If not, read this section one more time. That's not a failure, that's just learning. See you in Stage 2.

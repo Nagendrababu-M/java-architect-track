@@ -1,0 +1,21 @@
+You now have the complete JVM memory model: three regions, with clear rules for what goes where. Let me bring it all together into a single decision tree that you should be able to run any piece of code through.
+
+Here it is. Six categories, six answers.
+
+Category one: a local primitive inside a method. Where does it live? Stack. Why? Because it's declared inside a method's scope, it lives in that method's stack frame, and it's gone the instant the method returns.
+
+Category two: a local reference inside a method — something like "Order o" declared in a method body. Where does that reference live? Stack. It's still a local variable, still lives in the frame. The object it points to is a separate question.
+
+Category three: an object created with new. Where does it go? Heap. Always. No exceptions in standard Java. If you said "new Something" anywhere in your code, that object is on the heap.
+
+Category four: an instance field — whether it's a primitive int or a reference to a String. Where does it live? Heap. It's physically embedded inside the owning object. Since all objects are on the heap, all instance fields are on the heap.
+
+Category five: a static field — again, whether primitive or reference. Where does it live? Metaspace. It belongs to the class, not to any instance. The class lives in Metaspace, so the static field lives in Metaspace.
+
+Category six: the class definition itself — the bytecode, the method table, the structural metadata. Where does it live? Metaspace. Loaded once by the class loader, lives there for the JVM's lifetime.
+
+That's the complete model. If you can look at any piece of Java code and correctly categorize every piece of data into one of these six rows, you understand the JVM memory model — not just as trivia, but as a usable mental tool.
+
+And everything we cover this week — garbage collection, escape analysis, virtual threads, profiling — is built on these rules. They're not prerequisites you can skim. They're load-bearing foundations.
+
+Take a moment to actually run through the table in your head with a simple example. Pick any class you've written. Where do its static fields live? Where do its instance fields live? Where do its method locals live? You should be able to answer instantly.

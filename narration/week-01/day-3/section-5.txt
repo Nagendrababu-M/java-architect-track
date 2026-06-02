@@ -1,0 +1,25 @@
+Stage 5 is your open-ended challenge. No auto-check here. No dropdowns. Just a scenario and three questions that require you to reason like an architect.
+
+Here's the scenario. You're running a Java service handling five thousand requests per second. Average response time is eight milliseconds. The service has been stable for months.
+
+This morning, something changed. Your p50 latency — the median — is still eight milliseconds, completely unchanged. But your p99 latency, which used to be a comfortable twenty-five milliseconds, is now spiking to three hundred and fifty milliseconds every forty-five seconds. No code was deployed. No traffic changes. But if you look at CPU at one-second resolution, you see brief spikes that align perfectly with the latency spikes.
+
+You suspect garbage collection. Let me help you think through each of the three questions before you write your answers.
+
+Question one: which type of GC event is most likely causing this?
+
+Consider the duration first. Three hundred and fifty milliseconds. Minor GCs are single-digit milliseconds — way too short to cause a three hundred and fifty millisecond freeze. Full GCs would be longer and rarer. Three hundred and fifty milliseconds is a very good fit for a Major GC — collecting the old generation with a slower algorithm on a large set of live objects. Start there.
+
+Question two: what does the forty-five second interval tell you?
+
+The regularity of the interval is a clue about allocation behavior. If the old generation were filling due to random variation, the interval would be irregular. A consistent forty-five seconds suggests the old generation is accumulating at a steady, predictable rate. Something is being promoted from the young generation at a constant pace — which means something is surviving enough Minor GC cycles to get tenured. A growing cache is the most likely culprit. A session store. Connection state. Something long-lived that's slowly accumulating.
+
+Question three: why does this matter if p50 is fine?
+
+This is the question you'll be asked in every engineering review for the rest of your career. P50 is the median — it tells you about the average experience. But for a service doing five thousand requests per second, a three hundred and fifty millisecond spike every forty-five seconds affects roughly two hundred and twenty-five requests per spike. Those users don't see a slow service — they see what feels like a broken service. Buttons that don't respond. Requests that timeout. And then they retry — simultaneously — creating a thundering herd that hits your service right as it's coming back from the GC pause.
+
+SLA contracts are almost always written in terms of p99 and p999. "p50 is fine" is not a defense if your p99 violates the contract. Write that argument down in your own words — you'll use it.
+
+Write your answers in the text areas on the page. Make them substantive — at least fifty characters. Then compare against the model answers. Don't skip that comparison step. The model answers are not just "the right answer" — they're examples of how to structure a technical argument.
+
+See you on Day 4, where we go deep on the specific GC algorithms and learn how to actually tune them.

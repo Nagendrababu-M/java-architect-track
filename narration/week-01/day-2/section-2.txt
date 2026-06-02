@@ -1,0 +1,19 @@
+So far the rules have been clean and consistent. Locals on stack, objects on heap, instance fields with their object. Now we hit an exception that trips up almost everyone, and it's important enough that I want you to slow down here.
+
+Static fields don't belong to any object. At all. They belong to the class itself.
+
+Think about what that means. If you create fifty Counter objects, each Counter has its own instanceCount field — fifty separate copies, one per object, all on the heap. But if Counter has a static field called totalCount, there is exactly one totalCount in the entire JVM. One copy. Shared by all fifty instances, by all threads, for the entire lifetime of the class.
+
+So where does that one copy live? It can't be on the stack — it outlives every method call. It can't be on the heap inside an instance — there's no specific instance it belongs to. It lives in a third region: Metaspace.
+
+Let me introduce Metaspace properly, because we'll come back to it repeatedly throughout this course. Metaspace is where the JVM stores everything about classes themselves — not instances, but the class blueprints. It holds the class's structure: field names, types, method signatures. It holds the bytecode for every method. It holds the special Class object that represents the class for reflection purposes. And it holds static fields — both primitive values and references.
+
+Metaspace is loaded once when a class is first used, in a process called class loading. And once it's there, it typically lives for the entire lifetime of the JVM. The JVM doesn't garbage collect Metaspace on a regular basis. Classes can be unloaded, but only under specific conditions — it's not routine.
+
+Now here's a subtlety that catches people out. What if a static field holds a reference to an object? Say you have "static List entries = new ArrayList". Where is the reference? In Metaspace. Where is the ArrayList object it points to? On the heap. Same split as always — the reference and the object it refers to live in different places.
+
+And this distinction matters enormously in practice. The reference in Metaspace keeps the heap object alive. As long as that reference exists, the GC cannot collect the ArrayList, or anything the ArrayList contains, or anything those contained objects reference. The entire reachability chain is anchored by that one Metaspace reference.
+
+This is why a static HashMap that you forget to clear is a classic memory leak. Every entry you put in accumulates indefinitely. The GC cannot touch any of it. Your heap fills up with data you've forgotten about — data that's technically still reachable through the static reference in Metaspace.
+
+Quick check: if a class has a static String called GREETING equal to "hello", where does the GREETING reference live? Where does the String object "hello" live? Two different answers.

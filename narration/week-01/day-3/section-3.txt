@@ -1,0 +1,25 @@
+In the 1980s, GC researchers started measuring real programs and discovered something profound that completely changed how garbage collectors are designed. They called it the Weak Generational Hypothesis, and it goes like this: most objects die young.
+
+The vast majority of objects created by a typical program become garbage almost immediately after they're created. And if an object survives long enough to be checked twice — meaning it survived a GC cycle — it's very likely to live a long time.
+
+Think about your own Java code for a moment. In a typical request handler, you create temporary strings while building responses, intermediate collections while processing data, parser tokens when reading input, lambda captures for stream operations — all of which become garbage at the end of the request. Meanwhile, your application's long-lived state — connection pools, caches, configuration objects, the application context itself — was allocated once at startup and will be there until the JVM shuts down.
+
+Two completely different patterns. Two completely different lifetimes. Treating them with the same GC strategy is wildly inefficient.
+
+Here's the analogy. Think of a hospital with two wards. The ER is full of patients who arrive and leave within hours — very high turnover. The long-term care ward has patients who've been there for months or years and aren't going anywhere soon. If you did a "check on every patient in the entire hospital" sweep every hour, you'd be wasting enormous effort on the long-term ward for no benefit. The smarter approach: check the ER every hour, check the long-term ward maybe once a week.
+
+The JVM uses exactly this insight with the generational heap.
+
+The heap is split into two main regions. The Young Generation — small, high churn, collected frequently. And the Old Generation — large, low churn, collected rarely.
+
+The Young Generation itself has three subdivisions. Eden is where every new object begins its life — every "new Something" lands in Eden. Then there are two Survivor spaces, S0 and S1, which alternate roles each cycle.
+
+Here's how objects flow through. A new object is born in Eden. When Eden fills up, a Minor GC fires. The GC copies all live objects from Eden into one of the Survivor spaces, say S0, and wipes Eden clean. At the next Minor GC, it copies live objects from Eden and S0 into S1, then wipes Eden and S0. S0 and S1 swap roles each cycle.
+
+Every time an object survives a Minor GC, its age counter increments. When the counter crosses a threshold — typically around fifteen by default — the object gets promoted to the Old Generation, or tenured.
+
+And eventually, after your application has been running for a while, the Old Generation fills up too. That triggers a Major GC — much more expensive, covering the entire Old Generation with a more complex algorithm.
+
+This generational split is why Minor GCs are fast. They work on a small region, they use the efficient copying algorithm, and the vast majority of Eden's contents are garbage — the copying cost is tiny because there's almost nothing to copy. Major GCs are slow because the Old Generation is large, the algorithm is more complex, and there are many more live objects to deal with.
+
+Everything after Day 3 — GC tuning, ZGC, Shenandoah, profiling — builds on this generational foundation.

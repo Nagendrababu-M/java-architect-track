@@ -1,0 +1,21 @@
+You've now seen both regions separately. Let's lock in the contrast with a direct, row-by-row comparison — and I want you to actually read every single row, not just skim it.
+
+Who can access it? The stack is private to its thread. Only that one thread ever sees that stack. The heap is shared — all threads in your JVM access the same heap. That single difference is responsible for almost all concurrency complexity in Java programs.
+
+What's stored? Stack holds local primitives and references. Heap holds objects and arrays.
+
+Lifetime of an entry. Stack entries live until the method returns — then they're gone instantly. Heap entries live until no references point to them — then GC eventually cleans them up.
+
+Cleanup mechanism. Stack cleanup is automatic — it's just pointer movement on method return. Heap cleanup requires the Garbage Collector.
+
+Allocation cost. Stack allocation is near-zero — literally just moving a stack pointer. Heap allocation is higher — the JVM needs to find free space, update bookkeeping, and eventually involve GC.
+
+Typical size. Each thread's stack is small — half a meg to one meg. The heap is where your RAM actually goes — hundreds of megabytes to many gigabytes.
+
+Failure when full. If a thread's stack fills up, you get StackOverflowError. If the shared heap fills up, you get OutOfMemoryError: Java heap space. These are completely different problems with completely different causes and fixes.
+
+Order of operations. Stack is strict LIFO — you can only push and pop from the top. Heap is unordered — objects can be allocated and freed in any order.
+
+Notice the elegant symmetry here. The stack is fast, automatic, and self-cleaning — but small and rigid. The heap is flexible and large — but expensive and needs a sophisticated GC to manage. Neither is better. Each exists because each is right for what it's designed to hold.
+
+This symmetry is why the split exists at all. The JVM designers weren't being clever for the sake of it. They were matching the data structure to the access pattern.

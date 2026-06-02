@@ -1,0 +1,17 @@
+Welcome to Day 3. Let's start with a moment of honest reflection on what you built on Day 2.
+
+At the end of yesterday's challenge, you saw that the Order object survives method return — until there are no roots connected, then GC will clean it up. If you understood that sentence, you already have the intuition for everything we're about to formalize. Today is about making that intuition precise.
+
+So — what does "garbage" actually mean to the JVM?
+
+Here's the thing most engineers get wrong: they think the GC tracks objects that "aren't used anymore." But the JVM has no concept of "being used." It can't read your intentions. It doesn't know if you plan to use something later or not. It tracks something purely mechanical: reachability.
+
+An object is reachable if you can trace a chain of references to it, starting from a specific set of starting points called GC Roots. If you can trace a path from a root to the object, it's live. If you cannot, it's garbage — regardless of what you intended.
+
+So what counts as a GC Root? There are four categories. Active stack frames — every local variable and reference in every method currently executing is a root. Static fields — everything reachable from a loaded class in Metaspace is a root. Active threads themselves. And JNI references — native code that holds Java objects.
+
+The GC starts from all of these roots simultaneously, follows every reference outward like a web crawler, and marks everything it touches as live. When it's done, anything left unmarked is by definition unreachable — and therefore garbage.
+
+Here's the critical consequence: circular references don't prevent garbage collection. If object X references object Y, and Y references X, but neither X nor Y is reachable from any root — they're both garbage. The GC correctly identifies them and reclaims both. This is fundamentally different from reference counting systems — old C++ style — where two objects pointing at each other would never be freed. Java's reachability model handles cycles naturally.
+
+Your quick check: you create two objects, p and q. You set p.next = q and q.next = p, making them point at each other. Then you set both local variables to null. Are p and q garbage? Take a moment to think through the reachability chain before continuing.

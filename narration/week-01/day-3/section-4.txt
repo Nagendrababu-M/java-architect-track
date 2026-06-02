@@ -1,0 +1,21 @@
+Three GC event types. You need to be able to recognize all three instantly when you're reading production logs or looking at a GC dashboard.
+
+Minor GC. Collects only the Young Generation. This is fast — typically single-digit milliseconds, sometimes less. It fires frequently, possibly dozens of times per minute in a high-throughput application. Most of the time, Minor GCs are fine. They're doing exactly what the generational design intended. You shouldn't panic when you see them.
+
+Major GC. Collects the Old Generation. This is significantly slower — you're looking at anywhere from tens of milliseconds to over a second for a large heap. It fires less frequently, but when it does, it's noticeable. If your monitoring shows Major GC pauses, you should pay attention. It means objects are being promoted to Old Gen at a rate that's filling it up.
+
+Full GC. Collects everything — Young Generation, Old Generation, and sometimes Metaspace too. This is the one you fear. Full GCs can take seconds on large heaps. They're rare in a healthy system, but when they happen, they stop everything. If you're seeing Full GCs regularly, you have a serious problem — a memory leak, badly tuned heap sizing, or an algorithm that's creating too much long-lived data.
+
+Now — the stop-the-world pause. This is the concept that ties everything together, and it's the number one cause of latency spikes in production Java services.
+
+Most GC phases require that your application pause completely. Every application thread freezes. No requests are served. No responses go out. No code executes. This is a Stop-the-World pause, abbreviated STW.
+
+Why is it necessary? Because if your application threads keep running and mutating object references while the GC is trying to figure out what's reachable, the GC's answers would be wrong. It might collect something that just became reachable from a new reference that was created after the GC started. Or it might leave something alive that was the last reference to a dead object. The heap would be corrupted.
+
+So the GC says: everyone stop, I need to count the living.
+
+The practical consequence for your latency metrics: your p99 and p999 latency numbers aren't necessarily hurt by your code being slow. They're hurt by your code being completely frozen while GC runs. A Major GC that takes 200 milliseconds means every request that was in flight during those 200 milliseconds has a 200 millisecond forced delay — on top of whatever it was already doing.
+
+This is exactly why the newer GC algorithms — G1, ZGC, Shenandoah, which you'll study in depth on Day 4 — exist. They don't eliminate the need for GC. They minimize the time spent in stop-the-world phases, doing more of their work concurrently with your application threads.
+
+For a trading system in particular, a 500 millisecond Full GC isn't just a slow request. It's 500 milliseconds of not seeing prices, not processing signals, not sending orders. The market keeps moving while your JVM is frozen. This is why low-latency financial systems are so obsessive about GC tuning — it's not about speed, it's about predictability.

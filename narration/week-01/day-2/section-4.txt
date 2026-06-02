@@ -1,0 +1,23 @@
+Now we're going to talk about something that lives right at the intersection of everything we've covered: Java's Reflection API and how it connects to Metaspace.
+
+You know that when a class is loaded, its metadata — field names, method signatures, annotations, bytecode — lives in Metaspace. The Reflection API in the java.lang.reflect package is the official way to read and manipulate that metadata at runtime, after your code has already been compiled.
+
+Every loaded class has exactly one Class object in Metaspace. Think of it as the class's own description of itself. Reflection is how your running code reaches into that Class object and uses what it describes — without needing to know the type at compile time.
+
+Let me walk through the three most important things you can do with reflection.
+
+First: getting the Class object. There are three ways. You can use a compile-time literal — String.class. You can call getClass on an existing instance — "hello".getClass. Or you can load a class by name dynamically with Class.forName of some fully-qualified class name. That third option triggers the full class-loading pipeline, which lands the class's metadata in Metaspace if it wasn't there already.
+
+Second: inspecting fields. Once you have the Class object, you can call getDeclaredFields to get all declared fields, including private ones. You can check whether each field is static with Modifier.isStatic. This is exactly what frameworks like Spring and Hibernate do at startup — they scan your classes to understand their structure.
+
+Third: bypassing access control. You can call setAccessible(true) on a Field or Method to make private members accessible. This is powerful. And dangerous. When you call setAccessible(true), you're telling the JVM to skip its normal access checks. Frameworks like Jackson and Mockito rely on this to work their magic.
+
+Now there's a performance cost to all of this. Every Method.invoke call bypasses JIT inlining, performs access checks on every single invocation, and boxes and unboxes primitive arguments. In a tight loop, that overhead can be ten to a hundred times slower than a direct method call.
+
+Java 7 introduced MethodHandle to address this. MethodHandles are JIT-friendly — the just-in-time compiler can inline them, just like direct calls. Java 9 added VarHandle for field access — atomic, module-safe, no need for the old and dangerous sun.misc.Unsafe.
+
+Here's something critical about modules. Java 9 introduced the module system, and Java 16 made strong encapsulation the default with JEP 396. What this means in practice: calling setAccessible across module boundaries now throws InaccessibleObjectException unless the module explicitly opens its packages. This is why you see command-line flags like --add-opens java.base/java.lang=ALL-UNNAMED in startup scripts for Spring Boot apps running on Java 17. Someone's framework was trying to access private fields across a module boundary, and the JVM is now refusing.
+
+As an architect, you'll encounter this pattern constantly. Spring DI uses reflection for field injection, Jackson uses it to serialize your objects, JPA uses it to read annotations — and all of them are gradually moving to constructor injection, records, and compile-time annotation processors to escape the module system restrictions.
+
+The quick check for this section: Spring Boot works perfectly in development on Java 11, but crashes on production Java 17 with InaccessibleObjectException. You need to explain what changed between Java 11 and 17, and give two options to fix it. Think through that before revealing the hint on the page.

@@ -1,0 +1,19 @@
+Welcome to Day 2. Let's do a quick anchor before we dive in. Yesterday you learned two rules: local variables and references live on the stack, and objects created with "new" live on the heap. Those two rules hold today. We're adding one new dimension: what about fields inside objects?
+
+And this is where it gets interesting, because fields break the intuition most people have.
+
+Let me show you what I mean. Suppose you have a class called User with two fields: an int field called age, and a String field called name. Then in some method you write "User u = new User(); u.age = 30; u.name = Ana".
+
+Now the question: where does age live? Where does name live?
+
+If your intuition says "age is an int, so it's on the stack" — that's wrong. And it's a very common mistake, even among experienced engineers. The "int goes to stack" rule only applies to local variables declared directly inside a method. Age is not a local variable. Age is an instance field — it's part of the User object.
+
+Here's the rule: instance fields are physically embedded inside the object that owns them. If the User object lives on the heap — which it does, because all objects go to the heap — then every field of that object lives on the heap too. Age, name, any other fields — all inside the User object's memory block on the heap.
+
+Now name is a String, which is a reference type. So the name field contains a reference — eight bytes — that points to another object on the heap: the actual String "Ana". So you can already see how a single "new User" can produce multiple heap allocations: the User object itself, plus the String it references.
+
+This is why heap allocation patterns matter for performance. One line of code can mean several allocations, each potentially surviving into older generations and accumulating GC pressure.
+
+Quick check: if you have a class Box with an int field called size and a Box field called inner, and you write "Box b = new Box(); b.inner = new Box()", how many objects are on the heap? And where exactly does the size field of the outer box live?
+
+Sit with that before you continue.

@@ -1,0 +1,17 @@
+Let's talk about the stack. And I don't mean "stack" as a loose metaphor — the JVM's call stack really is a stack data structure. It's LIFO: last in, first out.
+
+Here's how it works. Every time a method gets called — any method, anywhere in your program — the JVM pushes a new frame onto that thread's stack. That frame holds everything that method needs while it runs: its local variables, its parameters, and the return address so the JVM knows where to jump back when the method is done. When the method returns, its frame is popped off the stack and discarded. Instantly. No bookkeeping needed.
+
+Let me make this concrete. Imagine a stack of dinner plates. The plate at the bottom is your main method — it's been there since the program started and it'll be there until the program ends. Now main calls method A — a new plate gets stacked on top. A calls method B — another plate. B calls C — another plate on top of that. At this exact moment you have four plates in your stack: main at the bottom, then A, then B, then C at the top.
+
+C finishes. Its plate is removed. B finishes. Its plate is gone. A finishes. Only main remains.
+
+Here's the beautiful part: when C's frame is popped, its local variables are gone instantly. No garbage collector involved, no tracking, no cleanup. Just a pointer move. The stack is essentially free to use in terms of allocation cost.
+
+Now two things worth burning into memory about stacks.
+
+First: every thread has its own stack. If you have a hundred threads, you have a hundred stacks, each completely isolated from the others. This isolation is actually great news for thread safety, and we'll come back to that. But it also has a cost — each of those stacks takes real memory.
+
+Second: stacks are small. Typically between half a megabyte and one megabyte per thread depending on your JVM settings. This is intentional — stacks aren't meant to hold long-lived data. But it means if you recurse too deeply — a recursive algorithm that goes thousands of calls deep — you'll fill that thread's stack and get a StackOverflowError. Not because you've run out of RAM on the machine, but because that one thread's small allocation is exhausted.
+
+Quick check: if method A calls method B, and B declares a local int variable y equals twenty, where does y live while B is running? And what happens to it the moment B returns? Hold that answer in your head, then move to Stage 3.

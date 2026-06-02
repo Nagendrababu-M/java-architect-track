@@ -1,0 +1,21 @@
+Alright, this is the moment of truth. Stage 5 is where we integrate everything from both Day 1 and Day 2 into a single comprehensive challenge. Seven rows. Three regions. Let me walk you through the code and give you the framework to work through each one.
+
+Here's the class: OrderProcessor. It has a private static int field called counter, a private String instance field called region, and a method called process that takes an int parameter quantity, creates a local int called total, then creates a new Order object and returns it.
+
+Before you touch the dropdowns, I want you to internalize the flow.
+
+Row A: counter is static. Static fields belong to the class. The class lives in Metaspace. Counter lives in Metaspace.
+
+Row B: region is an instance field. It's declared at the class level, not inside a method. It's part of any OrderProcessor object. Since OrderProcessor objects live on the heap, region lives on the heap. This is the twist — region is a String type, and your instinct might say "String, reference type, hmm." Don't follow that instinct here. The question isn't the type. The question is: is this a local variable or a field? It's a field. Fields go with their object. On the heap.
+
+Row C: quantity is a method parameter. Method parameters are just local variables with values passed in. They live in the current stack frame. On the stack.
+
+Row D: total is a local primitive inside the method. Classic stack case. Lives in the stack frame of process(), gone when process returns.
+
+Row E has two parts. The reference variable "order" — the name on the left side of the equals sign — is a local variable. It lives on the stack. The actual Order object created by "new Order(total)" — that lives on the heap. Same split we saw on Day 1: reference on stack, object on heap.
+
+And Row F is the insight question. After the method returns, where does the Order object live? The local reference "order" on the stack is gone — the frame was popped. But the heap object survives. It's now held by whatever the caller stored the return value in. The object's lifetime is not tied to the method that created it. It lives until no references point to it — and then GC handles it.
+
+This is a subtle but important point. Creating an object in a method doesn't mean that object goes away when the method ends. The reference goes away. The object persists as long as something else holds a reference to it. This is how methods can build and return objects that live on after the method is done.
+
+Go through all seven rows yourself now. If you get them all right immediately, you genuinely understand the JVM memory model. If you get some wrong, the explanations will tell you exactly why — read those carefully, don't just note the right answer.
