@@ -21,7 +21,7 @@
   const storageKey = (wk, dy) => `audio-state-w${wk}d${dy}`;
 
   /* ── Detect lesson from URL ─────────────────────────────── */
-  const m = window.location.pathname.match(/week-(\d+)\/day-(\d+)\.html/i);
+  const m = window.location.pathname.match(/week-(\d+)\/day-(\d+)(?:\.html)?/i);
   if (!m) return; // not a lesson page
 
   const weekNum = parseInt(m[1], 10);
