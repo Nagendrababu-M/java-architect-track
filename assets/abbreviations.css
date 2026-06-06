@@ -1,0 +1,147 @@
+/* ============================================================
+   Java Architect Track — Abbreviation Popup Styles
+   Companion to assets/abbreviations.js
+   ============================================================ */
+
+/* ── Abbreviation element ───────────────────────────────── */
+
+abbr[data-abbr] {
+  cursor: help;
+  border-bottom: 1px dotted var(--ink-dim);
+  text-decoration: none;
+  font-style: normal;
+  transition: border-bottom-color 0.15s ease, color 0.15s ease;
+}
+
+abbr[data-abbr]:hover,
+abbr[data-abbr]:focus {
+  border-bottom-color: var(--accent);
+  color: var(--accent-soft);
+  outline: none;
+}
+
+/* ── Popup card ─────────────────────────────────────────── */
+
+.abbr-popup {
+  position: fixed;
+  background: var(--bg-elev);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 14px 16px;
+  max-width: 320px;
+  min-width: 220px;
+  font-size: 13px;
+  font-family: 'Inter Tight', sans-serif;
+  color: var(--ink);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  z-index: 1050;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  line-height: 1.5;
+}
+
+.abbr-popup.visible {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+/* Arrow pointer — triangle pointing down toward the abbr */
+.abbr-popup::after {
+  content: '';
+  position: absolute;
+  bottom: -7px;
+  left: 20px;
+  width: 12px;
+  height: 12px;
+  background: var(--bg-elev);
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  transform: rotate(45deg);
+}
+
+/* Flip arrow to top when popup is below the abbr */
+.abbr-popup.below::after {
+  bottom: auto;
+  top: -7px;
+  border-right: none;
+  border-bottom: none;
+  border-left: 1px solid var(--line);
+  border-top: 1px solid var(--line);
+}
+
+/* ── Popup header: "KEY · Expansion" ────────────────────── */
+
+.abbr-popup-header {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.abbr-popup-key {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.abbr-popup-sep {
+  color: var(--ink-faint);
+}
+
+.abbr-popup-expansion {
+  color: var(--ink);
+  font-weight: 500;
+}
+
+/* ── Popup body ─────────────────────────────────────────── */
+
+.abbr-popup-body {
+  color: var(--ink-dim);
+  line-height: 1.55;
+  font-size: 13px;
+}
+
+/* ── Learn more link ────────────────────────────────────── */
+
+.abbr-popup-link {
+  display: block;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+  color: var(--accent);
+  font-size: 12px;
+  font-family: 'JetBrains Mono', monospace;
+  text-decoration: none;
+  letter-spacing: 0.03em;
+  transition: color 0.15s ease;
+}
+
+.abbr-popup-link:hover {
+  color: var(--accent-soft);
+}
+
+/* ── Mobile ─────────────────────────────────────────────── */
+
+@media (max-width: 640px) {
+  .abbr-popup {
+    max-width: calc(100vw - 40px);
+    min-width: 0;
+  }
+
+  /* Center on mobile instead of anchoring to the abbr */
+  .abbr-popup.mobile-center {
+    left: 20px !important;
+    right: 20px !important;
+    width: auto !important;
+  }
+
+  .abbr-popup::after {
+    display: none; /* hide arrow on mobile center mode */
+  }
+}

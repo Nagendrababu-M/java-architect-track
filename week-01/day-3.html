@@ -10,6 +10,7 @@
 <link rel="stylesheet" href="../assets/styles.css">
 <link rel="stylesheet" href="../assets/audio-player.css">
 <link rel="stylesheet" href="../assets/glossary.css">
+<link rel="stylesheet" href="../assets/abbreviations.css">
 <style>
   body {
     background-image:
@@ -51,7 +52,7 @@
 
     <p>Most engineers think the GC tracks &ldquo;objects that aren&rsquo;t used anymore.&rdquo; That&rsquo;s wrong. The GC has no idea what &ldquo;used&rdquo; means. It tracks something much simpler and more mechanical: <strong>reachability</strong>.</p>
 
-    <p>An object is <strong>reachable</strong> if you can trace a chain of references to it, starting from a special set of starting points called <strong>GC Roots</strong>.</p>
+    <p>An object is <strong>reachable</strong> if you can trace a chain of references to it, starting from a special set of starting points called <strong><abbr data-abbr="GC">GC</abbr> Roots</strong>.</p>
 
     <h4>What counts as a GC Root?</h4>
     <ul>
@@ -280,7 +281,7 @@
     <p>This is called a <strong>Stop-the-World (STW) pause</strong>. Why is it necessary? Because if your app threads keep mutating references while the GC is trying to figure out what&rsquo;s reachable, the GC&rsquo;s answers would be wrong &mdash; it might collect something that just became reachable, or miss something that just became garbage.</p>
 
     <div class="key-rule insight">
-      <p><strong>STW pauses are the #1 source of latency spikes in production Java services.</strong></p>
+      <p><strong><abbr data-abbr="STW">STW</abbr> pauses are the #1 source of latency spikes in production Java services.</strong></p>
       <p>Your <span data-term="p99">p99</span> latency isn&rsquo;t hurt by your code being slow. It&rsquo;s hurt by your code being <em>frozen</em> for 200ms during a Major GC. Modern GCs (G1, ZGC, Shenandoah &mdash; Day 4) exist almost entirely to minimize STW pauses.</p>
     </div>
 
@@ -433,6 +434,8 @@
 <script src="../assets/audio-player.js"></script>
 <script src="../data/glossary.js"></script>
 <script src="../assets/glossary.js"></script>
+<script src="../data/abbreviations.js"></script>
+<script src="../assets/abbreviations.js"></script>
 <script>
   document.addEventListener('DOMContentLoaded', () => {
     initOpenEndedChallenge('1-3');

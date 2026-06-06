@@ -10,6 +10,7 @@
 <link rel="stylesheet" href="../assets/styles.css">
 <link rel="stylesheet" href="../assets/audio-player.css">
 <link rel="stylesheet" href="../assets/glossary.css">
+<link rel="stylesheet" href="../assets/abbreviations.css">
 </head>
 <body>
 <div class="grain"></div>
@@ -85,7 +86,7 @@
     <span class="stage-tag">STAGE 2 <span class="time">12 MIN</span></span>
     <h2>The Stack: a stack of plates, one per thread</h2>
 
-    <p>The name isn&rsquo;t metaphorical &mdash; it really is a stack data structure (<span data-term="lifo">LIFO</span>). Every time a method gets called, the JVM pushes a new <strong>frame</strong> onto the stack. When the method returns, that frame is popped off and discarded.</p>
+    <p>The name isn&rsquo;t metaphorical &mdash; it really is a stack data structure (<span data-term="lifo">LIFO</span>). Every time a method gets called, the <abbr data-abbr="JVM">JVM</abbr> pushes a new <strong>frame</strong> onto the stack. When the method returns, that frame is popped off and discarded.</p>
 
     <div class="analogy">
       <p>Picture a stack of dinner plates. Each plate is a method call. The top plate is the method currently running. When that method calls another method, a new plate gets stacked on top. When a method finishes, its plate is removed from the top. The bottom plate (<code>main()</code>) stays until the program ends.</p>
@@ -420,6 +421,8 @@
 <script src="../assets/audio-player.js"></script>
 <script src="../data/glossary.js"></script>
 <script src="../assets/glossary.js"></script>
+<script src="../data/abbreviations.js"></script>
+<script src="../assets/abbreviations.js"></script>
 <script>
   document.addEventListener('DOMContentLoaded', () => { initReflection('1-1'); });
 </script>

@@ -10,6 +10,7 @@
 <link rel="stylesheet" href="../assets/styles.css">
 <link rel="stylesheet" href="../assets/audio-player.css">
 <link rel="stylesheet" href="../assets/glossary.css">
+<link rel="stylesheet" href="../assets/abbreviations.css">
 <style>
   body {
     background-image:
@@ -325,7 +326,7 @@ vh.getAndAdd(counter, <span class="num">1</span>);  <span class="cm">// atomic i
       </thead>
       <tbody>
         <tr>
-          <td>Spring DI</td>
+          <td>Spring <abbr data-abbr="DI">DI</abbr></td>
           <td><code>getDeclaredFields()</code> + <code>setAccessible()</code> for <code>@Autowired</code> field injection</td>
           <td>Constructor injection &mdash; no reflection needed, GraalVM-friendly</td>
         </tr>
@@ -554,6 +555,8 @@ vh.getAndAdd(counter, <span class="num">1</span>);  <span class="cm">// atomic i
 <script src="../assets/audio-player.js"></script>
 <script src="../data/glossary.js"></script>
 <script src="../assets/glossary.js"></script>
+<script src="../data/abbreviations.js"></script>
+<script src="../assets/abbreviations.js"></script>
 <script>
   document.addEventListener('DOMContentLoaded', () => { initReflection('1-2'); });
 </script>

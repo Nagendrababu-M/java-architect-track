@@ -10,6 +10,7 @@
 <link rel="stylesheet" href="../assets/styles.css">
 <link rel="stylesheet" href="../assets/audio-player.css">
 <link rel="stylesheet" href="../assets/glossary.css">
+<link rel="stylesheet" href="../assets/abbreviations.css">
 <style>
   body {
     background-image:
@@ -63,7 +64,7 @@
 
   <div class="recap">
     <span class="recap-tag">RECAP FROM DAY 3</span>
-    <p>You know <strong>reachability</strong> and GC roots. You understand the <strong>generational heap</strong>: Eden &rarr; Survivor &rarr; Old Gen, driven by the weak generational hypothesis. You know the difference between <strong>Minor, Major, and Full GC</strong>, and why <strong>Stop-the-World pauses</strong> are the primary source of production latency spikes. Today we open the hood on the actual algorithms &mdash; how Serial, Parallel, G1, and ZGC actually work, how to tune them, and how to read the evidence they leave in GC logs.</p>
+    <p>You know <strong>reachability</strong> and GC roots. You understand the <strong>generational heap</strong>: Eden &rarr; Survivor &rarr; Old Gen, driven by the weak generational hypothesis. You know the difference between <strong>Minor, Major, and Full GC</strong>, and why <strong>Stop-the-World (<abbr data-abbr="STW">STW</abbr>) pauses</strong> are the primary source of production latency spikes. Today we open the hood on the actual algorithms &mdash; how Serial, Parallel, G1, and ZGC actually work, how to tune them, and how to read the evidence they leave in GC logs.</p>
   </div>
 
   <!-- STAGE 1 -->
@@ -415,7 +416,7 @@
       <p>Old Gen is full of live objects &mdash; things the GC can still reach, so it can&rsquo;t collect them. The GC is working correctly. Your code is holding references it shouldn&rsquo;t. The fix is not more heap or a different GC &mdash; it&rsquo;s finding and fixing the leak. A heap dump at the time of OOM (enabled by <code>-XX:+HeapDumpOnOutOfMemoryError</code>) is your starting point.</p>
     </div>
 
-    <h4>Part B &mdash; Java Flight Recorder (JFR)</h4>
+    <h4>Part B &mdash; Java Flight Recorder (<abbr data-abbr="JFR">JFR</abbr>)</h4>
     <p>JFR is the JVM&rsquo;s built-in continuous profiling system. Since Java 11 it is completely free and always-on has near-zero overhead (well under 1% in most workloads). It records a continuous ring buffer of JVM events. You can dump it at any time &mdash; even on a production service that&rsquo;s currently behaving badly.</p>
 
     <pre><code><span class="cmt"># Attach to a running process and record for 60 seconds</span>
@@ -631,6 +632,8 @@ jcmd &lt;PID&gt; JFR.stop name=1 filename=recording.jfr
 <script src="../assets/audio-player.js"></script>
 <script src="../data/glossary.js"></script>
 <script src="../assets/glossary.js"></script>
+<script src="../data/abbreviations.js"></script>
+<script src="../assets/abbreviations.js"></script>
 <script>
   document.addEventListener('DOMContentLoaded', () => {
     initOpenEndedChallenge('1-4');
