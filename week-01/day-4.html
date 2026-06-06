@@ -9,6 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,800&family=JetBrains+Mono:wght@400;500;700&family=Inter+Tight:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../assets/styles.css">
 <link rel="stylesheet" href="../assets/audio-player.css">
+<link rel="stylesheet" href="../assets/glossary.css">
 <style>
   body {
     background-image:
@@ -527,7 +528,7 @@ jcmd &lt;PID&gt; JFR.stop name=1 filename=recording.jfr
 
       <div class="unlock-banner" id="unlock-1-4" style="margin-top:24px">
         <strong style="color:var(--green)">&#x2705; Day 4 complete!</strong> Day 5 is now unlocked &mdash;
-        <span style="color:var(--ink-dim)">Java Memory Model (JMM), happens-before, volatile &amp; the rules that govern shared heap data</span>
+        <span style="color:var(--ink-dim)">Java Memory Model (JMM), <span data-term="happens-before">happens-before</span>, volatile &amp; the rules that govern shared heap data</span>
       </div>
     </div>
 
@@ -628,6 +629,8 @@ jcmd &lt;PID&gt; JFR.stop name=1 filename=recording.jfr
 <script src="../data/curriculum.js"></script>
 <script src="../assets/app.js"></script>
 <script src="../assets/audio-player.js"></script>
+<script src="../data/glossary.js"></script>
+<script src="../assets/glossary.js"></script>
 <script>
   document.addEventListener('DOMContentLoaded', () => {
     initOpenEndedChallenge('1-4');

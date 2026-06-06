@@ -9,6 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,800&family=JetBrains+Mono:wght@400;500;700&family=Inter+Tight:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../assets/styles.css">
 <link rel="stylesheet" href="../assets/audio-player.css">
+<link rel="stylesheet" href="../assets/glossary.css">
 <style>
   body {
     background-image:
@@ -280,7 +281,7 @@
 
     <div class="key-rule insight">
       <p><strong>STW pauses are the #1 source of latency spikes in production Java services.</strong></p>
-      <p>Your p99 latency isn&rsquo;t hurt by your code being slow. It&rsquo;s hurt by your code being <em>frozen</em> for 200ms during a Major GC. Modern GCs (G1, ZGC, Shenandoah &mdash; Day 4) exist almost entirely to minimize STW pauses.</p>
+      <p>Your <span data-term="p99">p99</span> latency isn&rsquo;t hurt by your code being slow. It&rsquo;s hurt by your code being <em>frozen</em> for 200ms during a Major GC. Modern GCs (G1, ZGC, Shenandoah &mdash; Day 4) exist almost entirely to minimize STW pauses.</p>
     </div>
 
     <div class="architect-callout">
@@ -304,7 +305,7 @@
 
       <p>This morning, you start seeing a strange pattern in your latency metrics:</p>
       <ul>
-        <li>p50 (median) is still 8ms &mdash; unchanged.</li>
+        <li><span data-term="p50">p50</span> (median) is still 8ms &mdash; unchanged.</li>
         <li>p99 latency, which used to be 25ms, is now spiking to <strong>350ms every ~45 seconds</strong>.</li>
         <li>Nothing changed in the code. No new deployments. Same traffic volume.</li>
         <li>CPU usage looks normal on average. But if you look closely at CPU graphs at a 1-second resolution, you see brief spikes that align with the latency spikes.</li>
@@ -361,7 +362,7 @@
         </div>
         <div class="model-answer" id="ma-1-3-gc3">
           <span class="model-answer-tag">MODEL ANSWER</span>
-          <p>p50 measures median, hiding tail latency entirely. For a 5,000 req/sec service, a 350ms spike every 45s affects roughly <strong>225 requests per spike</strong> — those users see the system as broken even if 99% see it as fine. SLA contracts, retry storms, and downstream cascades all live in the tail. One bad GC pause can cascade into a thundering herd when 225 clients retry simultaneously.</p>
+          <p>p50 measures median, hiding <span data-term="tail-latency">tail latency</span> entirely. For a 5,000 req/sec service, a 350ms spike every 45s affects roughly <strong>225 requests per spike</strong> — those users see the system as broken even if 99% see it as fine. <span data-term="sla">SLA</span> contracts, retry storms, and downstream cascades all live in the tail. One bad GC pause can cascade into a thundering herd when 225 clients retry simultaneously.</p>
         </div>
       </div>
 
@@ -430,6 +431,8 @@
 <script src="../data/curriculum.js"></script>
 <script src="../assets/app.js"></script>
 <script src="../assets/audio-player.js"></script>
+<script src="../data/glossary.js"></script>
+<script src="../assets/glossary.js"></script>
 <script>
   document.addEventListener('DOMContentLoaded', () => {
     initOpenEndedChallenge('1-3');

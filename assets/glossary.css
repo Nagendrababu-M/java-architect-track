@@ -1,0 +1,91 @@
+/* ============================================================
+   Java Architect Track — Glossary Link Styles
+   Companion to assets/glossary.js
+   ============================================================ */
+
+/* ── Term links ─────────────────────────────────────────── */
+
+.learn-more-link {
+  color: var(--accent-soft);
+  text-decoration: underline dashed;
+  text-underline-offset: 4px;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.learn-more-link::after {
+  content: " ↗";
+  font-size: 0.75em;
+  opacity: 0.7;
+  margin-left: 2px;
+}
+
+.learn-more-link:hover {
+  color: var(--accent);
+  text-decoration: underline solid;
+  text-underline-offset: 4px;
+}
+
+/* ── Tooltip ────────────────────────────────────────────── */
+
+.glossary-tooltip {
+  position: fixed;
+  background: var(--bg-elev);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 10px 14px;
+  max-width: 280px;
+  font-size: 13px;
+  font-family: 'Inter Tight', sans-serif;
+  color: var(--ink-dim);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  z-index: 1100;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  line-height: 1.5;
+}
+
+.glossary-tooltip.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.glossary-tooltip-type {
+  display: inline-block;
+  font-size: 10px;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 3px;
+  margin-bottom: 6px;
+}
+
+/* Type badge colours */
+.glossary-tooltip-type.type-wikipedia { background: rgba(100,140,240,0.15); color: #7ab8e8; }
+.glossary-tooltip-type.type-docs      { background: rgba(110,211,168,0.15); color: #6ed3a8; }
+.glossary-tooltip-type.type-article   { background: rgba(255,122,61,0.15);  color: #ff7a3d; }
+.glossary-tooltip-type.type-video     { background: rgba(232,122,122,0.15); color: #e87a7a; }
+.glossary-tooltip-type.type-paper     { background: rgba(177,138,224,0.15); color: #b18ae0; }
+.glossary-tooltip-type.type-book      { background: rgba(232,200,122,0.15); color: #e8c87a; }
+
+.glossary-tooltip-desc {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.glossary-tooltip-cta {
+  font-size: 11px;
+  color: var(--ink-faint);
+  font-style: italic;
+}
+
+/* ── Mobile: no hover — tap shows a brief flash ─────────── */
+@media (max-width: 640px) {
+  .glossary-tooltip {
+    max-width: calc(100vw - 32px);
+  }
+}

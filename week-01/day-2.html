@@ -9,6 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,800&family=JetBrains+Mono:wght@400;500;700&family=Inter+Tight:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../assets/styles.css">
 <link rel="stylesheet" href="../assets/audio-player.css">
+<link rel="stylesheet" href="../assets/glossary.css">
 <style>
   body {
     background-image:
@@ -293,7 +294,7 @@ f.setAccessible(<span class="kw">true</span>);                           <span c
 
     <h4>The performance cost &mdash; and the modern fix</h4>
 
-    <p>Reflection is <strong>slow compared to direct calls</strong>. Every <code>Method.invoke()</code> bypasses JIT inlining, performs access checks on every call, and boxes/unboxes primitives. In a tight loop, it can be 10&ndash;100&times; slower than a direct invocation.</p>
+    <p>Reflection is <strong>slow compared to direct calls</strong>. Every <code>Method.invoke()</code> bypasses <span data-term="jit">JIT</span> inlining, performs access checks on every call, and boxes/unboxes primitives. In a tight loop, it can be 10&ndash;100&times; slower than a direct invocation.</p>
 
     <p>Java 7 introduced <strong><code>MethodHandle</code></strong> in <code>java.lang.invoke</code>. Java 9 added <strong><code>VarHandle</code></strong> for field access. Both are JIT-friendly, module-safe, and the performance gap nearly disappears after the JVM warms up.</p>
 
@@ -551,6 +552,8 @@ vh.getAndAdd(counter, <span class="num">1</span>);  <span class="cm">// atomic i
 <script src="../data/curriculum.js"></script>
 <script src="../assets/app.js"></script>
 <script src="../assets/audio-player.js"></script>
+<script src="../data/glossary.js"></script>
+<script src="../assets/glossary.js"></script>
 <script>
   document.addEventListener('DOMContentLoaded', () => { initReflection('1-2'); });
 </script>
