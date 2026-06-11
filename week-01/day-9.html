@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Week 1 · Day 9 — Streams & Functional Interfaces: Internals, Advanced Patterns & LTS Evolution (Java 8 → 21)</title>
+<title>Week 1 · Day 9 — Modern Java Part 2: Streams & Functional Internals + Java 17 & 21 Features</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,800&family=JetBrains+Mono:wght@400;500;700&family=Inter+Tight:wght@400;500;600&display=swap" rel="stylesheet">
@@ -52,8 +52,8 @@
       <span>Week 1 / Day 9</span>
     </div>
     <h1>
-      Streams &amp; Functional Interfaces: Internals, Advanced Patterns &amp; LTS Evolution
-      <span class="sub">What actually happens when a lambda runs, how a stream pipeline executes, when parallel streams hurt you &mdash; and how the toolkit grew from Java 8 to 21.</span>
+      Modern Java Part 2: Streams &amp; Functional Internals + Java 17 &amp; 21 Features
+      <span class="sub">What actually happens when a lambda runs, how a stream pipeline executes, when parallel streams hurt you &mdash; plus every Java 17 and Java 21 feature under its own version heading.</span>
     </h1>
     <div class="scope"><strong>SCOPE</strong> &middot; 225 min &middot; 7 stages &mdash; interview-prep session: internals first, then the patterns interviewers test</div>
   <div id="play-full-lesson-mount"></div>
@@ -338,91 +338,57 @@ ids.stream().map(repo::findById).flatMap(<span class="typ">Optional</span>::stre
   <!-- STAGE 6 -->
   <div class="stage" data-section="6">
     <span class="stage-tag">STAGE 6 <span class="time">50 MIN</span></span>
-    <h2>Streams &amp; lambdas version by version &mdash; Java 8, 11, 17, 21 with code</h2>
+    <h2>Java 17 &amp; Java 21 &mdash; every feature under its version, with code</h2>
 
-    <p>Day 8 gave you the platform view of the four <abbr data-abbr="LTS">LTS</abbr> releases. This stage is the same timeline through today&rsquo;s lens: how the functional/streams toolkit grew from 8 to 21, version by version, with a working example for each feature. Interviewers use this to date your experience &mdash; a candidate still writing <code>collect(Collectors.toList())</code> on Java 17+ is telegraphing that they stopped learning at 8.</p>
+    <p>Day 8&rsquo;s Stage 6 covered <strong>Java 8 and Java 11</strong>. This stage completes the <abbr data-abbr="LTS">LTS</abbr> timeline with <strong>Java 17 and Java 21</strong> &mdash; every feature under its version heading, with a working example. No mixing. Interviewers use this timeline to date your experience &mdash; a candidate still writing <code>collect(Collectors.toList())</code> on Java 17+ is telegraphing that they stopped learning at 8.</p>
 
-    <h3 style="color:var(--accent); font-family:'JetBrains Mono',monospace; font-size:15px; letter-spacing:1px; margin-top:36px">&#x2503; JAVA 8 (2014) &mdash; THE FOUNDATION</h3>
-    <p>Everything in Stages 1&ndash;3 starts here.</p>
+    <h3 style="color:var(--accent); font-family:'JetBrains Mono',monospace; font-size:15px; letter-spacing:1px; margin-top:36px">&#x2503; JAVA 17 (2021) &mdash; THE DATA-MODELING LTS (BUNDLING 12&ndash;16)</h3>
 
-    <h4>1. Lambdas + java.util.function</h4>
-    <pre><code><span class="typ">Predicate</span>&lt;<span class="typ">Trade</span>&gt; isBuy   = t -&gt; t.side() == <span class="typ">Side</span>.BUY;
-<span class="typ">Function</span>&lt;<span class="typ">Trade</span>,<span class="typ">BigDecimal</span>&gt; value = <span class="typ">Trade</span>::value;
-<span class="typ">Supplier</span>&lt;<span class="typ">List</span>&lt;<span class="typ">Trade</span>&gt;&gt; empty = <span class="typ">ArrayList</span>::new;
-<span class="cmt">// Composition is the underused part:</span>
-<span class="typ">Predicate</span>&lt;<span class="typ">Trade</span>&gt; bigBuy = isBuy.and(t -&gt; t.qty() &gt; <span class="num-lit">10_000</span>).negate().negate();</code></pre>
-    <p>The core four plus ~40 primitive specializations (<code>IntFunction</code>, <code>ToLongFunction</code>&hellip;) to dodge autoboxing; backed by the <code>invokedynamic</code> machinery from Stage 1.</p>
+    <h4>1. Records (16)</h4>
+    <pre><code><span class="kw">public record</span> <span class="typ">Trade</span>(<span class="typ">String</span> symbol, <span class="typ">long</span> qty, <span class="typ">BigDecimal</span> price) {
+    <span class="kw">public</span> <span class="typ">Trade</span> { <span class="kw">if</span> (qty &lt;= <span class="num-lit">0</span>) <span class="kw">throw new</span> <span class="typ">IllegalArgumentException</span>(<span class="str">"qty"</span>); }
+}</code></pre>
+    <p>Transparent immutable carriers with compiler-generated constructor, accessors, equals/hashCode/toString. Day 8 Stage 1 has the full treatment (compact constructors, defensive copies, the deserialization-safety angle).</p>
 
-    <h4>2. Stream API v1 + Collectors v1</h4>
-    <pre><code><span class="typ">Map</span>&lt;<span class="typ">Boolean</span>, <span class="typ">List</span>&lt;<span class="typ">Trade</span>&gt;&gt; bySide = trades.stream()
-    .collect(partitioningBy(t -&gt; t.side() == <span class="typ">Side</span>.BUY));
+    <h4>2. Sealed classes (17)</h4>
+    <pre><code><span class="kw">public sealed interface</span> <span class="typ">PaymentResult</span> <span class="kw">permits</span> <span class="typ">Approved</span>, <span class="typ">Declined</span>, <span class="typ">Pending</span> {}</code></pre>
+    <p>Closed hierarchies the compiler can enumerate &mdash; the foundation of exhaustive switch. Day 8 Stage 2 covers the design thinking.</p>
 
-<span class="typ">String</span> tickers = trades.stream().map(<span class="typ">Trade</span>::symbol).distinct()
-    .collect(joining(<span class="str">", "</span>, <span class="str">"["</span>, <span class="str">"]"</span>));</code></pre>
+    <h4>3. Switch expressions (14) + pattern matching for instanceof (16)</h4>
+    <pre><code><span class="typ">int</span> lot = <span class="kw">switch</span> (symbol) { <span class="kw">case</span> <span class="str">"NIFTY"</span> -&gt; <span class="num-lit">50</span>; <span class="kw">case</span> <span class="str">"BANKNIFTY"</span> -&gt; <span class="num-lit">15</span>; <span class="kw">default</span> -&gt; <span class="num-lit">1</span>; };
+<span class="kw">if</span> (msg <span class="kw">instanceof</span> <span class="typ">TradeEvent</span> te &amp;&amp; te.qty() &gt; <span class="num-lit">0</span>) process(te);</code></pre>
 
-    <h4>3. Optional v1</h4>
-    <pre><code>findUser(id).map(<span class="typ">User</span>::email).filter(e -&gt; e.contains(<span class="str">"@"</span>)).orElse(<span class="str">"unknown"</span>);</code></pre>
+    <h4>4. Text blocks (15)</h4>
+    <pre><code><span class="typ">String</span> q = <span class="str">"""
+    SELECT symbol, SUM(qty) FROM trades GROUP BY symbol
+    """</span>;</code></pre>
 
-    <h4>4. Know the gaps &mdash; they&rsquo;re interview material</h4>
-    <pre><code><span class="cmt">// No takeWhile: couldn't conditionally stop a stream</span>
-<span class="cmt">// Stream.iterate was infinite-only — bounding needed limit() and luck</span>
-<span class="cmt">// Optional → Stream required this monstrosity:</span>
-opt.map(<span class="typ">Stream</span>::of).orElseGet(<span class="typ">Stream</span>::empty)</code></pre>
+    <h4>5. Helpful NullPointerExceptions (14)</h4>
+    <pre><code><span class="cmt">// Before: NullPointerException at line 42 — WHICH of the three calls was null?</span>
+order.getCustomer().getAddress().getCity();
+<span class="cmt">// Java 14+: the JVM tells you exactly:</span>
+<span class="cmt">// "Cannot invoke Address.getCity() because the return value of</span>
+<span class="cmt">//  Customer.getAddress() is null"</span></code></pre>
 
-    <h3 style="color:var(--accent); font-family:'JetBrains Mono',monospace; font-size:15px; letter-spacing:1px; margin-top:36px">&#x2503; JAVA 11 (2018) &mdash; THE GAP-FILLERS (BUNDLING 9 &amp; 10)</h3>
+    <h4>6. Strong encapsulation by default (17) &mdash; the migration pain</h4>
+    <pre><code><span class="cmt"># Reflective access to JDK internals now fails unless explicitly opened:</span>
+$ java <span class="kw">--add-opens</span> java.base/java.lang=ALL-UNNAMED -jar legacy-app.jar</code></pre>
+    <p>Why old Lombok, Mockito, and ASM-based serializers broke on 17 until upgraded. JVM side: ZGC and Shenandoah went production-ready (15); biased locking was removed.</p>
 
-    <h4>1. takeWhile / dropWhile (9)</h4>
-    <pre><code><span class="cmt">// Ordered, conditional truncation — stops at the FIRST failing element</span>
-prices.stream().takeWhile(p -&gt; p.compareTo(limit) &lt; <span class="num-lit">0</span>).forEach(book::add);
-<span class="cmt">// This is what makes the Stage 5 pagination pattern possible:</span>
-<span class="typ">Stream</span>.iterate(fetchPage(<span class="num-lit">0</span>), pg -&gt; fetchPage(pg.number() + <span class="num-lit">1</span>))
-      .takeWhile(pg -&gt; !pg.items().isEmpty())
-      .flatMap(pg -&gt; pg.items().stream());</code></pre>
-
-    <h4>2. Bounded Stream.iterate (9)</h4>
-    <pre><code><span class="cmt">// seed, hasNext, next — a for-loop as a stream, finally bounded</span>
-<span class="typ">Stream</span>.iterate(<span class="num-lit">1</span>, i -&gt; i &lt;= <span class="num-lit">100</span>, i -&gt; i * <span class="num-lit">2</span>).forEach(<span class="typ">System</span>.out::println);</code></pre>
-
-    <h4>3. Optional grows up (9&ndash;11)</h4>
-    <pre><code>repo.findById(id)
-    .or(() -&gt; cache.find(id))                       <span class="cmt">// (9) lazy alternative source</span>
-    .ifPresentOrElse(this::audit,                   <span class="cmt">// (9) both branches</span>
-                     () -&gt; log.warn(<span class="str">"missing"</span>));
-
-ids.stream().map(repo::findById)
-   .flatMap(<span class="typ">Optional</span>::stream)                       <span class="cmt">// (9) the bridge — gone is the monstrosity</span>
-   .toList();
-
-<span class="kw">if</span> (result.isEmpty()) { ... }                       <span class="cmt">// (11) finally, the readable negative</span></code></pre>
-
-    <h4>4. New collectors &amp; small gems (9&ndash;11)</h4>
-    <pre><code><span class="cmt">// filtering (9) as downstream — keeps EMPTY groups, unlike pre-filtering</span>
-trades.stream().collect(groupingBy(<span class="typ">Trade</span>::symbol,
-       filtering(t -&gt; t.qty() &gt; <span class="num-lit">10_000</span>, toList())));
-
-<span class="cmt">// flatMapping (9) — flatten inside a group</span>
-orders.stream().collect(groupingBy(<span class="typ">Order</span>::customer,
-       flatMapping(o -&gt; o.lines().stream(), toList())));
-
-stream.filter(<span class="typ">Predicate</span>.not(<span class="typ">String</span>::isBlank))      <span class="cmt">// (11) negate a method ref</span>
-<span class="typ">Files</span>.lines(path).filter(l -&gt; l.contains(<span class="str">"ERROR"</span>)) <span class="cmt">// lazy file processing</span></code></pre>
-
-    <h3 style="color:var(--accent); font-family:'JetBrains Mono',monospace; font-size:15px; letter-spacing:1px; margin-top:36px">&#x2503; JAVA 17 (2021) &mdash; ERGONOMICS &amp; PERFORMANCE (BUNDLING 12&ndash;16)</h3>
-
-    <h4>1. Stream.toList() (16) &mdash; and its trap</h4>
+    <h4>7. Stream.toList() (16) &mdash; and its trap</h4>
     <pre><code><span class="typ">List</span>&lt;<span class="typ">String</span>&gt; a = stream.collect(<span class="typ">Collectors</span>.toList()); <span class="cmt">// happens to be mutable ArrayList</span>
 <span class="typ">List</span>&lt;<span class="typ">String</span>&gt; b = stream.toList();                      <span class="cmt">// UNMODIFIABLE — add() throws</span>
 b.add(<span class="str">"x"</span>);  <span class="cmt">// UnsupportedOperationException — mechanical migration breaks mutating code</span></code></pre>
 
-    <h4>2. mapMulti (16) &mdash; allocation-free flatMap</h4>
+    <h4>8. mapMulti (16) &mdash; allocation-free flatMap</h4>
     <pre><code><span class="cmt">// flatMap allocates a Stream per element; mapMulti pushes into a consumer</span>
 orders.stream().&lt;<span class="typ">OrderLine</span>&gt;mapMulti((o, push) -&gt; o.lines().forEach(push)).toList();</code></pre>
 
-    <h4>3. Collectors.teeing (12) &mdash; two aggregates, one pass</h4>
+    <h4>9. Collectors.teeing (12) &mdash; two aggregates, one pass</h4>
     <pre><code><span class="kw">var</span> range = trades.stream().collect(teeing(
     minBy(comparing(<span class="typ">Trade</span>::price)), maxBy(comparing(<span class="typ">Trade</span>::price)), <span class="typ">PriceRange</span>::<span class="kw">new</span>));</code></pre>
 
-    <h4>4. Records as stream tuples (16) &mdash; including LOCAL records</h4>
+    <h4>10. Records as stream tuples (16) &mdash; including LOCAL records</h4>
     <pre><code><span class="typ">List</span>&lt;<span class="typ">String</span>&gt; report(<span class="typ">List</span>&lt;<span class="typ">Trade</span>&gt; trades) {
     <span class="kw">record</span> <span class="typ">SymbolValue</span>(<span class="typ">String</span> symbol, <span class="typ">BigDecimal</span> value) {}   <span class="cmt">// declared INSIDE the method</span>
     <span class="kw">return</span> trades.stream()
@@ -433,28 +399,52 @@ orders.stream().&lt;<span class="typ">OrderLine</span>&gt;mapMulti((o, push) -&g
 }
 <span class="cmt">// Before records: AbstractMap.SimpleEntry or a hand-written class per pipeline shape</span></code></pre>
 
-    <h3 style="color:var(--accent); font-family:'JetBrains Mono',monospace; font-size:15px; letter-spacing:1px; margin-top:36px">&#x2503; JAVA 21 (2023) &mdash; THE CONCURRENCY INTERSECTION (+ 22&rsquo;S GATHERERS)</h3>
+    <h3 style="color:var(--accent); font-family:'JetBrains Mono',monospace; font-size:15px; letter-spacing:1px; margin-top:36px">&#x2503; JAVA 21 (2023) &mdash; THE CONCURRENCY LTS (+ 22&rsquo;S GATHERERS)</h3>
 
-    <h4>1. Virtual threads redraw the parallel-stream boundary</h4>
-    <pre><code><span class="cmt">// I/O-bound fan-out: NOT a parallel stream — virtual threads</span>
-<span class="kw">try</span> (<span class="kw">var</span> ex = <span class="typ">Executors</span>.newVirtualThreadPerTaskExecutor()) {
-    <span class="kw">var</span> futures = orders.stream().map(o -&gt; ex.submit(() -&gt; enrich(o))).toList();
-}
-<span class="cmt">// CPU-bound crunching: parallel stream on the common pool — Stage 4's rules apply</span>
-<span class="typ">LongStream</span>.range(<span class="num-lit">0</span>, <span class="num-lit">10_000_000</span>).parallel().map(<span class="typ">Math</span>::abs).sum();</code></pre>
-    <p>Before 21, people abused parallel streams for I/O because threads were expensive. That excuse is gone &mdash; and saying so in an interview shows you understand <em>both</em> tools.</p>
+    <h4>1. Virtual threads &mdash; the headline</h4>
+    <pre><code><span class="cmt">// Platform threads: ~1MB stack each, OS-scheduled — 10k is a lot</span>
+<span class="cmt">// Virtual threads: cheap, JVM-scheduled — millions are fine</span>
+<span class="kw">try</span> (<span class="kw">var</span> executor = <span class="typ">Executors</span>.newVirtualThreadPerTaskExecutor()) {
+    <span class="kw">for</span> (<span class="typ">Order</span> o : orders) {
+        executor.submit(() -&gt; enrich(o));   <span class="cmt">// 100,000 blocking HTTP calls? Fine.</span>
+    }
+}</code></pre>
+    <p>Blocking code that scales like async &mdash; a virtual thread that blocks on I/O unmounts from its carrier thread, which runs another one. Thread-per-request is a sane architecture again (Week 2, Day 14 goes deep). It also redraws the parallel-stream boundary: <strong>virtual threads for I/O-bound fan-out, parallel streams for CPU-bound crunching</strong> &mdash; before 21, people abused parallel streams for I/O because threads were expensive; that excuse is gone.</p>
 
-    <h4>2. Sequenced Collections meet streams</h4>
+    <h4>2. Pattern matching for switch + record patterns (final)</h4>
+    <pre><code><span class="kw">return switch</span> (result) {
+    <span class="kw">case</span> <span class="typ">Approved</span>(<span class="kw">var</span> id, <span class="kw">var</span> amt)                 -&gt; settle(id, amt);
+    <span class="kw">case</span> <span class="typ">Declined</span>(<span class="kw">var</span> r, <span class="kw">var</span> retry) <span class="kw">when</span> retry     -&gt; requeue(r);
+    <span class="kw">case</span> <span class="typ">Declined</span>(<span class="kw">var</span> r, <span class="kw">var</span> x)                   -&gt; reject(r);
+    <span class="kw">case</span> <span class="typ">Pending</span> p                                -&gt; defer(p);
+};  <span class="cmt">// sealed ⇒ exhaustive ⇒ no default</span></code></pre>
+
+    <h4>3. Structured Concurrency (preview)</h4>
+    <pre><code><span class="kw">try</span> (<span class="kw">var</span> scope = <span class="kw">new</span> <span class="typ">StructuredTaskScope.ShutdownOnFailure</span>()) {
+    <span class="kw">var</span> user = scope.fork(() -&gt; fetchUser(id));
+    <span class="kw">var</span> order = scope.fork(() -&gt; fetchOrder(id));
+    scope.join().throwIfFailed();
+    <span class="kw">return new</span> <span class="typ">Response</span>(user.get(), order.get());
+}  <span class="cmt">// no subtask outlives this block — Day 8 Stage 5 has the full treatment</span></code></pre>
+
+    <h4>4. Scoped Values (preview)</h4>
+    <pre><code><span class="kw">static final</span> <span class="typ">ScopedValue</span>&lt;<span class="typ">String</span>&gt; REQUEST_ID = <span class="typ">ScopedValue</span>.newInstance();
+
+<span class="typ">ScopedValue</span>.where(REQUEST_ID, <span class="str">"req-8861"</span>).run(() -&gt; handle());
+<span class="cmt">// Inside handle() and everything it calls: REQUEST_ID.get() — immutable, no cleanup,</span>
+<span class="cmt">// safe with a million virtual threads where mutable ThreadLocals are a memory disaster</span></code></pre>
+
+    <h4>5. Sequenced Collections meet streams</h4>
     <pre><code>auditLog.reversed().entrySet().stream().limit(<span class="num-lit">10</span>)   <span class="cmt">// newest-first, zero-copy view</span></code></pre>
 
-    <h4>3. Record patterns inside pipelines</h4>
+    <h4>6. Record patterns inside pipelines</h4>
     <pre><code>results.stream().map(r -&gt; <span class="kw">switch</span> (r) {
     <span class="kw">case</span> <span class="typ">Approved</span>(<span class="kw">var</span> id, <span class="kw">var</span> amt) -&gt; <span class="str">"OK "</span> + id;
     <span class="kw">case</span> <span class="typ">Declined</span>(<span class="kw">var</span> reason, <span class="kw">var</span> x) -&gt; <span class="str">"NO "</span> + reason;
     <span class="kw">case</span> <span class="typ">Pending</span> p -&gt; <span class="str">"WAIT"</span>;
 }).toList();   <span class="cmt">// Day 8's exhaustiveness, now inside your map()</span></code></pre>
 
-    <h4>4. Gatherers (22, preview) &mdash; custom intermediate operations</h4>
+    <h4>7. Gatherers (22, preview) &mdash; custom intermediate operations</h4>
     <pre><code>ticks.stream().gather(<span class="typ">Gatherers</span>.windowSliding(<span class="num-lit">20</span>))   <span class="cmt">// rolling 20-tick windows (VWAP)</span>
      .map(window -&gt; vwap(window));
 
@@ -465,21 +455,24 @@ amounts.stream().gather(<span class="typ">Gatherers</span>.scan(() -&gt; <span c
    .forEach(<span class="typ">System</span>.out::println);                    <span class="cmt">// running totals</span></code></pre>
     <p>Collectors only ever customized the terminal step; Gatherers close the last extensibility gap &mdash; the intermediate step.</p>
 
+    <h4>8. Generational ZGC</h4>
+    <p>ZGC gains young/old generations &mdash; lower CPU overhead and better allocation throughput at the same sub-millisecond pauses. Day 4&rsquo;s collector table gets a free upgrade. (String templates also previewed in 21 &mdash; later withdrawn for redesign.)</p>
+
     <div class="key-rule insight">
-      <p><strong>The evolution in one sentence per LTS:</strong></p>
-      <p><strong>8</strong> invented the model (lambdas, streams, collectors, Optional). <strong>11</strong> filled the gaps (takeWhile, bounded iterate, Optional.or/stream, filtering/flatMapping). <strong>17</strong> polished ergonomics (toList, mapMulti, teeing, records as tuples). <strong>21/22</strong> drew the concurrency boundary (virtual threads for I/O, parallel streams for CPU) and opened the pipeline itself (Gatherers).</p>
+      <p><strong>The one-line summary per version (Part 2 of 2):</strong></p>
+      <p><strong>Java 17</strong> changed how we <em>model data</em> &mdash; records, sealed, pattern matching, text blocks &mdash; and polished stream ergonomics (toList, mapMulti, teeing). <strong>Java 21</strong> changed how we <em>do concurrency</em> &mdash; virtual threads, structured concurrency, scoped values &mdash; and Java 22&rsquo;s Gatherers opened the pipeline itself. Together with Day 8&rsquo;s <strong>Java 8</strong> (how we write) and <strong>Java 11</strong> (the platform cleanup), that&rsquo;s the full senior-level answer to the version question.</p>
     </div>
 
     <div class="interview-q">
       <span class="iq-tag">&#x1F3AF; INTERVIEW QUESTIONS</span>
       <p><strong>Q: <code>Stream.toList()</code> vs <code>collect(Collectors.toList())</code> &mdash; just style?</strong> &mdash; No. <code>toList()</code> returns an unmodifiable list; <code>Collectors.toList()</code> happens to return a mutable ArrayList (documented as no-guarantees). Migrating mechanically can break code that mutates the result &mdash; and <code>toList()</code> can also be faster (no accumulator indirection, sized allocation).</p>
-      <p><strong>Q: How did Optional change after Java 8?</strong> &mdash; Java 9 added <code>or()</code> (lazy alternative Optional), <code>ifPresentOrElse()</code> (both branches), and <code>stream()</code> (the flatMap bridge); 10 added <code>orElseThrow()</code> no-arg; 11 added <code>isEmpty()</code>. If a candidate only knows <code>isPresent/get</code>, they learned Optional in 2014 and stopped.</p>
-      <p><strong>Q: You need to batch a stream into groups of 500 for bulk DB inserts &mdash; answer for Java 8, 17, and 22.</strong> &mdash; Java 8/17: no native support &mdash; collect to a list and partition by index, or use a library (Guava <code>Lists.partition</code>); laziness is lost. Java 22: <code>stream.gather(Gatherers.windowFixed(500))</code> &mdash; lazy and composable. Knowing the feature&rsquo;s absence <em>and</em> arrival dates your knowledge as current.</p>
+      <p><strong>Q: We&rsquo;re on Java 11 &mdash; what does migrating to 17, then 21, buy us?</strong> &mdash; 17: records/sealed/pattern matching for the domain model, helpful NPEs, production-ready ZGC; pain: strong encapsulation (<code>--add-opens</code>, upgrade Lombok/Mockito). 21: virtual threads (thread-per-request at scale), exhaustive pattern switch, sequenced collections, generational ZGC; pain: minimal &mdash; 17&rarr;21 is historically one of the easiest jumps.</p>
+      <p><strong>Q: You need to batch a stream into groups of 500 for bulk DB inserts &mdash; answer for Java 17 and 22.</strong> &mdash; Java 17: no native support &mdash; collect to a list and partition by index, or use a library (Guava <code>Lists.partition</code>); laziness is lost. Java 22: <code>stream.gather(Gatherers.windowFixed(500))</code> &mdash; lazy and composable. Knowing the feature&rsquo;s absence <em>and</em> arrival dates your knowledge as current.</p>
     </div>
 
     <div class="check">
       <span class="check-tag">QUICK CHECK</span>
-      <p>Date these idioms to their earliest LTS: <code>filter(Predicate.not(String::isBlank))</code> &middot; <code>flatMap(Optional::stream)</code> &middot; <code>.toList()</code> &middot; <code>gather(windowSliding(2))</code> &middot; <code>iterate(0, i -&gt; i &lt; 100, i -&gt; i + 1)</code>.</p>
+      <p>Which version (17 or 21+, crediting bundled releases) gave us &mdash; <code>.toList()</code> &middot; virtual threads &middot; <code>mapMulti</code> &middot; record patterns in switch &middot; <code>teeing</code> &middot; <code>gather(windowFixed(500))</code> &middot; helpful NullPointerException messages?</p>
     </div>
   </div>
 
