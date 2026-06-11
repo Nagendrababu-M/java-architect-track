@@ -111,12 +111,14 @@ const CURRICULUM = {
         { day: 7, title: "Week 1 Synthesis: Production Diagnosis",        topic: "JVM Memory",         status: "locked", file: null },
         {
           day: 8, title: "Java Advanced: Records, Sealed Classes, Pattern Matching & Modern APIs (Java 14–21)",
-          topic: "Java Language", status: "locked", file: null,
+          topic: "Java Language", status: "current", file: "week-01/day-8.html", duration: 180,
+          audio: { available: false, voice: 'en-US-Wavenet-D', sectionCount: 6, estimatedMinutes: 30 },
           note: "Records (compact constructors, custom accessors, records-as-value-types); Sealed classes + interfaces for exhaustive algebraic types; Pattern matching instanceof with binding vars; Switch expressions (arrow labels, yield) + guarded patterns (Java 21 when clauses); Deconstruction patterns — record patterns, array patterns; Text blocks (indentation stripping, \\ line continuation); Structured Concurrency: StructuredTaskScope.ShutdownOnFailure / ShutdownOnSuccess — fork/join with automatic cancellation; Sequenced Collections: SequencedCollection, SequencedSet, SequencedMap with reversed views; String templates (preview — interpolation with processors); Value objects & Valhalla preview concepts; Migration paths: how to replace inheritance hierarchies with sealed+record trees, null-checks with pattern switch"
         },
         {
           day: 9, title: "Streams & Functional Interfaces: Advanced Patterns & Internals",
-          topic: "Java Language", status: "locked", file: null,
+          topic: "Java Language", status: "current", file: "week-01/day-9.html", duration: 180,
+          audio: { available: false, voice: 'en-US-Wavenet-D', sectionCount: 6, estimatedMinutes: 30 },
           note: "Functional interface mechanics: @FunctionalInterface, SAM types, method references (4 kinds) vs lambdas, capture semantics (effectively-final, heap pollution with varargs); Lambda desugaring via invokedynamic — how the JVM avoids generating anonymous classes; Stream internals: spliterator-based lazy pipeline, encounter order, stateful vs stateless ops, short-circuit evaluation; Advanced collectors: Collectors.teeing, downstream collectors, custom Collector<T,A,R> implementation, groupingBy with counting/mapping/filtering; flatMap vs mapMulti (Java 16) — when mapMulti wins on performance; Parallel streams: ForkJoinPool.commonPool, spliterator SIZED/ORDERED/SUBSIZED characteristics, when parallel hurts (stateful, ordered, small N); Gatherers API (Java 22 preview): window, fold, scan, custom Gatherer<T,A,R> — stream operations that were impossible before; Optional deep-dive: chaining flatMap, or(), ifPresentOrElse, stream() bridge, anti-patterns (Optional as field, isPresent/get); Custom spliterators: implementing trySplit for parallel-capable infinite sources; Reactive bridge: Flux.fromStream pitfalls, Stream.generate for push-to-pull conversion; Real patterns: pagination with Stream.iterate + takeWhile, lazy DB cursor wrapping, multi-level groupBy for report generation, collector fusion"
         },
       ]

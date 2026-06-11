@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Week 1 · Day 9 — Streams & Functional Interfaces: Advanced Patterns & Internals</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,800&family=JetBrains+Mono:wght@400;500;700&family=Inter+Tight:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/styles.css">
+<link rel="stylesheet" href="../assets/audio-player.css">
+<link rel="stylesheet" href="../assets/glossary.css">
+<link rel="stylesheet" href="../assets/abbreviations.css">
+<style>
+  body {
+    background-image:
+      radial-gradient(ellipse 800px 600px at 20% 0%, rgba(122,184,232,0.07), transparent 60%),
+      radial-gradient(ellipse 600px 400px at 90% 100%, rgba(122,184,232,0.04), transparent 60%);
+  }
+  .interview-q {
+    margin: 20px 0;
+    padding: 18px 22px;
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--yellow);
+    border-radius: 0 8px 8px 0;
+    background: rgba(230,200,90,0.04);
+  }
+  .interview-q .iq-tag {
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: var(--yellow);
+    margin-bottom: 10px;
+  }
+  .interview-q p { margin: 0 0 10px; color: var(--ink-dim); line-height: 1.7; }
+  .interview-q p:last-child { margin-bottom: 0; }
+</style>
+</head>
+<body>
+<div class="grain"></div>
+
+<div class="container">
+
+  <header class="lesson-header">
+    <a href="../index.html" class="back-link">&larr; Back to curriculum</a>
+    <div class="meta">
+      <span class="dot"></span>
+      <span class="phase">Phase 1 &middot; Advanced Java</span>
+      <span>&middot;</span>
+      <span>Week 1 / Day 9</span>
+    </div>
+    <h1>
+      Streams &amp; Functional Interfaces: Advanced Patterns &amp; Internals
+      <span class="sub">What actually happens when a lambda runs, how a stream pipeline executes, and when parallel streams hurt you.</span>
+    </h1>
+    <div class="scope"><strong>SCOPE</strong> &middot; 180 min &middot; 6 stages &mdash; interview-prep session: internals first, then the patterns interviewers test</div>
+  <div id="play-full-lesson-mount"></div>
+  </header>
+
+  <div class="recap">
+    <span class="recap-tag">INTERVIEW CONTEXT</span>
+    <p>Everyone can write <code>.stream().filter().map().collect()</code>. Senior interviews go underneath: <strong>How does a lambda avoid creating a class per call site? Why is a stream lazy and what does that buy? When does <code>parallelStream()</code> make things slower?</strong> Today is internals-first &mdash; <code>invokedynamic</code>, spliterators, collector mechanics &mdash; because the candidate who can explain <em>why</em> beats the candidate who memorized <em>what</em>. Yesterday&rsquo;s theme continues: knowing the design reasoning is the differentiator.</p>
+  </div>
+
+  <!-- STAGE 1 -->
+  <div class="stage" data-section="1">
+    <span class="stage-tag">STAGE 1 <span class="time">30 MIN</span></span>
+    <h2>Functional interfaces &amp; what a lambda really is</h2>
+
+    <h4>SAM types and @FunctionalInterface</h4>
+    <p>A functional interface is any interface with exactly one abstract method (a <strong>SAM</strong> &mdash; Single Abstract Method &mdash; type). <code>default</code> and <code>static</code> methods don&rsquo;t count, and neither do abstract methods that match <code>Object</code>&rsquo;s public methods (which is why <code>Comparator</code> can declare <code>equals</code> and still be functional). <code>@FunctionalInterface</code> changes nothing at runtime &mdash; it makes the compiler <em>fail</em> if someone adds a second abstract method later. It&rsquo;s a contract annotation, like <code>@Override</code>.</p>
+
+    <h4>The core four (and their primitive cousins)</h4>
+    <div class="compare-wrap"><table class="compare">
+      <thead><tr><th>Interface</th><th>Signature</th><th>Use</th></tr></thead>
+      <tbody>
+        <tr><td><code>Supplier&lt;T&gt;</code></td><td><code>() &rarr; T</code></td><td>Lazy values, factories</td></tr>
+        <tr><td><code>Consumer&lt;T&gt;</code></td><td><code>T &rarr; void</code></td><td>Side effects (forEach)</td></tr>
+        <tr><td><code>Function&lt;T,R&gt;</code></td><td><code>T &rarr; R</code></td><td>Transformations (map)</td></tr>
+        <tr><td><code>Predicate&lt;T&gt;</code></td><td><code>T &rarr; boolean</code></td><td>Filtering, validation</td></tr>
+      </tbody>
+    </table></div>
+    <p>The primitive specializations &mdash; <code>IntFunction</code>, <code>ToLongFunction</code>, <code>DoublePredicate</code>, etc. &mdash; exist to avoid <strong>autoboxing</strong>. <code>Stream&lt;Integer&gt;.map(i -&gt; i * 2)</code> boxes and unboxes on every element; <code>IntStream.map(i -&gt; i * 2)</code> works on raw ints. In a hot loop over millions of elements that&rsquo;s the difference between memory-bound and CPU-bound.</p>
+
+    <h4>The four kinds of method references</h4>
+    <pre><code><span class="cmt">// 1. Static method</span>
+<span class="typ">Function</span>&lt;<span class="typ">String</span>,<span class="typ">Integer</span>&gt; f1 = <span class="typ">Integer</span>::parseInt;      <span class="cmt">// s -&gt; Integer.parseInt(s)</span>
+<span class="cmt">// 2. Instance method of a PARTICULAR object (bound)</span>
+<span class="typ">Supplier</span>&lt;<span class="typ">Integer</span>&gt; f2 = myString::length;               <span class="cmt">// () -&gt; myString.length()</span>
+<span class="cmt">// 3. Instance method of an ARBITRARY object of a type (unbound — receiver becomes param 1)</span>
+<span class="typ">Function</span>&lt;<span class="typ">String</span>,<span class="typ">Integer</span>&gt; f3 = <span class="typ">String</span>::length;          <span class="cmt">// s -&gt; s.length()</span>
+<span class="cmt">// 4. Constructor</span>
+<span class="typ">Supplier</span>&lt;<span class="typ">ArrayList</span>&lt;<span class="typ">String</span>&gt;&gt; f4 = <span class="typ">ArrayList</span>::new;       <span class="cmt">// () -&gt; new ArrayList&lt;&gt;()</span></code></pre>
+    <p>The bound/unbound distinction (2 vs 3) is the one interviewers test: <code>String::length</code> as a <code>Function&lt;String,Integer&gt;</code> takes the receiver as its argument.</p>
+
+    <h4>Capture semantics: effectively final</h4>
+    <p>A lambda can only capture local variables that are <strong>effectively final</strong> &mdash; never reassigned after initialization. Why? Captured locals are <em>copied</em> into the lambda object at creation. If the variable could change afterwards, the lambda&rsquo;s copy and the original would silently diverge &mdash; Java forbids the divergence rather than allow the confusion. Fields and statics are not captured (the lambda reads them live through <code>this</code>), which is why they don&rsquo;t need to be final &mdash; and why mutating a field from a lambda in a parallel stream is a data race.</p>
+
+    <h4>invokedynamic &mdash; why a lambda is not an anonymous class</h4>
+    <div class="key-rule insight">
+      <p><strong>The compiler does not generate a class file per lambda. It emits an <code>invokedynamic</code> instruction.</strong></p>
+      <p>The lambda body becomes a private static method in the enclosing class. The <code>invokedynamic</code> call site, on <em>first execution</em>, calls a bootstrap method &mdash; <code>LambdaMetafactory</code> &mdash; which spins a small implementation class <em>at runtime</em> and links it. Subsequent executions hit the linked call site directly. Consequences: no <code>.class</code> file clutter, non-capturing lambdas are cached as singletons (zero allocation per call!), capturing lambdas allocate per evaluation, and the JVM is free to improve the strategy in future releases without recompiling your code. An anonymous class, by contrast, is a compile-time-fixed class file with an allocation on every <code>new</code>.</p>
+    </div>
+
+    <div class="interview-q">
+      <span class="iq-tag">&#x1F3AF; INTERVIEW QUESTIONS</span>
+      <p><strong>Q: Is a lambda just syntax sugar for an anonymous class?</strong> &mdash; No. Anonymous class = compile-time class file + allocation per instantiation + its own <code>this</code>. Lambda = invokedynamic + LambdaMetafactory at runtime, singleton if non-capturing, and <code>this</code> is lexically the enclosing instance.</p>
+      <p><strong>Q: Why effectively final?</strong> &mdash; Locals are captured by value (copied). Allowing mutation would mean the copy and the variable diverge; banning reassignment removes the trap.</p>
+      <p><strong>Q: When does a lambda allocate?</strong> &mdash; Only if it captures. <code>x -&gt; x * 2</code> is created once, ever. <code>x -&gt; x * factor</code> allocates each time the expression is evaluated (it must carry <code>factor</code>).</p>
+    </div>
+
+    <div class="check">
+      <span class="check-tag">QUICK CHECK</span>
+      <p>Inside a loop you write <code>list.forEach(item -&gt; process(item, i))</code> where <code>i</code> is the loop counter of a classic <code>for (int i = 0; ...)</code>. It doesn&rsquo;t compile. Why exactly &mdash; and why does the same lambda compile fine in a for-each loop?</p>
+    </div>
+  </div>
+
+  <!-- STAGE 2 -->
+  <div class="stage" data-section="2">
+    <span class="stage-tag">STAGE 2 <span class="time">30 MIN</span></span>
+    <h2>Stream internals &mdash; the lazy pipeline</h2>
+
+    <p>A stream pipeline has three parts: a <strong>source</strong> (collection, array, generator), zero or more <strong>intermediate operations</strong> (filter, map, sorted), and one <strong>terminal operation</strong> (collect, reduce, forEach, findFirst). The fact every candidate states &mdash; and few can explain &mdash; is laziness:</p>
+
+    <div class="key-rule insight">
+      <p><strong>Intermediate operations do nothing. They build a linked chain of pipeline stages. All work happens when the terminal operation pulls.</strong></p>
+      <p>When <code>collect()</code> runs, the pipeline is fused: each element flows through <em>all</em> stages one at a time &mdash; filter, then map, then accumulate &mdash; before the next element starts. There is no intermediate collection between <code>filter</code> and <code>map</code>. One pass, no materialization, and short-circuit operations (<code>findFirst</code>, <code>anyMatch</code>, <code>limit</code>) can stop pulling the moment they&rsquo;re satisfied &mdash; which is why <code>Stream.iterate(0, i -&gt; i + 1).filter(...).findFirst()</code> terminates on an infinite stream.</p>
+    </div>
+
+    <h4>Spliterators &mdash; the engine underneath</h4>
+    <p>Every stream source provides a <code>Spliterator</code> (&ldquo;splittable iterator&rdquo;). It does two jobs: <code>tryAdvance(consumer)</code> pushes one element through the pipeline (sequential traversal), and <code>trySplit()</code> carves off a chunk for another thread (parallel decomposition). It also reports <strong>characteristics</strong> &mdash; <code>SIZED</code> (knows its element count), <code>SUBSIZED</code> (splits also know theirs), <code>ORDERED</code> (encounter order matters), <code>SORTED</code>, <code>DISTINCT</code>, <code>IMMUTABLE</code> &mdash; which the pipeline uses to skip work: <code>distinct()</code> on a <code>DISTINCT</code> source is a no-op; <code>toArray()</code> on a <code>SIZED</code> source preallocates exactly.</p>
+
+    <h4>Stateless vs stateful operations</h4>
+    <div class="compare-wrap"><table class="compare">
+      <thead><tr><th>Kind</th><th>Operations</th><th>Cost</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>Stateless</strong></td>
+          <td><code>filter</code>, <code>map</code>, <code>flatMap</code>, <code>peek</code></td>
+          <td>Each element processed independently &mdash; fuses perfectly, parallelizes perfectly</td>
+        </tr>
+        <tr>
+          <td><strong>Stateful</strong></td>
+          <td><code>sorted</code>, <code>distinct</code>, <code>limit</code>, <code>skip</code></td>
+          <td>Must see some/all elements before emitting &mdash; <code>sorted</code> buffers the ENTIRE stream; barriers in the pipeline</td>
+        </tr>
+      </tbody>
+    </table></div>
+    <p><code>sorted()</code> in the middle of a pipeline breaks the one-pass model: everything upstream runs to completion into a buffer, the buffer sorts, then downstream resumes. In parallel pipelines, stateful ops are where the scalability dies.</p>
+
+    <h4>Encounter order</h4>
+    <p>An <em>ordered</em> stream (from a List) promises results in source order. <code>forEach</code> ignores ordering for speed; <code>forEachOrdered</code> enforces it. <code>unordered()</code> explicitly drops the promise &mdash; which can genuinely speed up parallel <code>distinct()</code> and <code>limit()</code>, because maintaining &ldquo;the <em>first</em> N&rdquo; across threads requires coordination that &ldquo;<em>any</em> N&rdquo; doesn&rsquo;t.</p>
+
+    <h4>flatMap vs mapMulti (Java 16)</h4>
+    <pre><code><span class="cmt">// flatMap: one Stream object allocated per element — expensive when most map to 0–1 results</span>
+orders.stream().flatMap(o -&gt; o.lines().stream())
+
+<span class="cmt">// mapMulti: push results into a consumer — no per-element stream allocation</span>
+orders.stream().&lt;<span class="typ">OrderLine</span>&gt;mapMulti((o, push) -&gt; o.lines().forEach(push))</code></pre>
+    <p><code>mapMulti</code> wins when the mapping is mostly 0-or-1 elements (filter-and-transform in one step) or when the per-element <code>Stream</code> allocation of flatMap shows up in the profile. flatMap stays clearer when each element genuinely expands into a meaningful sub-stream.</p>
+
+    <div class="interview-q">
+      <span class="iq-tag">&#x1F3AF; INTERVIEW QUESTIONS</span>
+      <p><strong>Q: Why can&rsquo;t you reuse a stream?</strong> &mdash; A stream is a one-shot pipeline over a spliterator, not a data structure. The terminal op consumes the spliterator; a second terminal op throws <code>IllegalStateException</code>. Re-create from the source (or use a <code>Supplier&lt;Stream&gt;</code>).</p>
+      <p><strong>Q: Does <code>peek</code> always run?</strong> &mdash; No. Laziness + short-circuiting means elements never pulled are never peeked, and ops may even be elided entirely (e.g. <code>count()</code> on a SIZED source can skip traversal). Never use <code>peek</code> for required side effects.</p>
+      <p><strong>Q: <code>map(x -&gt; x*2).filter(x -&gt; x &gt; 10)</code> vs <code>filter</code> first &mdash; does order matter?</strong> &mdash; Semantically here, and always for performance: filter early so fewer elements flow through later stages.</p>
+    </div>
+
+    <div class="check">
+      <span class="check-tag">QUICK CHECK</span>
+      <p>Predict the output: <code>Stream.of("a","b","c").peek(System.out::println).anyMatch(s -&gt; s.equals("a"))</code> &mdash; how many letters print, and why?</p>
+    </div>
+  </div>
+
+  <!-- STAGE 3 -->
+  <div class="stage" data-section="3">
+    <span class="stage-tag">STAGE 3 <span class="time">30 MIN</span></span>
+    <h2>Collectors &mdash; from groupingBy to building your own</h2>
+
+    <h4>The Collector contract</h4>
+    <p>A <code>Collector&lt;T, A, R&gt;</code> is four functions plus characteristics: <code>supplier()</code> creates the mutable container A, <code>accumulator()</code> folds an element T into it, <code>combiner()</code> merges two containers (used by parallel streams), <code>finisher()</code> transforms A into the result R. Characteristics: <code>IDENTITY_FINISH</code> (A is R, skip the finisher), <code>CONCURRENT</code> (one shared container, thread-safe accumulate), <code>UNORDERED</code>.</p>
+
+    <h4>Downstream collectors &mdash; the composition pattern</h4>
+    <pre><code><span class="cmt">// Count trades per symbol</span>
+<span class="typ">Map</span>&lt;<span class="typ">String</span>, <span class="typ">Long</span>&gt; counts = trades.stream()
+    .collect(groupingBy(<span class="typ">Trade</span>::symbol, counting()));
+
+<span class="cmt">// Per symbol: total notional value — groupingBy + mapping-free reduce</span>
+<span class="typ">Map</span>&lt;<span class="typ">String</span>, <span class="typ">BigDecimal</span>&gt; notional = trades.stream()
+    .collect(groupingBy(<span class="typ">Trade</span>::symbol,
+             reducing(<span class="typ">BigDecimal</span>.ZERO, <span class="typ">Trade</span>::value, <span class="typ">BigDecimal</span>::add)));
+
+<span class="cmt">// Multi-level: symbol → side → list of trades (report-style nested grouping)</span>
+<span class="typ">Map</span>&lt;<span class="typ">String</span>, <span class="typ">Map</span>&lt;<span class="typ">Side</span>, <span class="typ">List</span>&lt;<span class="typ">Trade</span>&gt;&gt;&gt; bySymbolBySide = trades.stream()
+    .collect(groupingBy(<span class="typ">Trade</span>::symbol, groupingBy(<span class="typ">Trade</span>::side)));
+
+<span class="cmt">// filtering vs pre-filter: keep EMPTY groups for symbols with no large trades</span>
+<span class="typ">Map</span>&lt;<span class="typ">String</span>, <span class="typ">List</span>&lt;<span class="typ">Trade</span>&gt;&gt; large = trades.stream()
+    .collect(groupingBy(<span class="typ">Trade</span>::symbol,
+             filtering(t -&gt; t.quantity() &gt; <span class="num-lit">10_000</span>, toList())));</code></pre>
+    <p>That last distinction is a classic probe: <code>.filter(...).collect(groupingBy(...))</code> drops symbols entirely if nothing passes; <code>groupingBy(..., filtering(...))</code> keeps the symbol with an empty list. Different shapes for different reports.</p>
+
+    <h4>Collectors.teeing (Java 12)</h4>
+    <pre><code><span class="cmt">// Min and max in ONE pass</span>
+<span class="kw">record</span> <span class="typ">PriceRange</span>(<span class="typ">Optional</span>&lt;<span class="typ">Trade</span>&gt; low, <span class="typ">Optional</span>&lt;<span class="typ">Trade</span>&gt; high) {}
+
+<span class="typ">PriceRange</span> range = trades.stream().collect(teeing(
+    minBy(comparing(<span class="typ">Trade</span>::price)),
+    maxBy(comparing(<span class="typ">Trade</span>::price)),
+    <span class="typ">PriceRange</span>::<span class="kw">new</span>));</code></pre>
+    <p><code>teeing</code> feeds every element to <em>two</em> collectors and merges their results. The pattern: any time you&rsquo;re tempted to traverse twice (average + count, sum + max), teeing does it in one pass.</p>
+
+    <h4>Writing a custom Collector</h4>
+    <pre><code><span class="cmt">// Collect into an immutable, comma-joined, capped summary — the 4 functions explicitly</span>
+<span class="typ">Collector</span>&lt;<span class="typ">String</span>, <span class="typ">StringJoiner</span>, <span class="typ">String</span>&gt; top3Summary = <span class="typ">Collector</span>.of(
+    () -&gt; <span class="kw">new</span> <span class="typ">StringJoiner</span>(<span class="str">", "</span>),          <span class="cmt">// supplier: the mutable container</span>
+    (j, s) -&gt; { <span class="kw">if</span> (j.length() &lt; <span class="num-lit">60</span>) j.add(s); },  <span class="cmt">// accumulator</span>
+    (j1, j2) -&gt; j1.merge(j2),                 <span class="cmt">// combiner: parallel merge</span>
+    <span class="typ">StringJoiner</span>::toString);                 <span class="cmt">// finisher</span></code></pre>
+    <p>The interview point: <strong>the combiner is not optional decoration</strong>. If your collector can&rsquo;t correctly merge two partial containers, it&rsquo;s broken under <code>parallelStream()</code> even if it &ldquo;works&rdquo; sequentially.</p>
+
+    <div class="interview-q">
+      <span class="iq-tag">&#x1F3AF; INTERVIEW QUESTIONS</span>
+      <p><strong>Q: <code>toMap</code> throws on duplicate keys &mdash; how do you handle it?</strong> &mdash; The 3-arg form takes a merge function: <code>toMap(Trade::symbol, Trade::price, (a, b) -&gt; b)</code> (keep latest). Forgetting the merge function is a top-5 production stream bug.</p>
+      <p><strong>Q: <code>reduce</code> vs <code>collect</code>?</strong> &mdash; <code>reduce</code> is for immutable accumulation (each step produces a new value &mdash; right for ints, wrong for StringBuilder). <code>collect</code> is mutable reduction: one container per thread, mutated in place, merged. Folding strings with <code>reduce(String::concat)</code> is O(n&sup2;); <code>joining()</code> is linear.</p>
+    </div>
+
+    <div class="check">
+      <span class="check-tag">QUICK CHECK</span>
+      <p>Using one stream pass, produce both the count of trades and the average price. Which collector composition do you reach for?</p>
+    </div>
+  </div>
+
+  <!-- STAGE 4 -->
+  <div class="stage" data-section="4">
+    <span class="stage-tag">STAGE 4 <span class="time">30 MIN</span></span>
+    <h2>Parallel streams &mdash; when they hurt</h2>
+
+    <p><code>parallelStream()</code> is one method call that looks free and isn&rsquo;t. Underneath: the spliterator <code>trySplit()</code>s the source into chunks, chunks are processed as ForkJoin tasks on <strong><code>ForkJoinPool.commonPool()</code></strong>, and results merge via the collector&rsquo;s combiner.</p>
+
+    <div class="key-rule">
+      <p><strong>The common pool is shared by the entire JVM &mdash; sized at cores&minus;1.</strong></p>
+      <p>Every parallel stream, every <code>CompletableFuture</code> default async, everything that doesn&rsquo;t name a pool shares these threads. One parallel stream doing blocking I/O starves every other parallel computation in the process. That&rsquo;s the #1 production parallel-stream incident: someone parallelized a stream of HTTP calls, the common pool filled with blocked threads, and unrelated code across the service stopped making progress.</p>
+    </div>
+
+    <h4>The decision checklist &mdash; parallel only if ALL of these hold</h4>
+    <ul>
+      <li><strong>N &times; Q is large:</strong> element count times per-element cost. 10,000 elements of cheap work loses to sequential; the fork/join orchestration costs more than it saves. Rule of thumb: don&rsquo;t consider parallel below ~100k cheap elements or unless per-element work is genuinely expensive.</li>
+      <li><strong>The source splits well:</strong> ArrayList and arrays split perfectly (SIZED + SUBSIZED &mdash; index ranges). LinkedList splits terribly (must walk to find the midpoint). <code>Stream.iterate</code> can&rsquo;t split at all (each element depends on the previous); <code>LongStream.range</code> splits perfectly.</li>
+      <li><strong>Operations are stateless &amp; non-blocking:</strong> CPU-bound pure functions. No I/O, no locks, no shared mutable state.</li>
+      <li><strong>Merge is cheap:</strong> summing longs merges in O(1); merging HashMaps merges in O(n). <code>groupingBy</code> in parallel pays a real merge cost &mdash; <code>groupingByConcurrent</code> (one ConcurrentHashMap, UNORDERED) often wins if you don&rsquo;t need encounter order.</li>
+      <li><strong>You don&rsquo;t depend on encounter order:</strong> <code>limit()</code> and <code>findFirst()</code> on an ordered parallel stream force coordination; <code>findAny()</code> and <code>unordered()</code> release it.</li>
+    </ul>
+
+    <h4>The shared-state trap</h4>
+    <pre><code><span class="cmt">// BROKEN under parallel — ArrayList is not thread-safe; loses elements or throws</span>
+<span class="typ">List</span>&lt;<span class="typ">String</span>&gt; results = <span class="kw">new</span> <span class="typ">ArrayList</span>&lt;&gt;();
+trades.parallelStream().map(<span class="typ">Trade</span>::symbol).forEach(results::add);   <span class="cmt">// ✗ data race</span>
+
+<span class="cmt">// CORRECT — let the collector own the mutable state, one container per thread + merge</span>
+<span class="typ">List</span>&lt;<span class="typ">String</span>&gt; results = trades.parallelStream().map(<span class="typ">Trade</span>::symbol).toList();  <span class="cmt">// ✓</span></code></pre>
+
+    <h4>Isolating from the common pool</h4>
+    <p>A parallel stream submitted from <em>inside</em> a custom ForkJoinPool runs its tasks in that pool &mdash; the standard (if officially undocumented) isolation trick: <code>new ForkJoinPool(8).submit(() -&gt; data.parallelStream()...).get()</code>. For I/O-bound fan-out, don&rsquo;t use parallel streams at all &mdash; that&rsquo;s what virtual threads / StructuredTaskScope (Day 8) are for. Parallel streams are for CPU-bound data crunching.</p>
+
+    <div class="interview-q">
+      <span class="iq-tag">&#x1F3AF; INTERVIEW QUESTIONS</span>
+      <p><strong>Q: Why was my parallel stream slower than sequential?</strong> &mdash; Walk the checklist: too few elements / too cheap per element; badly-splitting source (LinkedList, iterate); a stateful op (sorted/limit) serializing the pipeline; expensive merge; or common-pool contention from elsewhere in the JVM.</p>
+      <p><strong>Q: Is <code>forEach</code> on a parallel stream ordered?</strong> &mdash; No, deliberately: elements are processed as threads finish. <code>forEachOrdered</code> restores order at the cost of parallel benefit in that stage.</p>
+      <p><strong>Q: Where do parallel stream threads come from?</strong> &mdash; <code>ForkJoinPool.commonPool()</code>, sized cores&minus;1, shared JVM-wide; the calling thread also participates. Sizing override: <code>-Djava.util.concurrent.ForkJoinPool.common.parallelism=N</code>.</p>
+    </div>
+
+    <div class="check">
+      <span class="check-tag">QUICK CHECK</span>
+      <p>A teammate parallelizes <code>orders.parallelStream().map(o -&gt; restClient.enrich(o)).toList()</code> over 200 orders and reports a nice speedup in testing. Why is this still a production incident waiting to happen, and what&rsquo;s the right tool instead?</p>
+    </div>
+  </div>
+
+  <!-- STAGE 5 -->
+  <div class="stage" data-section="5">
+    <span class="stage-tag">STAGE 5 <span class="time">30 MIN</span></span>
+    <h2>Optional discipline &amp; Gatherers &mdash; the missing operations</h2>
+
+    <h4>Optional &mdash; the API and the anti-patterns</h4>
+    <pre><code><span class="cmt">// The chain — alternative sources, transformation, fallback action</span>
+<span class="typ">String</span> display = repo.findById(id)                     <span class="cmt">// Optional&lt;User&gt;</span>
+    .or(() -&gt; cache.find(id))                          <span class="cmt">// try another source (lazy)</span>
+    .flatMap(<span class="typ">User</span>::nickname)                           <span class="cmt">// nickname() returns Optional — flatMap, not map</span>
+    .filter(n -&gt; !n.isBlank())
+    .orElseGet(() -&gt; expensiveDefault());              <span class="cmt">// orElseGet is lazy; orElse always evaluates</span>
+
+ifPresentOrElse(u -&gt; audit(u), () -&gt; log.warn(<span class="str">"missing"</span>));
+
+<span class="cmt">// Optional → Stream bridge: from a stream of Optionals, keep the present values</span>
+ids.stream().map(repo::findById).flatMap(<span class="typ">Optional</span>::stream).toList();</code></pre>
+
+    <div class="compare-wrap"><table class="compare">
+      <thead><tr><th>Anti-pattern</th><th>Why it&rsquo;s wrong</th><th>Instead</th></tr></thead>
+      <tbody>
+        <tr><td><code>if (o.isPresent()) o.get()</code></td><td>Re-creates the null-check; <code>get()</code> can throw</td><td><code>map/ifPresent/orElseThrow</code></td></tr>
+        <tr><td>Optional as a field</td><td>Not serializable; adds a box to every read; identity-based equals risk</td><td>Nullable field, Optional-returning getter</td></tr>
+        <tr><td>Optional method parameters</td><td>Caller forced to wrap; three states (null, empty, present)</td><td>Overloads or @Nullable param</td></tr>
+        <tr><td><code>orElse(compute())</code></td><td>Always evaluates, even when present</td><td><code>orElseGet(() -&gt; compute())</code></td></tr>
+      </tbody>
+    </table></div>
+    <p>The one-line philosophy for interviews: <strong>Optional is a return type</strong> &mdash; a contract that &ldquo;absence is a normal outcome&rdquo; &mdash; not a general-purpose null replacement.</p>
+
+    <h4>Stream.iterate + takeWhile — bounded generation (pagination pattern)</h4>
+    <pre><code><span class="cmt">// Pull pages from an API until an empty page comes back — lazy, no upfront count needed</span>
+<span class="typ">Stream</span>.iterate(fetchPage(<span class="num-lit">0</span>), page -&gt; fetchPage(page.number() + <span class="num-lit">1</span>))
+      .takeWhile(page -&gt; !page.items().isEmpty())
+      .flatMap(page -&gt; page.items().stream())
+      .toList();</code></pre>
+
+    <h4>Gatherers (Java 22+) &mdash; custom intermediate operations</h4>
+    <p>Collectors customize the <em>terminal</em> step; until Gatherers, you couldn&rsquo;t customize an <em>intermediate</em> step. <code>Stream.gather(...)</code> fills the gap with built-ins that were previously impossible or awkward:</p>
+    <ul>
+      <li><code>Gatherers.windowFixed(3)</code> &mdash; <code>[1,2,3,4,5,6] &rarr; [1,2,3],[4,5,6]</code> (batching!)</li>
+      <li><code>Gatherers.windowSliding(2)</code> &mdash; <code>[1,2,3] &rarr; [1,2],[2,3]</code> (pairwise comparison, moving averages)</li>
+      <li><code>Gatherers.scan(() -&gt; 0, Integer::sum)</code> &mdash; running totals: emits every intermediate accumulation</li>
+      <li><code>Gatherers.fold(...)</code> &mdash; ordered, sequential fold emitting one result</li>
+    </ul>
+    <p>A custom <code>Gatherer&lt;T,A,R&gt;</code> has an initializer, an <strong>integrator</strong> (sees each element + state + downstream; returns false to short-circuit), an optional combiner, and a finisher. The canonical example interviewers love: a <em>moving average over a price stream</em> &mdash; before Gatherers that needed an external mutable deque (broken in parallel); now it&rsquo;s a self-contained, reusable pipeline stage.</p>
+
+    <div class="architect-callout">
+      <p>For the trading platform: <code>windowSliding(20)</code> over a tick stream is a 20-tick moving window for a rolling VWAP &mdash; expressed declaratively, no hand-rolled ring buffer. And the pagination pattern (<code>iterate + takeWhile</code>) is exactly how you wrap a broker&rsquo;s paged historical-data API as a lazy stream: pages are fetched only as the consumer pulls, and a <code>limit(n)</code> downstream stops the HTTP calls automatically &mdash; laziness doing real work.</p>
+    </div>
+
+    <div class="interview-q">
+      <span class="iq-tag">&#x1F3AF; INTERVIEW QUESTIONS</span>
+      <p><strong>Q: Why is Optional-as-field discouraged?</strong> &mdash; Optional isn&rsquo;t Serializable, costs an extra object per read, and was explicitly designed (per Brian Goetz) as a return-type vehicle for &ldquo;no result&rdquo; &mdash; fields and params re-introduce the null problem one level up (the Optional itself can be null).</p>
+      <p><strong>Q: How would you batch a stream into chunks of 100 before Java 22, and after?</strong> &mdash; Before: collect to a list and partition by index arithmetic (eager, loses laziness) or an external library. After: <code>stream.gather(Gatherers.windowFixed(100))</code> &mdash; lazy, composable, parallel-aware.</p>
+    </div>
+  </div>
+
+  <!-- STAGE 6 -->
+  <div class="stage" data-section="6">
+    <span class="stage-tag">STAGE 6 <span class="time">30 MIN</span></span>
+    <h2>The interview challenge &mdash; explain, diagnose, design</h2>
+
+    <p>Three escalating interview prompts &mdash; an explain-the-internals question, a debug question, and a design question. Answer each (50+ chars), then compare.</p>
+
+    <div class="challenge">
+      <span class="challenge-tag">SCENARIO &middot; THREE REAL INTERVIEW PROMPTS</span>
+      <h3>The streams deep-dive round</h3>
+      <p><strong>Prompt A:</strong> &ldquo;Walk me through exactly what the JVM does when this line executes for the first time: <code>list.stream().filter(s -&gt; s.length() &gt; max).count()</code> &mdash; from lambda creation to result.&rdquo;</p>
+      <p><strong>Prompt B:</strong> &ldquo;This code intermittently returns wrong counts in production. Find every bug: <code>Map&lt;String,Integer&gt; counts = new HashMap&lt;&gt;(); orders.parallelStream().forEach(o -&gt; counts.merge(o.symbol(), 1, Integer::sum));</code>&rdquo;</p>
+      <p><strong>Prompt C:</strong> &ldquo;Design a single stream pipeline producing a report: for each symbol, the trade count, total notional, and the largest single trade &mdash; one pass over 10 million trades. Sequential or parallel, and why?&rdquo;</p>
+    </div>
+
+    <div class="challenge-form" id="challenge-1-9">
+      <span class="challenge-tag">YOUR ANSWERS &middot; MINIMUM 50 CHARS EACH TO UNLOCK MODEL ANSWER</span>
+
+      <div class="textarea-row">
+        <label class="textarea-label" for="ta-1-9-st1">
+          Q1 &mdash; Prompt A: trace the execution. Cover the lambda (capturing? allocation?), the pipeline construction, and how count() drives it.
+        </label>
+        <textarea class="answer-textarea" id="ta-1-9-st1" placeholder="invokedynamic… LambdaMetafactory… what do filter() and count() actually do…"></textarea>
+        <div class="char-count" id="cc-1-9-st1">0 / 50 characters</div>
+        <div style="margin-top:12px">
+          <button class="btn-reveal" id="reveal-1-9-st1" onclick="revealModelAnswer('1-9','st1')" disabled>Reveal model answer</button>
+        </div>
+        <div class="model-answer" id="ma-1-9-st1">
+          <span class="model-answer-tag">MODEL ANSWER</span>
+          <p><strong>Lambda:</strong> <code>s -&gt; s.length() &gt; max</code> captures <code>max</code>, so it allocates a Predicate instance per execution of this line (a non-capturing lambda would be a cached singleton). First execution hits the <code>invokedynamic</code> call site: the JVM calls the bootstrap method, <code>LambdaMetafactory.metafactory</code>, which spins a hidden class implementing <code>Predicate</code> whose <code>test()</code> delegates to the compiler-generated private static method holding the body; the call site links and never bootstraps again. <strong>Pipeline:</strong> <code>list.stream()</code> wraps the list&rsquo;s spliterator (SIZED, ORDERED) in a head stage; <code>filter(...)</code> allocates one stateless-op stage object linked to the head &mdash; <em>no elements move</em>. <strong>Terminal:</strong> <code>count()</code> triggers evaluation. Wrinkle worth naming: with no peek, count() on a SIZED source <em>could</em> shortcut, but the filter changes the count, so it must traverse: the spliterator&rsquo;s <code>forEachRemaining</code> pushes each element through the fused sink chain &mdash; test the predicate, increment if it passes &mdash; one pass, no intermediate collection, result returned.</p>
+        </div>
+      </div>
+
+      <div class="textarea-row" style="margin-top:28px">
+        <label class="textarea-label" for="ta-1-9-st2">
+          Q2 &mdash; Prompt B: identify every defect in the parallel counting code and give the correct version.
+        </label>
+        <textarea class="answer-textarea" id="ta-1-9-st2" placeholder="Think: thread safety of HashMap, forEach side effects, what owns the mutable state…"></textarea>
+        <div class="char-count" id="cc-1-9-st2">0 / 50 characters</div>
+        <div style="margin-top:12px">
+          <button class="btn-reveal" id="reveal-1-9-st2" onclick="revealModelAnswer('1-9','st2')" disabled>Reveal model answer</button>
+        </div>
+        <div class="model-answer" id="ma-1-9-st2">
+          <span class="model-answer-tag">MODEL ANSWER</span>
+          <p><strong>Bug 1 &mdash; data race:</strong> <code>HashMap</code> is not thread-safe; concurrent <code>merge()</code> from ForkJoin threads loses updates (lost counts), can corrupt buckets, and in resize races can even loop or throw. Intermittent-wrong-counts is the textbook symptom. <strong>Bug 2 &mdash; pattern violation:</strong> side-effecting <code>forEach</code> into external mutable state is exactly what the Stream API&rsquo;s &ldquo;mutable reduction&rdquo; exists to avoid &mdash; the stream should own the container. <strong>Fix (idiomatic):</strong> <code>Map&lt;String,Long&gt; counts = orders.parallelStream().collect(groupingBy(Order::symbol, counting()));</code> &mdash; per-thread maps, merged by the combiner. <strong>Fix (high-contention alternative):</strong> <code>groupingByConcurrent</code> with a single ConcurrentHashMap, valid because counting is UNORDERED. <strong>Bonus point:</strong> swapping HashMap for ConcurrentHashMap alone would make the original <em>correct</em> (merge is atomic there) but still non-idiomatic and contended &mdash; saying that distinction out loud is senior-level signal. Then question whether parallel is justified at all (Stage 4 checklist).</p>
+        </div>
+      </div>
+
+      <div class="textarea-row" style="margin-top:28px">
+        <label class="textarea-label" for="ta-1-9-st3">
+          Q3 &mdash; Prompt C: design the one-pass report pipeline. Name the exact collectors and justify sequential vs parallel for 10M elements.
+        </label>
+        <textarea class="answer-textarea" id="ta-1-9-st3" placeholder="One pass, three aggregates per key… which collector composes multiple results? Splits well? Merge cost?"></textarea>
+        <div class="char-count" id="cc-1-9-st3">0 / 50 characters</div>
+        <div style="margin-top:12px">
+          <button class="btn-reveal" id="reveal-1-9-st3" onclick="revealModelAnswer('1-9','st3')" disabled>Reveal model answer</button>
+        </div>
+        <div class="model-answer" id="ma-1-9-st3">
+          <span class="model-answer-tag">MODEL ANSWER</span>
+          <p><strong>Shape:</strong> <code>record SymbolStats(long count, BigDecimal notional, Optional&lt;Trade&gt; largest) {}</code>, then one pass: <code>trades.stream().collect(groupingBy(Trade::symbol, teeing(counting(), teeing(reducing(BigDecimal.ZERO, Trade::value, BigDecimal::add), maxBy(comparing(Trade::value)), Pair::new), (cnt, p) -&gt; new SymbolStats(cnt, p.first(), p.second()))));</code> &mdash; <code>groupingBy</code> partitions by symbol; nested <code>teeing</code> composes the three aggregates per group (teeing takes two collectors, so three aggregates = teeing inside teeing, or write one small custom Collector with a mutable stats accumulator &mdash; cleaner, and worth saying). <strong>Sequential vs parallel:</strong> parallel is defensible here and you justify it against the checklist: N is large (10M); source should be an ArrayList/array (splits perfectly &mdash; if it&rsquo;s coming off a file or LinkedList, fix the source first); ops are CPU-bound and stateless; no order dependence. The cost center is the merge &mdash; maps with per-key stats merging across threads &mdash; so benchmark both, and mention <code>groupingByConcurrent</code> if symbol cardinality is low and contention is acceptable. Closing with &ldquo;I&rsquo;d measure with JMH before committing&rdquo; is the senior answer.</p>
+        </div>
+      </div>
+
+      <div class="unlock-banner" id="unlock-1-9" style="margin-top:24px">
+        <strong style="color:var(--green)">&#x2705; Day 9 complete!</strong> Week 2 begins &mdash;
+        <span style="color:var(--ink-dim)">Concurrency: threads, thread pools, ExecutorService &mdash; where the JMM and the common-pool lessons pay off</span>
+      </div>
+    </div>
+
+    <!-- REFLECTION -->
+    <div class="reflection">
+      <div class="reflection-header" onclick="toggleReflection(this)">
+        <span class="reflection-icon">&#x1FA9E;</span>
+        <span class="reflection-title">Reflection &amp; Self-Assessment</span>
+        <span class="reflection-chevron">&#x25BE;</span>
+      </div>
+      <div class="reflection-body">
+
+        <div class="takeaways">
+          <div class="takeaways-label">Key Takeaways</div>
+          <ul>
+            <li><strong>A lambda is invokedynamic + LambdaMetafactory</strong>, not an anonymous class: runtime-linked, singleton when non-capturing, allocating only when it captures.</li>
+            <li><strong>Streams are lazy fused pipelines over spliterators:</strong> intermediate ops build stages, the terminal op pulls each element through all stages in one pass &mdash; which is what makes short-circuiting and infinite sources work.</li>
+            <li><strong>Collectors are 4 functions; the combiner is load-bearing.</strong> A collector that can&rsquo;t merge partial results is broken under parallelism. <code>teeing</code> and downstream collectors compose multi-aggregate one-pass reports.</li>
+            <li><strong>Parallel streams: CPU-bound, well-splitting, stateless, cheap merge, big N &mdash; and they all share the common pool.</strong> Blocking I/O in a parallel stream is a JVM-wide incident; that workload belongs to virtual threads.</li>
+            <li><strong>Optional is a return-type contract</strong>, not a null replacement: never a field or parameter, <code>orElseGet</code> over <code>orElse</code>, <code>flatMap(Optional::stream)</code> to cross into streams.</li>
+          </ul>
+        </div>
+
+        <div class="reflection-prompts">
+          <div class="reflection-prompt">
+            <span class="prompt-num">01</span>
+            <p class="prompt-text">Run <code>javap -c</code> on a class with one lambda and one anonymous class doing the same thing. Find the invokedynamic instruction. How many .class files did each approach produce?</p>
+          </div>
+          <div class="reflection-prompt">
+            <span class="prompt-num">02</span>
+            <p class="prompt-text">Find one <code>parallelStream()</code> in a codebase you know (or imagine the most likely one). Walk it through the five-point checklist out loud. Does it survive?</p>
+          </div>
+          <div class="reflection-prompt">
+            <span class="prompt-num">03</span>
+            <p class="prompt-text">Explain to an imaginary junior, in under 90 seconds, why <code>list.stream().map(expensive).findFirst()</code> calls <code>expensive</code> exactly once &mdash; and why that stops being guaranteed if someone adds <code>sorted()</code> before the map.</p>
+          </div>
+        </div>
+
+        <div class="confidence-block">
+          <div class="confidence-label">How confident do you feel about today&rsquo;s material?</div>
+          <div class="confidence-btns">
+            <button class="conf-btn" data-day="1-9" data-level="1" onclick="saveConfidence('1-9', 1)">&#x1F615; Not yet &mdash; need another pass</button>
+            <button class="conf-btn" data-day="1-9" data-level="2" onclick="saveConfidence('1-9', 2)">&#x1F914; Getting there &mdash; mostly clear</button>
+            <button class="conf-btn" data-day="1-9" data-level="3" onclick="saveConfidence('1-9', 3)">&#x2705; Solid &mdash; I could explain this</button>
+          </div>
+          <div class="confidence-saved" id="conf-saved-1-9"></div>
+        </div>
+
+      </div>
+    </div>
+
+  </div><!-- end stage 6 -->
+
+  <footer>
+    DAY 9 OF 158 &middot; STREAMS &amp; LAMBDAS &middot; PHASE 1 / 6
+  </footer>
+
+</div>
+
+<script src="../data/curriculum.js"></script>
+<script src="../assets/app.js"></script>
+<script src="../assets/audio-player.js"></script>
+<script src="../data/glossary.js"></script>
+<script src="../assets/glossary.js"></script>
+<script src="../data/abbreviations.js"></script>
+<script src="../assets/abbreviations.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    initOpenEndedChallenge('1-9');
+    initReflection('1-9');
+    initLessonNav();
+  });
+</script>
+</body>
+</html>

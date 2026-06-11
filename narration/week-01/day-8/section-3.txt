@@ -1,0 +1,13 @@
+Stage 3: pattern matching — the feature that ties records and sealed types together. It arrived in three waves.
+
+Wave one, Java 16: pattern matching for instanceof. Instead of testing the type and then casting on the next line, you test and bind in one step: if obj instanceof String s. The binding variable s uses flow scoping — it's in scope exactly where the compiler can prove the test passed. That includes after an early return: if NOT obj instanceof String s, return — and below that line, s is in scope, because the only way to reach that code is if the test succeeded. Flow scoping is a favorite interview probe, so sit with that example for a second.
+
+Wave two, Java 14: switch expressions. Arrow labels instead of colons, which means no fall-through — the most infamous switch bug in history, gone. The switch produces a value you can assign directly. Multiple labels per case. And if a case needs a block, yield returns its value. Most importantly: a switch expression must be exhaustive. Every possible input must be covered.
+
+Wave three, Java 21, is where it all converges: pattern matching for switch with record patterns. You switch over a sealed PaymentResult and write case Approved with its components deconstructed right in the case label — the pattern matches the type AND pulls out txnId and amount in one motion. Guarded patterns add a when clause: case Declined when retryable goes to the retry path, plain Declined goes to the hard-decline path. And because the interface is sealed, there's no default — the compiler verifies you covered everything.
+
+Record patterns nest. A Line containing two Points deconstructs two levels deep in a single pattern — x1, y1, x2, y2 bound in one case label.
+
+Two details for the interview. Ordering: cases are checked top to bottom, and the compiler rejects a more general pattern placed above a more specific one — that's a dominance error. Your guarded case must come before its unguarded twin. And null: exhaustiveness covers types, not null. A null selector still throws NullPointerException unless you add an explicit case null.
+
+When do you still write default? When the selector type is open — switching over Object — or when you deliberately collapse the remaining cases. But understand the cost: default switches off the compiler's exhaustiveness check. You're trading future safety for present convenience.

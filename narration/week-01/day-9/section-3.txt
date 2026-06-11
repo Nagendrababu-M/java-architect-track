@@ -1,0 +1,13 @@
+Stage 3: collectors — from groupingBy composition to writing your own.
+
+A Collector is four functions plus characteristics. The supplier creates the mutable container. The accumulator folds one element in. The combiner merges two containers — and remember that word, combiner, because it's the one everyone forgets. The finisher transforms the container into the final result.
+
+The power move with collectors is composition through downstream collectors. GroupingBy with just a classifier gives you a map of lists. But the second argument is another collector, applied within each group. GroupingBy symbol, counting — trades counted per symbol. GroupingBy symbol, then reducing with BigDecimal addition — total notional per symbol. GroupingBy symbol, then groupingBy side — a two-level nested map, the shape of every report you've ever built.
+
+Here's a subtle one interviewers use: filtering as a downstream collector versus filtering before the collect. Filter first, and symbols where nothing passes vanish from the map entirely. GroupingBy with a filtering downstream keeps every symbol, mapping the empty ones to empty lists. Different report shapes — know which one you're producing.
+
+Collectors dot teeing, Java 12: feed every element to TWO collectors and merge their results. Min and max in one pass. Sum and count in one pass. Any time you catch yourself traversing twice to compute two aggregates, teeing is the answer.
+
+Writing a custom collector with Collector dot of means supplying those four functions explicitly. And here's the interview point that matters: the combiner is not optional decoration. Sequential streams never call it, so a broken combiner "works" in every test you wrote — and then silently produces garbage the day someone adds parallelStream. If your collector can't correctly merge two partial containers, it is broken, full stop.
+
+Two rapid-fire classics. ToMap throws on duplicate keys — the fix is the three-argument form with a merge function: keep the latest, keep the max, whatever the domain wants. Forgetting that merge function is a top-five production stream bug. And reduce versus collect: reduce is immutable accumulation — every step produces a new value. Perfect for ints, catastrophic for strings: reducing with String concat is quadratic, because every concatenation copies everything so far. Collect is mutable reduction — one container per thread, mutated in place, merged at the end. Joining is linear. Same answer, hundred-x difference at scale.
