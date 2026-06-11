@@ -55,7 +55,7 @@
       Streams &amp; Functional Interfaces: Advanced Patterns &amp; Internals
       <span class="sub">What actually happens when a lambda runs, how a stream pipeline executes, and when parallel streams hurt you.</span>
     </h1>
-    <div class="scope"><strong>SCOPE</strong> &middot; 180 min &middot; 6 stages &mdash; interview-prep session: internals first, then the patterns interviewers test</div>
+    <div class="scope"><strong>SCOPE</strong> &middot; 210 min &middot; 7 stages &mdash; interview-prep session: internals first, then the patterns interviewers test</div>
   <div id="play-full-lesson-mount"></div>
   </header>
 
@@ -337,7 +337,72 @@ ids.stream().map(repo::findById).flatMap(<span class="typ">Optional</span>::stre
 
   <!-- STAGE 6 -->
   <div class="stage" data-section="6">
-    <span class="stage-tag">STAGE 6 <span class="time">30 MIN</span></span>
+    <span class="stage-tag">STAGE 6 <span class="time">35 MIN</span></span>
+    <h2>Streams &amp; lambdas across the <abbr data-abbr="LTS">LTS</abbr> versions &mdash; Java 8, 11, 17, 21</h2>
+
+    <p>Day 8 gave you the platform view of the four LTS releases. This stage is the same timeline through today&rsquo;s lens: how the functional/streams toolkit grew from 8 to 21. Interviewers use this to date your experience &mdash; a candidate still writing <code>collect(Collectors.toList())</code> on Java 17+ is telegraphing that they stopped learning at 8.</p>
+
+    <h4>Java 8 (2014) &mdash; the foundation</h4>
+    <p>Everything in Stages 1&ndash;3 starts here:</p>
+    <ul>
+      <li><strong>Lambdas + <code>invokedynamic</code> + LambdaMetafactory</strong> &mdash; the runtime machinery from Stage 1, designed so future JVMs could optimize lambda creation without recompiling your code.</li>
+      <li><strong><code>java.util.function</code></strong> &mdash; the core four (Supplier, Consumer, Function, Predicate) plus ~40 primitive specializations to dodge autoboxing.</li>
+      <li><strong>Stream API v1</strong> &mdash; filter/map/flatMap/reduce/collect, the spliterator engine, parallel streams on the common pool.</li>
+      <li><strong>Collectors v1</strong> &mdash; <code>toList</code>, <code>toMap</code>, <code>joining</code>, <code>groupingBy</code>, <code>partitioningBy</code>, downstream composition with <code>counting</code>/<code>mapping</code>.</li>
+      <li><strong>Optional v1</strong> &mdash; <code>map</code>, <code>flatMap</code>, <code>filter</code>, <code>orElse</code>, <code>orElseGet</code> &mdash; but no <code>or()</code>, no <code>ifPresentOrElse</code>, no <code>stream()</code> bridge yet.</li>
+      <li><strong>Known gaps at the time:</strong> no way to conditionally stop a stream (takeWhile didn&rsquo;t exist), <code>Stream.iterate</code> was infinite-only, Optional-to-Stream required an ugly <code>map(Stream::of).orElseGet(Stream::empty)</code>.</li>
+    </ul>
+
+    <h4>Java 11 (2018) &mdash; the gap-fillers (bundling 9 &amp; 10)</h4>
+    <ul>
+      <li><strong><code>takeWhile</code> / <code>dropWhile</code> (9)</strong> &mdash; ordered, conditional truncation. The pagination pattern from Stage 5 (<code>iterate + takeWhile</code>) became possible here.</li>
+      <li><strong>3-arg <code>Stream.iterate</code> (9)</strong> &mdash; <code>iterate(seed, hasNext, next)</code>: a for-loop as a stream, finally bounded.</li>
+      <li><strong><code>Stream.ofNullable</code> (9)</strong> &mdash; 0-or-1 element stream from a possibly-null value; perfect inside flatMap.</li>
+      <li><strong>Optional grows up:</strong> <code>or()</code> for lazy alternative sources (9), <code>ifPresentOrElse</code> (9), <code>stream()</code> (9) &mdash; enabling the <code>flatMap(Optional::stream)</code> idiom &mdash; and <code>isEmpty()</code> (11).</li>
+      <li><strong>Collectors:</strong> <code>flatMapping</code> and <code>filtering</code> as downstream collectors (9) &mdash; the keep-empty-groups pattern from Stage 3; <code>toUnmodifiableList/Set/Map</code> (10).</li>
+      <li><strong><code>Predicate.not()</code> (11)</strong> &mdash; turns a positive method reference negative: <code>filter(Predicate.not(String::isBlank))</code> instead of a lambda.</li>
+      <li><strong><code>String.lines()</code> (11)</strong> &mdash; a stream of lines straight off a string; pairs with <code>Files.lines()</code> for lazy file processing.</li>
+      <li><strong><code>var</code> in lambda params (11)</strong> &mdash; exists solely so you can annotate lambda parameters: <code>(@Nonnull var s) -&gt; ...</code></li>
+    </ul>
+
+    <h4>Java 17 (2021) &mdash; ergonomics &amp; performance (bundling 12&ndash;16)</h4>
+    <ul>
+      <li><strong><code>Stream.toList()</code> (16)</strong> &mdash; the new default. Shorter than <code>collect(toList())</code>, returns an <em>unmodifiable</em> list, and doesn&rsquo;t need the collector machinery. Subtle interview point: code relying on mutating the result of <code>collect(toList())</code> breaks if mechanically migrated.</li>
+      <li><strong><code>mapMulti</code> (16)</strong> &mdash; Stage 2&rsquo;s allocation-free flatMap alternative for 0-or-1 expansions.</li>
+      <li><strong><code>Collectors.teeing</code> (12)</strong> &mdash; Stage 3&rsquo;s two-collectors-one-pass composition.</li>
+      <li><strong>Records as stream tuples (16)</strong> &mdash; the missing piece for multi-value pipelines: <code>map(t -&gt; new SymbolStats(t.symbol(), t.value()))</code>. Before records, intermediate pipeline shapes meant AbstractMap.SimpleEntry or a hand-written class; local records (declared inside a method!) made one-off pipeline shapes free.</li>
+      <li><strong>Switch expressions (14)</strong> &mdash; an expression fits inside <code>map()</code>: <code>map(order -&gt; switch (order.type()) { ... })</code>.</li>
+    </ul>
+
+    <h4>Java 21 (2023) &mdash; the concurrency intersection (and 22&rsquo;s Gatherers)</h4>
+    <ul>
+      <li><strong>Virtual threads change the parallel-stream calculus</strong> &mdash; Stage 4&rsquo;s rule hardens: parallel streams for CPU-bound work on the common pool; virtual threads (cheap, blocking-friendly) for I/O-bound fan-out. Before 21, people abused parallel streams for I/O because threads were expensive; that excuse is gone.</li>
+      <li><strong>Sequenced Collections meet streams</strong> &mdash; <code>map.reversed().entrySet().stream()</code>: descending iteration over a LinkedHashMap without copying.</li>
+      <li><strong>Record patterns in pipelines</strong> &mdash; deconstruction inside stream ops via pattern switch: <code>map(result -&gt; switch (result) { case Approved(var id, var amt) -&gt; ...; ... })</code> &mdash; Day 8&rsquo;s exhaustiveness guarantees, now inside your pipeline.</li>
+      <li><strong>Gatherers (22, preview)</strong> &mdash; Stage 5: <code>windowFixed</code>, <code>windowSliding</code>, <code>scan</code>, <code>fold</code>, custom <code>Gatherer&lt;T,A,R&gt;</code> &mdash; custom <em>intermediate</em> operations, closing the last gap in the API&rsquo;s extensibility (Collectors only ever customized the terminal step).</li>
+    </ul>
+
+    <div class="key-rule insight">
+      <p><strong>The evolution in one sentence per LTS:</strong></p>
+      <p><strong>8</strong> invented the model (lambdas, streams, collectors, Optional). <strong>11</strong> filled the gaps (takeWhile, bounded iterate, Optional.or/stream, filtering/flatMapping). <strong>17</strong> polished ergonomics (toList, mapMulti, teeing, records as tuples). <strong>21/22</strong> drew the concurrency boundary (virtual threads for I/O, parallel streams for CPU) and opened the pipeline itself (Gatherers).</p>
+    </div>
+
+    <div class="interview-q">
+      <span class="iq-tag">&#x1F3AF; INTERVIEW QUESTIONS</span>
+      <p><strong>Q: <code>Stream.toList()</code> vs <code>collect(Collectors.toList())</code> &mdash; just style?</strong> &mdash; No. <code>toList()</code> returns an unmodifiable list; <code>Collectors.toList()</code> happens to return a mutable ArrayList (documented as no-guarantees). Migrating mechanically can break code that mutates the result &mdash; and <code>toList()</code> can also be faster (no accumulator indirection, sized allocation).</p>
+      <p><strong>Q: How did Optional change after Java 8?</strong> &mdash; Java 9 added <code>or()</code> (lazy alternative Optional), <code>ifPresentOrElse()</code> (both branches), and <code>stream()</code> (the flatMap bridge); 10 added <code>orElseThrow()</code> no-arg; 11 added <code>isEmpty()</code>. If a candidate only knows <code>isPresent/get</code>, they learned Optional in 2014 and stopped.</p>
+      <p><strong>Q: You need to batch a stream into groups of 500 for bulk DB inserts &mdash; answer for Java 8, 17, and 22.</strong> &mdash; Java 8/17: no native support &mdash; collect to a list and partition by index, or use a library (Guava <code>Lists.partition</code>); laziness is lost. Java 22: <code>stream.gather(Gatherers.windowFixed(500))</code> &mdash; lazy and composable. Knowing the feature&rsquo;s absence <em>and</em> arrival dates your knowledge as current.</p>
+    </div>
+
+    <div class="check">
+      <span class="check-tag">QUICK CHECK</span>
+      <p>Date these idioms to their earliest LTS: <code>filter(Predicate.not(String::isBlank))</code> &middot; <code>flatMap(Optional::stream)</code> &middot; <code>.toList()</code> &middot; <code>gather(windowSliding(2))</code> &middot; <code>iterate(0, i -&gt; i &lt; 100, i -&gt; i + 1)</code>.</p>
+    </div>
+  </div>
+
+  <!-- STAGE 7 -->
+  <div class="stage" data-section="7">
+    <span class="stage-tag">STAGE 7 <span class="time">30 MIN</span></span>
     <h2>The interview challenge &mdash; explain, diagnose, design</h2>
 
     <p>Three escalating interview prompts &mdash; an explain-the-internals question, a debug question, and a design question. Answer each (50+ chars), then compare.</p>
@@ -452,7 +517,7 @@ ids.stream().map(repo::findById).flatMap(<span class="typ">Optional</span>::stre
       </div>
     </div>
 
-  </div><!-- end stage 6 -->
+  </div><!-- end stage 7 -->
 
   <footer>
     DAY 9 OF 158 &middot; STREAMS &amp; LAMBDAS &middot; PHASE 1 / 6

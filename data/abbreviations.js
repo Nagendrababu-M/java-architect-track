@@ -43,6 +43,11 @@ const ABBREVIATIONS = {
     definition: "Per-thread region of the heap's young generation where new objects are allocated without locking.",
     learnMore: "https://shipilev.net/jvm/anatomy-quarks/4-tlab-allocation/"
   },
+  "LTS": {
+    expansion: "Long-Term Support",
+    definition: "A Java release with multi-year vendor support (8, 11, 17, 21). Production fleets standardize on LTS versions; non-LTS releases get only six months of updates.",
+    learnMore: null
+  },
   "JEP": {
     expansion: "JDK Enhancement Proposal",
     definition: "The formal process by which new features are proposed and tracked in OpenJDK.",

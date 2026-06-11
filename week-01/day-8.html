@@ -55,7 +55,7 @@
       Records, Sealed Classes, Pattern Matching &amp; Modern Java
       <span class="sub">Java 14&ndash;21 features that interviewers ask about &mdash; and the design thinking behind them.</span>
     </h1>
-    <div class="scope"><strong>SCOPE</strong> &middot; 180 min &middot; 6 stages &mdash; interview-prep session: every stage ends with the questions interviewers actually ask</div>
+    <div class="scope"><strong>SCOPE</strong> &middot; 210 min &middot; 7 stages &mdash; interview-prep session: every stage ends with the questions interviewers actually ask</div>
   <div id="play-full-lesson-mount"></div>
   </header>
 
@@ -354,7 +354,80 @@
 
   <!-- STAGE 6 -->
   <div class="stage" data-section="6">
-    <span class="stage-tag">STAGE 6 <span class="time">30 MIN</span></span>
+    <span class="stage-tag">STAGE 6 <span class="time">35 MIN</span></span>
+    <h2>The LTS timeline &mdash; Java 8, 11, 17, 21 in depth</h2>
+
+    <p>&ldquo;Which Java version do you use, and what came with it?&rdquo; is a guaranteed interview question. Companies live on the <abbr data-abbr="LTS">LTS</abbr> releases &mdash; 8, 11, 17, 21 &mdash; so organize your knowledge around those four. For each one, know the headline features, the runtime/JVM changes, and the migration pain.</p>
+
+    <h4>Java 8 (2014) &mdash; the functional revolution</h4>
+    <p>The largest language change in Java&rsquo;s history. Still the baseline interviewers expect total fluency in:</p>
+    <ul>
+      <li><strong>Lambdas &amp; functional interfaces</strong> &mdash; behavior as data. <code>Runnable r = () -&gt; work();</code> backed by <code>invokedynamic</code>, not anonymous classes (Day 9 covers the internals).</li>
+      <li><strong>Streams API</strong> &mdash; declarative, lazy, composable collection processing; parallelizable via the ForkJoin common pool.</li>
+      <li><strong>Optional</strong> &mdash; a return-type contract for &ldquo;absence is normal&rdquo;, ending the null-or-not guessing game.</li>
+      <li><strong>Default &amp; static interface methods</strong> &mdash; interfaces could finally evolve without breaking implementors. This is <em>how</em> Streams could be added: <code>Collection.stream()</code> is a default method.</li>
+      <li><strong>java.time (JSR-310)</strong> &mdash; immutable, thread-safe dates replacing the broken <code>Date</code>/<code>Calendar</code>. <code>LocalDate</code>, <code>Instant</code>, <code>ZonedDateTime</code>, <code>Duration</code>.</li>
+      <li><strong>CompletableFuture</strong> &mdash; composable async pipelines: <code>thenApply</code>, <code>thenCompose</code>, <code>exceptionally</code>.</li>
+      <li><strong>JVM: PermGen removed, Metaspace introduced</strong> &mdash; class metadata moved to native memory; <code>OutOfMemoryError: PermGen space</code> became <code>Metaspace</code>, sized by <code>-XX:MaxMetaspaceSize</code>.</li>
+    </ul>
+
+    <h4>Java 11 (2018) &mdash; the cleanup LTS</h4>
+    <p>The first LTS of the 6-month release era; it bundles Java 9/10 changes, so credit those here:</p>
+    <ul>
+      <li><strong>Module system (JPMS, from 9)</strong> &mdash; <code>module-info.java</code>, strong encapsulation of JDK internals. Most apps stay on the classpath, but the <em>JDK itself</em> is modularized &mdash; which is what later enabled jlink custom runtimes and the eventual lockdown of <code>sun.misc.*</code> hacks.</li>
+      <li><strong><code>var</code> (from 10)</strong> &mdash; local-variable type inference. Compile-time only; the bytecode is identical. Also legal on lambda params in 11 (<code>(var a, var b) -&gt; ...</code>) so you can annotate them.</li>
+      <li><strong>Standard HTTP Client</strong> &mdash; <code>java.net.http.HttpClient</code>: HTTP/2, async via CompletableFuture, WebSockets. Killed the need for Apache HttpClient in most services.</li>
+      <li><strong>Collection/String conveniences</strong> &mdash; <code>List.of()</code>/<code>Map.of()</code> immutable factories (9); <code>String.strip()</code>, <code>isBlank()</code>, <code>lines()</code>, <code>repeat()</code>; <code>Files.readString()</code>; <code>Predicate.not()</code>.</li>
+      <li><strong>Single-file execution</strong> &mdash; <code>java Script.java</code> runs without explicit compilation.</li>
+      <li><strong>Removed:</strong> Java EE &amp; CORBA modules (JAXB, JAX-WS) &mdash; the #1 migration breakage from 8 to 11; you re-add them as Maven dependencies.</li>
+      <li><strong>JVM:</strong> ZGC and Epsilon arrive as experimental; JFR is open-sourced and free in production (it was a commercial feature in 8 &mdash; a great interview detail).</li>
+    </ul>
+
+    <h4>Java 17 (2021) &mdash; the data-modeling LTS</h4>
+    <p>The release that made this whole lesson possible. Bundles 12&ndash;16:</p>
+    <ul>
+      <li><strong>Records (16)</strong> &mdash; Stage 1. Transparent immutable carriers with compiler-generated members.</li>
+      <li><strong>Sealed classes (17)</strong> &mdash; Stage 2. Closed hierarchies; the compiler knows every subtype.</li>
+      <li><strong>Pattern matching for instanceof (16)</strong> &mdash; Stage 3. Test-and-bind with flow scoping.</li>
+      <li><strong>Switch expressions (14)</strong> &mdash; arrow labels, <code>yield</code>, exhaustiveness.</li>
+      <li><strong>Text blocks (15)</strong> &mdash; Stage 4. Triple-quoted multi-line strings.</li>
+      <li><strong>Helpful NullPointerExceptions (14)</strong> &mdash; the JVM tells you <em>which</em> variable was null in a chain: &ldquo;Cannot invoke String.length() because the return value of User.getName() is null&rdquo;.</li>
+      <li><strong>Strong encapsulation by default (17)</strong> &mdash; <code>--illegal-access</code> ends; reflective access to JDK internals now requires explicit <code>--add-opens</code>. The #1 migration pain from 11 to 17 (old versions of Lombok, Mockito, serializers break until upgraded).</li>
+      <li><strong>JVM:</strong> ZGC and Shenandoah production-ready (15); biased locking removed; always-strict floating point.</li>
+    </ul>
+
+    <h4>Java 21 (2023) &mdash; the concurrency LTS</h4>
+    <ul>
+      <li><strong>Virtual threads (final!)</strong> &mdash; the headline. Millions of cheap threads multiplexed onto carrier threads; blocking code that scales like async. Thread-per-request returns as a sane architecture. (Week 2, Day 14 goes deep.)</li>
+      <li><strong>Pattern matching for switch + record patterns (final)</strong> &mdash; Stage 3. Exhaustive switch over sealed hierarchies with deconstruction and <code>when</code> guards.</li>
+      <li><strong>Sequenced Collections</strong> &mdash; Stage 4. <code>getFirst/getLast/reversed()</code> unified across ordered collections.</li>
+      <li><strong>Structured Concurrency (preview)</strong> &mdash; Stage 5. <code>StructuredTaskScope</code>; subtasks scoped to a block.</li>
+      <li><strong>Scoped Values (preview)</strong> &mdash; immutable, inheritable per-thread context; the ThreadLocal replacement designed for virtual threads (a million virtual threads &times; mutable ThreadLocals = memory disaster).</li>
+      <li><strong>Generational ZGC</strong> &mdash; ZGC gains young/old generations: most workloads see lower CPU and better allocation throughput at the same sub-ms pauses. Ties directly back to Day 4.</li>
+      <li><strong>String templates (preview)</strong> &mdash; later withdrawn for redesign (Stage 5&rsquo;s table).</li>
+    </ul>
+
+    <div class="key-rule insight">
+      <p><strong>The one-line-per-LTS summary to deliver in interviews:</strong></p>
+      <p><strong>8</strong> changed how we <em>write</em> Java (lambdas, streams). <strong>11</strong> cleaned the platform (modules, HTTP client, EE removal, free JFR). <strong>17</strong> changed how we <em>model data</em> (records, sealed, pattern matching). <strong>21</strong> changed how we <em>do concurrency</em> (virtual threads, structured concurrency). If you can attach two or three concrete features and one migration pain to each sentence, you&rsquo;ve answered the version question at a senior level.</p>
+    </div>
+
+    <div class="interview-q">
+      <span class="iq-tag">&#x1F3AF; INTERVIEW QUESTIONS</span>
+      <p><strong>Q: We&rsquo;re on Java 8 &mdash; what does migrating to 17 buy us, and what breaks?</strong> &mdash; Buys: records/sealed/pattern matching for the domain model, G1 default + ZGC available, free JFR, helpful NPEs, text blocks, HTTP client. Breaks: JAXB/JAX-WS removal (re-add as dependencies), strong encapsulation (<code>--add-opens</code> or upgrade Lombok/Mockito/ASM-based libs), and any code touching <code>sun.misc.Unsafe</code> internals.</p>
+      <p><strong>Q: Why do companies skip non-LTS versions?</strong> &mdash; Six-month releases get six months of free updates; LTS gets years of vendor support. Features land in non-LTS releases first (records in 16) but fleets standardize on the LTS that bundles them (17).</p>
+      <p><strong>Q: What changed about JFR between 8 and 11?</strong> &mdash; In 8 it was a commercial Oracle feature requiring <code>-XX:+UnlockCommercialFeatures</code>; since 11 it&rsquo;s open-source and free in production &mdash; which is why &ldquo;always-on JFR&rdquo; is now standard ops practice.</p>
+    </div>
+
+    <div class="check">
+      <span class="check-tag">QUICK CHECK</span>
+      <p>Without looking up: name the LTS release each of these shipped in as <em>final</em> &mdash; records, virtual threads, lambdas, the standard HTTP client, sealed classes, Sequenced Collections.</p>
+    </div>
+  </div>
+
+  <!-- STAGE 7 -->
+  <div class="stage" data-section="7">
+    <span class="stage-tag">STAGE 7 <span class="time">30 MIN</span></span>
     <h2>The interview challenge &mdash; design with the full toolkit</h2>
 
     <p>This is a realistic senior-interview design question. Answer all three parts (50+ characters each), then compare with the model answers.</p>
@@ -467,7 +540,7 @@
       </div>
     </div>
 
-  </div><!-- end stage 6 -->
+  </div><!-- end stage 7 -->
 
   <footer>
     DAY 8 OF 158 &middot; MODERN JAVA &middot; PHASE 1 / 6

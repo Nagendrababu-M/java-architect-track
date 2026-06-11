@@ -1,0 +1,13 @@
+Stage 6 is your capstone — a real senior-interview design question. Model the result of an order-matching attempt. Four outcomes: fully filled with price and quantity, partially filled with filled and remaining quantities, rejected with a reason code and a retry flag, or queued with a position. The requirement: downstream code must handle every outcome, and forgetting one should be impossible.
+
+Work through it before reading the model answers. But let me give you the shape of strong answers.
+
+The type design: a sealed interface MatchResult permitting four records. Sealed because the outcomes are a closed set the compiler should know. Records because each outcome is an immutable value with a different shape — and different shapes per variant is precisely what rules out an enum. The reason code inside Rejected? That IS an enum — fixed set of instances, identical shape. Validation goes in compact constructors. Name the concept: a sum type of product types — an algebraic data type.
+
+Consumption: a switch expression with record patterns and no default branch. The deliberate omission of default is the entire point — it keeps the compiler's exhaustiveness check alive, so adding a fifth outcome produces compile errors at every consumer. Use a guarded pattern for the retryable rejection, and remember it has to come before the unguarded Rejected case, or you get a dominance error.
+
+Then the push-back question, and this is where senior candidates are made: why not classic polymorphism, an abstract handle method on each subclass? The answer is the expression problem. Virtual dispatch makes adding new variants easy but new operations hard — every operation touches every class. Data-oriented switch makes new operations easy — each one is a self-contained switch — but new variants touch every switch, which here is exactly what we want, because the compiler enumerates the touch points. For a match result, the variants are stable and the operations multiply: settlement, risk, audit, notification, metrics — owned by different teams who should not be injecting their logic into a shared domain type.
+
+And give the counter-example unprompted: when variants are open-ended and operations are stable — a plugin system — classic polymorphism wins and sealed is exactly wrong.
+
+That's Day 8. Tomorrow: streams and lambdas — what actually happens under invokedynamic, and when parallel streams hurt you.
