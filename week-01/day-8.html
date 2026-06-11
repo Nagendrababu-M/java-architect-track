@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Week 1 · Day 8 — Records, Sealed Classes, Pattern Matching & Modern Java (14–21)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,800&family=JetBrains+Mono:wght@400;500;700&family=Inter+Tight:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/styles.css">
+<link rel="stylesheet" href="../assets/audio-player.css">
+<link rel="stylesheet" href="../assets/glossary.css">
+<link rel="stylesheet" href="../assets/abbreviations.css">
+<style>
+  body {
+    background-image:
+      radial-gradient(ellipse 800px 600px at 20% 0%, rgba(177,138,224,0.07), transparent 60%),
+      radial-gradient(ellipse 600px 400px at 90% 100%, rgba(177,138,224,0.04), transparent 60%);
+  }
+  .interview-q {
+    margin: 20px 0;
+    padding: 18px 22px;
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--yellow);
+    border-radius: 0 8px 8px 0;
+    background: rgba(230,200,90,0.04);
+  }
+  .interview-q .iq-tag {
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: var(--yellow);
+    margin-bottom: 10px;
+  }
+  .interview-q p { margin: 0 0 10px; color: var(--ink-dim); line-height: 1.7; }
+  .interview-q p:last-child { margin-bottom: 0; }
+</style>
+</head>
+<body>
+<div class="grain"></div>
+
+<div class="container">
+
+  <header class="lesson-header">
+    <a href="../index.html" class="back-link">&larr; Back to curriculum</a>
+    <div class="meta">
+      <span class="dot"></span>
+      <span class="phase">Phase 1 &middot; Advanced Java</span>
+      <span>&middot;</span>
+      <span>Week 1 / Day 8</span>
+    </div>
+    <h1>
+      Records, Sealed Classes, Pattern Matching &amp; Modern Java
+      <span class="sub">Java 14&ndash;21 features that interviewers ask about &mdash; and the design thinking behind them.</span>
+    </h1>
+    <div class="scope"><strong>SCOPE</strong> &middot; 180 min &middot; 6 stages &mdash; interview-prep session: every stage ends with the questions interviewers actually ask</div>
+  <div id="play-full-lesson-mount"></div>
+  </header>
+
+  <div class="recap">
+    <span class="recap-tag">INTERVIEW CONTEXT</span>
+    <p>Modern Java questions are now standard in senior interviews. The interviewer is not testing whether you memorized syntax &mdash; they&rsquo;re testing whether you understand <strong>why</strong> these features exist and <strong>when</strong> you would reach for them. Records, sealed classes, and pattern matching are not three separate features: together they form <strong>algebraic data types</strong> &mdash; a way to model your domain so the compiler enforces correctness. That&rsquo;s the story you tell in the interview, and that&rsquo;s the story of today&rsquo;s session.</p>
+  </div>
+
+  <!-- STAGE 1 -->
+  <div class="stage" data-section="1">
+    <span class="stage-tag">STAGE 1 <span class="time">30 MIN</span></span>
+    <h2>Records &mdash; transparent carriers of immutable data</h2>
+
+    <p>A record is a class whose state is its <abbr data-abbr="API">API</abbr>. Declared in one line, the compiler generates the constructor, accessors, <code>equals()</code>, <code>hashCode()</code>, and <code>toString()</code>:</p>
+
+    <pre><code><span class="kw">public record</span> <span class="typ">Trade</span>(<span class="typ">String</span> symbol, <span class="typ">long</span> quantity, <span class="typ">BigDecimal</span> price) {}</code></pre>
+
+    <p>That single line replaces ~50 lines of a classic value class. But the important part isn&rsquo;t the brevity &mdash; it&rsquo;s the <strong>semantics</strong>:</p>
+
+    <div class="key-rule insight">
+      <p><strong>A record is a promise: this type is a transparent, immutable carrier of its components.</strong></p>
+      <p>All fields are <code>private final</code>. There are no setters. The accessor for <code>symbol</code> is <code>symbol()</code>, not <code>getSymbol()</code>. <code>equals()</code> and <code>hashCode()</code> are component-wise &mdash; two records with equal components are equal. Records cannot extend a class (they implicitly extend <code>java.lang.Record</code>) and cannot be extended (implicitly final). They <em>can</em> implement interfaces.</p>
+    </div>
+
+    <h4>Compact constructors &mdash; validation without ceremony</h4>
+    <p>The compact constructor omits the parameter list. It runs <em>before</em> field assignment, and you can normalize values by reassigning the parameters:</p>
+
+    <pre><code><span class="kw">public record</span> <span class="typ">Trade</span>(<span class="typ">String</span> symbol, <span class="typ">long</span> quantity, <span class="typ">BigDecimal</span> price) {
+    <span class="kw">public</span> <span class="typ">Trade</span> {  <span class="cmt">// compact constructor — no parameter list</span>
+        <span class="typ">Objects</span>.requireNonNull(symbol);
+        <span class="kw">if</span> (quantity &lt;= <span class="num-lit">0</span>) <span class="kw">throw new</span> <span class="typ">IllegalArgumentException</span>(<span class="str">"quantity must be positive"</span>);
+        symbol = symbol.toUpperCase();  <span class="cmt">// normalization: reassigns the parameter, not the field</span>
+    }
+}</code></pre>
+
+    <h4>Custom accessors and static factories</h4>
+    <pre><code><span class="kw">public record</span> <span class="typ">Range</span>(<span class="typ">int</span> lo, <span class="typ">int</span> hi) {
+    <span class="cmt">// override an accessor — rare, but legal. Must not break lo() == lo invariant expectations</span>
+    <span class="kw">public</span> <span class="typ">int</span> lo() { <span class="kw">return</span> <span class="typ">Math</span>.min(lo, hi); }
+
+    <span class="cmt">// static factory for derived construction</span>
+    <span class="kw">public static</span> <span class="typ">Range</span> of(<span class="typ">int</span> a, <span class="typ">int</span> b) { <span class="kw">return new</span> <span class="typ">Range</span>(<span class="typ">Math</span>.min(a,b), <span class="typ">Math</span>.max(a,b)); }
+}</code></pre>
+
+    <h4>What records are NOT</h4>
+    <ul>
+      <li><strong>Not shallowly-magic immutable:</strong> if a component is a <code>List</code>, the reference is final but the list is still mutable. Defensive-copy in the compact constructor: <code>items = List.copyOf(items);</code></li>
+      <li><strong>Not JavaBeans:</strong> no no-arg constructor, no setters. Some old frameworks (and some serializers without record support) choke on them.</li>
+      <li><strong>Not entities:</strong> JPA entities need mutability and identity-based equality. Records have value-based equality. Use records for DTOs, API payloads, map keys, and domain values &mdash; not for ORM entities.</li>
+    </ul>
+
+    <div class="interview-q">
+      <span class="iq-tag">&#x1F3AF; INTERVIEW QUESTIONS &mdash; ANSWER OUT LOUD</span>
+      <p><strong>Q: When would you NOT use a record?</strong> &mdash; Mutable state, JPA entities, classes needing inheritance, beans requiring no-arg constructors. Records model <em>values</em>; entities model <em>identity over time</em>.</p>
+      <p><strong>Q: Are records immutable?</strong> &mdash; Shallowly. The fields are final, but a mutable component (a List, a Date) can still be mutated through its reference. Defensive copies in the compact constructor make them deeply immutable.</p>
+      <p><strong>Q: How do records interact with serialization?</strong> &mdash; Records deserialize through the canonical constructor, so your validation in the compact constructor <em>always runs</em> &mdash; unlike regular classes where deserialization bypasses constructors. This makes records strictly safer for untrusted data.</p>
+    </div>
+
+    <div class="check">
+      <span class="check-tag">QUICK CHECK</span>
+      <p>A teammate writes <code>record Config(Map&lt;String,String&gt; settings)</code> and claims it&rsquo;s immutable so it&rsquo;s safe to share across threads. What&rsquo;s the flaw, and what one-line fix do you suggest?</p>
+    </div>
+  </div>
+
+  <!-- STAGE 2 -->
+  <div class="stage" data-section="2">
+    <span class="stage-tag">STAGE 2 <span class="time">30 MIN</span></span>
+    <h2>Sealed classes &mdash; closing the type hierarchy</h2>
+
+    <p>Before Java 17, a class hierarchy had exactly two settings: open to everyone (<code>public class</code>) or closed to everyone (<code>final</code>). Sealed types add the middle ground: <strong>open to exactly the types I name</strong>.</p>
+
+    <pre><code><span class="kw">public sealed interface</span> <span class="typ">PaymentResult</span>
+        <span class="kw">permits</span> <span class="typ">Approved</span>, <span class="typ">Declined</span>, <span class="typ">Pending</span> {}
+
+<span class="kw">public record</span> <span class="typ">Approved</span>(<span class="typ">String</span> txnId, <span class="typ">BigDecimal</span> amount)        <span class="kw">implements</span> <span class="typ">PaymentResult</span> {}
+<span class="kw">public record</span> <span class="typ">Declined</span>(<span class="typ">String</span> reason, <span class="typ">boolean</span> retryable)       <span class="kw">implements</span> <span class="typ">PaymentResult</span> {}
+<span class="kw">public record</span> <span class="typ">Pending</span>(<span class="typ">String</span> txnId, <span class="typ">Instant</span> checkAfter)        <span class="kw">implements</span> <span class="typ">PaymentResult</span> {}</code></pre>
+
+    <p>Every permitted subtype must choose one of three modifiers: <code>final</code> (the branch ends here), <code>sealed</code> (the branch continues, controlled), or <code>non-sealed</code> (the branch re-opens to anyone). Records are implicitly final, which is why records + sealed interfaces pair so naturally.</p>
+
+    <div class="key-rule insight">
+      <p><strong>Sealed + records = algebraic data types. This is the headline answer in interviews.</strong></p>
+      <p>A sealed interface with record implementations is a <em>sum type</em>: a <code>PaymentResult</code> is <em>exactly one of</em> Approved, Declined, or Pending &mdash; and the compiler knows the complete list. That knowledge is what unlocks <strong>exhaustive switch</strong> in Stage 3: no <code>default</code> branch needed, and when someone adds a fourth result type, every switch over <code>PaymentResult</code> in the codebase <em>fails to compile</em> until it handles the new case. The compiler becomes your refactoring safety net.</p>
+    </div>
+
+    <h4>Replacing the visitor pattern</h4>
+    <p>The classic OO way to dispatch over a closed hierarchy was the Visitor pattern &mdash; double dispatch, an accept method on every class, a visitor interface that grows forever. Sealed types + pattern matching replace all of it with a switch expression. If an interviewer asks &ldquo;how has modern Java changed your design patterns?&rdquo; &mdash; this is the example: <em>visitor is dead for closed hierarchies</em>.</p>
+
+    <h4>Rules to remember</h4>
+    <ul>
+      <li>Permitted subtypes must be in the same module (or same package if unnamed module).</li>
+      <li>If subtypes are nested in the same file, the <code>permits</code> clause can be omitted &mdash; the compiler infers it.</li>
+      <li>Sealed works on interfaces and classes; <code>enum</code> is conceptually a special case of sealed (fixed set of instances rather than fixed set of subtypes).</li>
+    </ul>
+
+    <div class="interview-q">
+      <span class="iq-tag">&#x1F3AF; INTERVIEW QUESTIONS</span>
+      <p><strong>Q: Sealed classes vs enums &mdash; when each?</strong> &mdash; Enum when every variant carries the same shape of data (or none). Sealed hierarchy when variants carry <em>different</em> data: Approved has a txnId, Declined has a reason. Enums are a fixed set of <em>instances</em>; sealed types are a fixed set of <em>shapes</em>.</p>
+      <p><strong>Q: Why not just use a final class?</strong> &mdash; Final closes the hierarchy completely. Sealed lets you have polymorphism with a known, compiler-verified set of implementations &mdash; you keep the extensibility <em>you</em> control while denying it to everyone else.</p>
+    </div>
+
+    <div class="check">
+      <span class="check-tag">QUICK CHECK</span>
+      <p>You&rsquo;re designing the result type for an HTTP client library that external teams will extend with custom result types. Is <code>sealed</code> the right choice here? Why or why not?</p>
+    </div>
+  </div>
+
+  <!-- STAGE 3 -->
+  <div class="stage" data-section="3">
+    <span class="stage-tag">STAGE 3 <span class="time">35 MIN</span></span>
+    <h2>Pattern matching &mdash; from instanceof to deconstruction</h2>
+
+    <h4>1. Pattern matching for instanceof (Java 16)</h4>
+    <pre><code><span class="cmt">// Before: test, then cast — the cast can silently drift from the test</span>
+<span class="kw">if</span> (obj <span class="kw">instanceof</span> <span class="typ">String</span>) {
+    <span class="typ">String</span> s = (<span class="typ">String</span>) obj;
+    ...
+}
+
+<span class="cmt">// After: test and bind in one step. s is in scope only where the test passed</span>
+<span class="kw">if</span> (obj <span class="kw">instanceof</span> <span class="typ">String</span> s &amp;&amp; s.length() &gt; <span class="num-lit">5</span>) {
+    ...
+}</code></pre>
+
+    <p>The binding variable uses <strong>flow scoping</strong>: it&rsquo;s in scope exactly where the compiler can prove the test succeeded &mdash; including after an early return: <code>if (!(obj instanceof String s)) return; /* s is in scope here */</code>. That flow-scoping detail is a favourite interview probe.</p>
+
+    <h4>2. Switch expressions (Java 14)</h4>
+    <pre><code><span class="cmt">// Arrow labels: no fall-through, each case is an expression</span>
+<span class="typ">int</span> numLetters = <span class="kw">switch</span> (day) {
+    <span class="kw">case</span> MONDAY, FRIDAY, SUNDAY -&gt; <span class="num-lit">6</span>;
+    <span class="kw">case</span> TUESDAY                -&gt; <span class="num-lit">7</span>;
+    <span class="kw">default</span> -&gt; {
+        <span class="typ">int</span> len = day.toString().length();
+        <span class="kw">yield</span> len;  <span class="cmt">// yield returns a value from a block case</span>
+    }
+};</code></pre>
+    <ul>
+      <li><strong>Expression, not statement</strong> &mdash; it produces a value, assignable directly.</li>
+      <li><strong>No fall-through</strong> with arrow labels &mdash; the #1 historical switch bug, gone.</li>
+      <li><strong>Exhaustiveness checked</strong> &mdash; an expression must cover all cases (enums and sealed types make this provable without <code>default</code>).</li>
+    </ul>
+
+    <h4>3. Pattern matching for switch + record patterns (Java 21)</h4>
+    <p>This is where everything from Stages 1&ndash;2 converges:</p>
+
+    <pre><code><span class="typ">String</span> describe(<span class="typ">PaymentResult</span> result) {
+    <span class="kw">return switch</span> (result) {
+        <span class="cmt">// record pattern: matches the type AND deconstructs its components</span>
+        <span class="kw">case</span> <span class="typ">Approved</span>(<span class="typ">String</span> txnId, <span class="typ">BigDecimal</span> amt)   -&gt; <span class="str">"OK "</span> + txnId + <span class="str">" for "</span> + amt;
+
+        <span class="cmt">// guarded pattern: 'when' clause adds a condition (Java 21)</span>
+        <span class="kw">case</span> <span class="typ">Declined</span>(<span class="typ">String</span> reason, <span class="typ">boolean</span> retryable) <span class="kw">when</span> retryable
+                                                       -&gt; <span class="str">"Retry later: "</span> + reason;
+        <span class="kw">case</span> <span class="typ">Declined</span>(<span class="typ">String</span> reason, <span class="typ">boolean</span> r)        -&gt; <span class="str">"Hard decline: "</span> + reason;
+
+        <span class="kw">case</span> <span class="typ">Pending</span> p                                  -&gt; <span class="str">"Check at "</span> + p.checkAfter();
+        <span class="cmt">// NO default needed — sealed guarantees exhaustiveness</span>
+    };
+}</code></pre>
+
+    <p>Record patterns <strong>nest</strong>. Given <code>record Line(Point start, Point end)</code> and <code>record Point(int x, int y)</code>:</p>
+    <pre><code><span class="kw">if</span> (obj <span class="kw">instanceof</span> <span class="typ">Line</span>(<span class="typ">Point</span>(<span class="kw">var</span> x1, <span class="kw">var</span> y1), <span class="typ">Point</span>(<span class="kw">var</span> x2, <span class="kw">var</span> y2))) {
+    <span class="cmt">// deconstructed two levels deep in one pattern</span>
+}</code></pre>
+
+    <h4>Ordering and dominance</h4>
+    <p>Cases are checked top-to-bottom. A more general pattern placed above a more specific one makes the specific one unreachable &mdash; the compiler rejects this as a <strong>dominance error</strong>. Guarded patterns (<code>when</code>) must come before their unguarded form, as in the Declined example above. Also: <code>case null</code> is now allowed in switch (Java 21); without it, a null selector still throws <code>NullPointerException</code>.</p>
+
+    <div class="interview-q">
+      <span class="iq-tag">&#x1F3AF; INTERVIEW QUESTIONS</span>
+      <p><strong>Q: Why does exhaustive switch matter architecturally?</strong> &mdash; It moves a class of runtime bugs to compile time. Add a new variant to a sealed type and the compiler points at every switch that must handle it. With if/else chains, you&rsquo;d find those spots in production.</p>
+      <p><strong>Q: What happens if you switch over a sealed type and pass null?</strong> &mdash; NPE, unless you add <code>case null</code> explicitly. Exhaustiveness covers types, not null.</p>
+      <p><strong>Q: When do you still need <code>default</code>?</strong> &mdash; When the selector type is open (e.g. switching over <code>Object</code> or a non-sealed interface), or when you deliberately want to collapse remaining cases &mdash; at the cost of losing the compile-time check when new variants appear.</p>
+    </div>
+
+    <div class="check">
+      <span class="check-tag">QUICK CHECK</span>
+      <p>You have <code>case Declined(String r, boolean retryable)</code> followed by <code>case Declined(String r, boolean retryable) when retryable</code>. What does the compiler say, and why?</p>
+    </div>
+  </div>
+
+  <!-- STAGE 4 -->
+  <div class="stage" data-section="4">
+    <span class="stage-tag">STAGE 4 <span class="time">25 MIN</span></span>
+    <h2>Text blocks &amp; Sequenced Collections</h2>
+
+    <h4>Text blocks (Java 15)</h4>
+    <pre><code><span class="typ">String</span> query = <span class="str">"""
+        SELECT t.symbol, SUM(t.quantity)
+        FROM trades t
+        WHERE t.executed_at &gt; :since
+        GROUP BY t.symbol
+        """</span>;</code></pre>
+    <p>The details interviewers probe:</p>
+    <ul>
+      <li><strong>Incidental indentation stripping:</strong> the closing <code>"""</code> position determines the left margin. Common whitespace to the left of it is stripped; everything to the right is kept.</li>
+      <li><strong><code>\</code> at end of line</strong> suppresses the newline (one logical line split for readability); <strong><code>\s</code></strong> preserves a trailing space that would otherwise be stripped.</li>
+      <li>It&rsquo;s still a plain <code>String</code> &mdash; same type, same methods, compiled to the same constant pool entry.</li>
+    </ul>
+
+    <h4>Sequenced Collections (Java 21)</h4>
+    <p>Before Java 21, &ldquo;get the first element&rdquo; had a different spelling on every collection: <code>list.get(0)</code>, <code>deque.getFirst()</code>, <code>sortedSet.first()</code> &mdash; and <code>LinkedHashSet</code> had <em>no way at all</em> to get the last element without iterating. JEP 431 retrofits three interfaces into the hierarchy:</p>
+
+    <div class="compare-wrap"><table class="compare">
+      <thead>
+        <tr><th>Interface</th><th>Methods</th><th>Implementors</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>SequencedCollection&lt;E&gt;</code></td>
+          <td><code>getFirst/getLast</code>, <code>addFirst/addLast</code>, <code>removeFirst/removeLast</code>, <code>reversed()</code></td>
+          <td>List, Deque</td>
+        </tr>
+        <tr>
+          <td><code>SequencedSet&lt;E&gt;</code></td>
+          <td>same + Set semantics; <code>addFirst</code> on an existing element <em>moves</em> it</td>
+          <td>LinkedHashSet, SortedSet</td>
+        </tr>
+        <tr>
+          <td><code>SequencedMap&lt;K,V&gt;</code></td>
+          <td><code>firstEntry/lastEntry</code>, <code>putFirst/putLast</code>, <code>reversed()</code></td>
+          <td>LinkedHashMap, SortedMap</td>
+        </tr>
+      </tbody>
+    </table></div>
+
+    <p>The headline method is <code>reversed()</code> &mdash; it returns a <strong>view</strong>, not a copy. Mutations on the view write through to the original. <code>for (var e : map.reversed().entrySet())</code> iterates a LinkedHashMap backwards with zero allocation &mdash; previously impossible without copying keys into a list.</p>
+
+    <div class="interview-q">
+      <span class="iq-tag">&#x1F3AF; INTERVIEW QUESTIONS</span>
+      <p><strong>Q: What does <code>addFirst</code> do on a SortedSet?</strong> &mdash; Throws <code>UnsupportedOperationException</code>. A sorted set&rsquo;s order is defined by the comparator; you can&rsquo;t impose a position. The interface is retrofitted onto it for reading ends, not for positional writes.</p>
+      <p><strong>Q: Is <code>reversed()</code> a copy?</strong> &mdash; No, a live view. Cheap to create, reflects and propagates mutations.</p>
+    </div>
+
+    <div class="check">
+      <span class="check-tag">QUICK CHECK</span>
+      <p>You maintain an LRU-ish access log in a <code>LinkedHashSet</code>. With Sequenced Collections, how do you (a) move an element to the front on re-access, and (b) evict the oldest? One method call each.</p>
+    </div>
+  </div>
+
+  <!-- STAGE 5 -->
+  <div class="stage" data-section="5">
+    <span class="stage-tag">STAGE 5 <span class="time">30 MIN</span></span>
+    <h2>Structured Concurrency &amp; where Java is heading</h2>
+
+    <h4>The problem: unstructured concurrent code leaks</h4>
+    <p>With plain <code>ExecutorService</code>, when you fork two subtasks and the first one fails, the second keeps running &mdash; burning CPU, holding connections &mdash; unless you write careful, error-prone cancellation code. Threads outlive the code block that created them. That&rsquo;s the concurrency equivalent of <code>goto</code>.</p>
+
+    <h4>StructuredTaskScope (Java 21 preview)</h4>
+    <pre><code><span class="typ">Response</span> handle() <span class="kw">throws</span> <span class="typ">Exception</span> {
+    <span class="kw">try</span> (<span class="kw">var</span> scope = <span class="kw">new</span> <span class="typ">StructuredTaskScope.ShutdownOnFailure</span>()) {
+        <span class="typ">Subtask</span>&lt;<span class="typ">User</span>&gt;  user  = scope.fork(() -&gt; fetchUser(id));
+        <span class="typ">Subtask</span>&lt;<span class="typ">Order</span>&gt; order = scope.fork(() -&gt; fetchOrder(id));
+
+        scope.join()            <span class="cmt">// wait for both</span>
+             .throwIfFailed();  <span class="cmt">// propagate the first failure</span>
+
+        <span class="kw">return new</span> <span class="typ">Response</span>(user.get(), order.get());
+    }  <span class="cmt">// scope close GUARANTEES no subtask outlives this block</span>
+}</code></pre>
+
+    <ul>
+      <li><strong>ShutdownOnFailure:</strong> first subtask to fail cancels all the others. Use for &ldquo;I need ALL of these.&rdquo;</li>
+      <li><strong>ShutdownOnSuccess:</strong> first subtask to succeed cancels the rest. Use for &ldquo;I need ANY of these&rdquo; &mdash; hedged requests, racing replicas.</li>
+      <li><strong>The guarantee:</strong> the try-with-resources block cannot exit while subtasks run. Concurrency gets the same block structure as the rest of your code &mdash; errors propagate up, cancellation propagates down, thread dumps show the parent-child task tree.</li>
+    </ul>
+
+    <h4>The 30-second answers for everything else</h4>
+    <div class="compare-wrap"><table class="compare">
+      <thead>
+        <tr><th>Feature</th><th>Status</th><th>The one-liner to say in an interview</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>String templates</strong></td>
+          <td>Preview, withdrawn for redesign</td>
+          <td>&ldquo;Interpolation through processors like <code>STR."x = \{x}"</code> &mdash; processors can validate/escape, preventing SQL injection by construction. API was withdrawn after Java 22 for redesign &mdash; knowing <em>that</em> shows you track the platform.&rdquo;</td>
+        </tr>
+        <tr>
+          <td><strong>Project Valhalla</strong></td>
+          <td>In progress</td>
+          <td>&ldquo;Value classes &mdash; objects without identity that can be flattened into arrays and stack-allocated. Eliminates pointer-chasing for things like <code>Point[]</code>: codes like a class, performs like an int.&rdquo;</td>
+        </tr>
+        <tr>
+          <td><strong>Migration strategy</strong></td>
+          <td>&mdash;</td>
+          <td>&ldquo;Replace inheritance hierarchies over data with sealed interface + records; replace getter-chain null checks with record patterns in switch; replace visitor with exhaustive switch.&rdquo;</td>
+        </tr>
+      </tbody>
+    </table></div>
+
+    <div class="architect-callout">
+      <p>For the trading platform: market events are the textbook sealed hierarchy &mdash; <code>sealed interface MarketEvent permits Tick, OrderBookUpdate, TradeExecution, SessionStateChange</code>. The event processing switch is exhaustive: when the exchange adds a new event type and you add it to the hierarchy, <em>the compiler finds every handler in the codebase that must change</em>. Structured concurrency handles the fan-out: price one option by fetching spot, volatility surface, and rates in parallel with <code>ShutdownOnFailure</code> &mdash; if the vol fetch fails, the other fetches cancel immediately instead of wasting microseconds you don&rsquo;t have.</p>
+    </div>
+  </div>
+
+  <!-- STAGE 6 -->
+  <div class="stage" data-section="6">
+    <span class="stage-tag">STAGE 6 <span class="time">30 MIN</span></span>
+    <h2>The interview challenge &mdash; design with the full toolkit</h2>
+
+    <p>This is a realistic senior-interview design question. Answer all three parts (50+ characters each), then compare with the model answers.</p>
+
+    <div class="challenge">
+      <span class="challenge-tag">SCENARIO &middot; A REAL INTERVIEW DESIGN QUESTION</span>
+      <h3>&ldquo;Model the result of an order-matching attempt&rdquo;</h3>
+      <p>You&rsquo;re asked to design the types for an order-matching engine&rsquo;s result. An attempt to match an order can end in exactly four ways: <strong>fully filled</strong> (with execution price and quantity), <strong>partially filled</strong> (filled quantity + remaining quantity), <strong>rejected</strong> (with a reason code and whether retry is allowed), or <strong>queued</strong> (with queue position). Downstream code must handle every outcome &mdash; forgetting one should be impossible.</p>
+    </div>
+
+    <div class="challenge-form" id="challenge-1-8">
+      <span class="challenge-tag">YOUR ANSWERS &middot; MINIMUM 50 CHARS EACH TO UNLOCK MODEL ANSWER</span>
+
+      <div class="textarea-row">
+        <label class="textarea-label" for="ta-1-8-mj1">
+          Q1 &mdash; Write (in prose or pseudo-Java) the type design. Which constructs do you use and why is each the right choice?
+        </label>
+        <textarea class="answer-textarea" id="ta-1-8-mj1" placeholder="Think: what guarantees exhaustive handling? What makes the variants immutable? Where does validation live?"></textarea>
+        <div class="char-count" id="cc-1-8-mj1">0 / 50 characters</div>
+        <div style="margin-top:12px">
+          <button class="btn-reveal" id="reveal-1-8-mj1" onclick="revealModelAnswer('1-8','mj1')" disabled>Reveal model answer</button>
+        </div>
+        <div class="model-answer" id="ma-1-8-mj1">
+          <span class="model-answer-tag">MODEL ANSWER</span>
+          <p><code>sealed interface MatchResult permits Filled, PartiallyFilled, Rejected, Queued</code> &mdash; sealed because the outcomes are a closed set the compiler should know about. Each variant is a <strong>record</strong>: <code>record Filled(BigDecimal price, long qty)</code>, <code>record PartiallyFilled(long filledQty, long remainingQty)</code>, <code>record Rejected(ReasonCode reason, boolean retryable)</code>, <code>record Queued(int position)</code> &mdash; records because each outcome is an immutable value with different shape (which rules out an enum). Validation lives in compact constructors: <code>PartiallyFilled</code> asserts both quantities are positive; <code>Queued</code> asserts position &ge; 0. <code>ReasonCode</code> is an enum &mdash; fixed set of instances with identical shape. The combination is an algebraic data type: sum type (sealed) of product types (records).</p>
+        </div>
+      </div>
+
+      <div class="textarea-row" style="margin-top:28px">
+        <label class="textarea-label" for="ta-1-8-mj2">
+          Q2 &mdash; Show how downstream code consumes this type so that &ldquo;forgetting an outcome&rdquo; is a compile error. What language features are doing the work?
+        </label>
+        <textarea class="answer-textarea" id="ta-1-8-mj2" placeholder="What kind of switch? What patterns? Why no default branch?"></textarea>
+        <div class="char-count" id="cc-1-8-mj2">0 / 50 characters</div>
+        <div style="margin-top:12px">
+          <button class="btn-reveal" id="reveal-1-8-mj2" onclick="revealModelAnswer('1-8','mj2')" disabled>Reveal model answer</button>
+        </div>
+        <div class="model-answer" id="ma-1-8-mj2">
+          <span class="model-answer-tag">MODEL ANSWER</span>
+          <p>A <strong>switch expression with record patterns and no default branch</strong>: <code>return switch (result) { case Filled(var price, var qty) -&gt; settle(price, qty); case PartiallyFilled(var filled, var remaining) -&gt; requeue(remaining, settle(filled)); case Rejected(var reason, var retryable) when retryable -&gt; scheduleRetry(reason); case Rejected(var reason, var r) -&gt; alertDesk(reason); case Queued(var pos) -&gt; notifyPosition(pos); };</code> Three features cooperate: <strong>sealed</strong> gives the compiler the complete list of subtypes; <strong>switch as an expression</strong> requires exhaustiveness; <strong>record patterns</strong> deconstruct each variant&rsquo;s components in place. Omitting <code>default</code> is the crucial choice: when a fifth outcome is added to the sealed interface, this switch stops compiling &mdash; the compiler walks you to every consumer that needs updating. The guarded pattern (<code>when retryable</code>) must precede the unguarded <code>Rejected</code> case or the compiler reports a dominance error.</p>
+        </div>
+      </div>
+
+      <div class="textarea-row" style="margin-top:28px">
+        <label class="textarea-label" for="ta-1-8-mj3">
+          Q3 &mdash; The interviewer pushes: &ldquo;Why not just use a class hierarchy with an abstract <code>handle()</code> method &mdash; classic polymorphism?&rdquo; Defend the data-oriented design, and name one situation where classic polymorphism would actually be better.
+        </label>
+        <textarea class="answer-textarea" id="ta-1-8-mj3" placeholder="Think: who owns the behavior — the data types or the consumers? What changes more often, the variants or the operations?"></textarea>
+        <div class="char-count" id="cc-1-8-mj3">0 / 50 characters</div>
+        <div style="margin-top:12px">
+          <button class="btn-reveal" id="reveal-1-8-mj3" onclick="revealModelAnswer('1-8','mj3')" disabled>Reveal model answer</button>
+        </div>
+        <div class="model-answer" id="ma-1-8-mj3">
+          <span class="model-answer-tag">MODEL ANSWER</span>
+          <p>This is the <strong>expression problem</strong>. Virtual dispatch (abstract <code>handle()</code>) makes adding new <em>variants</em> easy but adding new <em>operations</em> hard &mdash; every new operation touches every class. The data-oriented design (sealed + records + switch) makes adding new <em>operations</em> easy &mdash; each operation is one self-contained switch &mdash; but adding a variant touches every switch (which is exactly what we want here: the compiler enumerates the touch points). For a MatchResult, the variants are stable (four outcomes, defined by the matching algorithm) while operations multiply endlessly &mdash; settlement, risk, audit logging, client notification, metrics &mdash; and those operations belong to <em>different teams and modules</em> that shouldn&rsquo;t inject behavior into a shared domain type. Data-oriented wins. Classic polymorphism is better when the variants are open-ended and operations are few and stable &mdash; e.g. a plugin system where third parties add new implementations of a fixed interface: there, sealed is exactly wrong (Stage 2&rsquo;s HTTP-client example).</p>
+        </div>
+      </div>
+
+      <div class="unlock-banner" id="unlock-1-8" style="margin-top:24px">
+        <strong style="color:var(--green)">&#x2705; Day 8 complete!</strong> Day 9 is next &mdash;
+        <span style="color:var(--ink-dim)">Streams &amp; functional interfaces: lambda internals, invokedynamic, advanced collectors, parallel stream pitfalls</span>
+      </div>
+    </div>
+
+    <!-- REFLECTION -->
+    <div class="reflection">
+      <div class="reflection-header" onclick="toggleReflection(this)">
+        <span class="reflection-icon">&#x1FA9E;</span>
+        <span class="reflection-title">Reflection &amp; Self-Assessment</span>
+        <span class="reflection-chevron">&#x25BE;</span>
+      </div>
+      <div class="reflection-body">
+
+        <div class="takeaways">
+          <div class="takeaways-label">Key Takeaways</div>
+          <ul>
+            <li><strong>Records + sealed + pattern matching are one feature</strong>, not three: algebraic data types with compiler-enforced exhaustive handling. That framing is your interview headline.</li>
+            <li><strong>Records are shallowly immutable</strong> &mdash; defensive-copy mutable components in the compact constructor. And record deserialization runs the canonical constructor, so validation can&rsquo;t be bypassed.</li>
+            <li><strong>Exhaustive switch without <code>default</code></strong> turns &ldquo;new variant added&rdquo; from a production bug hunt into a list of compile errors.</li>
+            <li><strong>Structured concurrency gives threads block scope:</strong> subtasks cannot outlive their scope; failure cancels siblings (<code>ShutdownOnFailure</code>) or success cancels the losers (<code>ShutdownOnSuccess</code>).</li>
+            <li><strong>Know the expression problem</strong> &mdash; it&rsquo;s the deep answer behind &ldquo;sealed+switch vs polymorphism&rdquo; and separates senior candidates from mid-level ones.</li>
+          </ul>
+        </div>
+
+        <div class="reflection-prompts">
+          <div class="reflection-prompt">
+            <span class="prompt-num">01</span>
+            <p class="prompt-text">Find one if/else-instanceof chain or visitor pattern in a codebase you know. Sketch its sealed+records+switch replacement. What breaks at compile time the next time someone adds a variant?</p>
+          </div>
+          <div class="reflection-prompt">
+            <span class="prompt-num">02</span>
+            <p class="prompt-text">Explain out loud, in under 60 seconds, why a record is safer than a Lombok <code>@Data</code> class for an API request payload. (Hint: deserialization path, mutability, equals semantics.)</p>
+          </div>
+          <div class="reflection-prompt">
+            <span class="prompt-num">03</span>
+            <p class="prompt-text">Where in your current system do you fan out to multiple services and wait for all results? What happens today when one fails &mdash; do the others keep running? How would StructuredTaskScope change that?</p>
+          </div>
+        </div>
+
+        <div class="confidence-block">
+          <div class="confidence-label">How confident do you feel about today&rsquo;s material?</div>
+          <div class="confidence-btns">
+            <button class="conf-btn" data-day="1-8" data-level="1" onclick="saveConfidence('1-8', 1)">&#x1F615; Not yet &mdash; need another pass</button>
+            <button class="conf-btn" data-day="1-8" data-level="2" onclick="saveConfidence('1-8', 2)">&#x1F914; Getting there &mdash; mostly clear</button>
+            <button class="conf-btn" data-day="1-8" data-level="3" onclick="saveConfidence('1-8', 3)">&#x2705; Solid &mdash; I could explain this</button>
+          </div>
+          <div class="confidence-saved" id="conf-saved-1-8"></div>
+        </div>
+
+      </div>
+    </div>
+
+  </div><!-- end stage 6 -->
+
+  <footer>
+    DAY 8 OF 158 &middot; MODERN JAVA &middot; PHASE 1 / 6
+  </footer>
+
+</div>
+
+<script src="../data/curriculum.js"></script>
+<script src="../assets/app.js"></script>
+<script src="../assets/audio-player.js"></script>
+<script src="../data/glossary.js"></script>
+<script src="../assets/glossary.js"></script>
+<script src="../data/abbreviations.js"></script>
+<script src="../assets/abbreviations.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    initOpenEndedChallenge('1-8');
+    initReflection('1-8');
+    initLessonNav();
+  });
+</script>
+</body>
+</html>
