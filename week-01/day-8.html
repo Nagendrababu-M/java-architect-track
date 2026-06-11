@@ -55,7 +55,7 @@
       Modern Java Deep Dive: Records, Sealed Classes, Pattern Matching &amp; the LTS Timeline
       <span class="sub">Java 8 &rarr; 11 &rarr; 17 &rarr; 21 &mdash; the features interviewers ask about, and the design thinking behind them.</span>
     </h1>
-    <div class="scope"><strong>SCOPE</strong> &middot; 210 min &middot; 7 stages &mdash; interview-prep session: every stage ends with the questions interviewers actually ask</div>
+    <div class="scope"><strong>SCOPE</strong> &middot; 225 min &middot; 7 stages &mdash; interview-prep session: every stage ends with the questions interviewers actually ask</div>
   <div id="play-full-lesson-mount"></div>
   </header>
 
@@ -354,58 +354,193 @@
 
   <!-- STAGE 6 -->
   <div class="stage" data-section="6">
-    <span class="stage-tag">STAGE 6 <span class="time">35 MIN</span></span>
-    <h2>The LTS timeline &mdash; Java 8, 11, 17, 21 in depth</h2>
+    <span class="stage-tag">STAGE 6 <span class="time">50 MIN</span></span>
+    <h2>Java 8 &rarr; 11 &rarr; 17 &rarr; 21 &mdash; every LTS, feature by feature, with code</h2>
 
-    <p>&ldquo;Which Java version do you use, and what came with it?&rdquo; is a guaranteed interview question. Companies live on the <abbr data-abbr="LTS">LTS</abbr> releases &mdash; 8, 11, 17, 21 &mdash; so organize your knowledge around those four. For each one, know the headline features, the runtime/JVM changes, and the migration pain.</p>
+    <p>&ldquo;Which Java version do you use, and what came with it?&rdquo; is a guaranteed interview question. Companies live on the <abbr data-abbr="LTS">LTS</abbr> releases &mdash; 8, 11, 17, 21 &mdash; so this stage walks each version separately: what shipped, why it matters, and a working example for every feature.</p>
 
-    <h4>Java 8 (2014) &mdash; the functional revolution</h4>
-    <p>The largest language change in Java&rsquo;s history. Still the baseline interviewers expect total fluency in:</p>
+    <h3 style="color:var(--accent); font-family:'JetBrains Mono',monospace; font-size:15px; letter-spacing:1px; margin-top:36px">&#x2503; JAVA 8 (2014) &mdash; THE FUNCTIONAL REVOLUTION</h3>
+    <p>The largest language change in Java&rsquo;s history. Still the baseline interviewers expect total fluency in.</p>
+
+    <h4>1. Lambdas &amp; functional interfaces</h4>
+    <p>Behavior as data. Any interface with a single abstract method can be implemented inline:</p>
+    <pre><code><span class="cmt">// Before Java 8 — anonymous class ceremony</span>
+<span class="typ">Comparator</span>&lt;<span class="typ">Trade</span>&gt; byPrice = <span class="kw">new</span> <span class="typ">Comparator</span>&lt;<span class="typ">Trade</span>&gt;() {
+    <span class="kw">public int</span> compare(<span class="typ">Trade</span> a, <span class="typ">Trade</span> b) { <span class="kw">return</span> a.getPrice().compareTo(b.getPrice()); }
+};
+
+<span class="cmt">// Java 8 — lambda, then method-reference composition</span>
+<span class="typ">Comparator</span>&lt;<span class="typ">Trade</span>&gt; byPrice = (a, b) -&gt; a.getPrice().compareTo(b.getPrice());
+<span class="typ">Comparator</span>&lt;<span class="typ">Trade</span>&gt; bySymbolThenPrice = comparing(<span class="typ">Trade</span>::getSymbol).thenComparing(<span class="typ">Trade</span>::getPrice);</code></pre>
+    <p>Compiled to <code>invokedynamic</code>, not anonymous classes &mdash; no class-file-per-lambda, and non-capturing lambdas are cached singletons (Day 9, Stage 1 has the full machinery).</p>
+
+    <h4>2. Streams API</h4>
+    <p>Declarative, lazy, composable collection processing:</p>
+    <pre><code><span class="cmt">// "Total notional of buy trades over 10k, per symbol" — one readable pipeline</span>
+<span class="typ">Map</span>&lt;<span class="typ">String</span>, <span class="typ">BigDecimal</span>&gt; notional = trades.stream()
+    .filter(t -&gt; t.getSide() == <span class="typ">Side</span>.BUY)
+    .filter(t -&gt; t.getQuantity() &gt; <span class="num-lit">10_000</span>)
+    .collect(groupingBy(<span class="typ">Trade</span>::getSymbol,
+             reducing(<span class="typ">BigDecimal</span>.ZERO, <span class="typ">Trade</span>::getValue, <span class="typ">BigDecimal</span>::add)));</code></pre>
+
+    <h4>3. Optional</h4>
+    <p>A return-type contract that absence is a normal outcome:</p>
+    <pre><code><span class="cmt">// Before: is null an error? a missing row? nobody knows without reading the impl</span>
+<span class="typ">User</span> findUser(<span class="typ">String</span> id);
+<span class="cmt">// After: the signature itself says "may be absent — handle it"</span>
+<span class="typ">Optional</span>&lt;<span class="typ">User</span>&gt; findUser(<span class="typ">String</span> id);
+
+<span class="typ">String</span> name = findUser(id).map(<span class="typ">User</span>::getName).orElse(<span class="str">"anonymous"</span>);</code></pre>
+
+    <h4>4. Default &amp; static interface methods</h4>
+    <p>Interfaces can carry implementations &mdash; which is <em>how</em> Streams could be retrofitted without breaking every Collection implementor on earth:</p>
+    <pre><code><span class="kw">public interface</span> <span class="typ">Collection</span>&lt;E&gt; {
+    <span class="kw">default</span> <span class="typ">Stream</span>&lt;E&gt; stream() {            <span class="cmt">// existing implementors inherit this for free</span>
+        <span class="kw">return</span> <span class="typ">StreamSupport</span>.stream(spliterator(), <span class="kw">false</span>);
+    }
+}</code></pre>
+
+    <h4>5. java.time (JSR-310)</h4>
+    <p>Immutable, thread-safe, sane date/time, replacing the mutable <code>Date</code>/<code>Calendar</code> disaster:</p>
+    <pre><code><span class="typ">LocalDate</span> expiry   = <span class="typ">LocalDate</span>.of(<span class="num-lit">2026</span>, <span class="typ">Month</span>.JUNE, <span class="num-lit">25</span>);
+<span class="typ">ZonedDateTime</span> open = <span class="typ">ZonedDateTime</span>.of(expiry.atTime(<span class="num-lit">9</span>, <span class="num-lit">15</span>), <span class="typ">ZoneId</span>.of(<span class="str">"Asia/Kolkata"</span>));
+<span class="typ">Duration</span> toExpiry  = <span class="typ">Duration</span>.between(<span class="typ">Instant</span>.now(), open.toInstant());
+<span class="cmt">// Every operation returns a NEW object — share freely across threads</span></code></pre>
+
+    <h4>6. CompletableFuture</h4>
+    <pre><code><span class="typ">CompletableFuture</span>.supplyAsync(() -&gt; fetchSpot(symbol))
+    .thenCombine(supplyAsync(() -&gt; fetchVol(symbol)), (spot, vol) -&gt; price(spot, vol))
+    .exceptionally(ex -&gt; fallbackPrice(symbol))
+    .thenAccept(quoteCache::put);</code></pre>
+
+    <h4>7. JVM: PermGen removed &rarr; Metaspace</h4>
+    <p>Class metadata moved from a fixed-size heap region to native memory. <code>OutOfMemoryError: PermGen space</code> became <code>Metaspace</code>, capped by <code>-XX:MaxMetaspaceSize</code>. Classloader-leak symptoms changed accordingly &mdash; ties back to Day 2.</p>
+
+    <h3 style="color:var(--accent); font-family:'JetBrains Mono',monospace; font-size:15px; letter-spacing:1px; margin-top:36px">&#x2503; JAVA 11 (2018) &mdash; THE CLEANUP LTS</h3>
+    <p>First LTS of the 6-month era; it bundles Java 9 and 10, so credit those features here.</p>
+
+    <h4>1. <code>var</code> &mdash; local-variable type inference (10)</h4>
+    <pre><code><span class="kw">var</span> trades = <span class="kw">new</span> <span class="typ">HashMap</span>&lt;<span class="typ">String</span>, <span class="typ">List</span>&lt;<span class="typ">Trade</span>&gt;&gt;();   <span class="cmt">// type inferred at COMPILE time</span>
+<span class="kw">for</span> (<span class="kw">var</span> entry : trades.entrySet()) { ... }           <span class="cmt">// bytecode identical to explicit types</span>
+<span class="cmt">// Java 11 allows var on lambda params — exists so you can annotate them:</span>
+(<span class="typ">@Nonnull</span> <span class="kw">var</span> a, <span class="typ">@Nonnull</span> <span class="kw">var</span> b) -&gt; a.merge(b)</code></pre>
+    <p>Local variables only &mdash; never fields, params, or return types. Inference, not dynamic typing.</p>
+
+    <h4>2. Standard HTTP Client</h4>
+    <pre><code><span class="typ">HttpClient</span> client = <span class="typ">HttpClient</span>.newBuilder().version(<span class="typ">Version</span>.HTTP_2).build();
+<span class="typ">HttpRequest</span> req = <span class="typ">HttpRequest</span>.newBuilder(<span class="typ">URI</span>.create(<span class="str">"https://api.nse.in/quote/NIFTY"</span>))
+                             .timeout(<span class="typ">Duration</span>.ofSeconds(<span class="num-lit">2</span>)).build();
+
+<span class="cmt">// Sync</span>
+<span class="typ">HttpResponse</span>&lt;<span class="typ">String</span>&gt; resp = client.send(req, <span class="typ">BodyHandlers</span>.ofString());
+<span class="cmt">// Async — composes with the CompletableFuture skills from Java 8</span>
+client.sendAsync(req, <span class="typ">BodyHandlers</span>.ofString()).thenApply(<span class="typ">HttpResponse</span>::body).thenAccept(cache::update);</code></pre>
+    <p>HTTP/2, WebSockets, async built-in &mdash; killed the mandatory Apache HttpClient dependency.</p>
+
+    <h4>3. Collection &amp; String conveniences (9&ndash;11)</h4>
+    <pre><code><span class="cmt">// Immutable collection factories (9) — throws on mutation, rejects nulls</span>
+<span class="typ">List</span>&lt;<span class="typ">String</span>&gt; symbols = <span class="typ">List</span>.of(<span class="str">"NIFTY"</span>, <span class="str">"BANKNIFTY"</span>);
+<span class="typ">Map</span>&lt;<span class="typ">String</span>, <span class="typ">Integer</span>&gt; lots = <span class="typ">Map</span>.of(<span class="str">"NIFTY"</span>, <span class="num-lit">50</span>, <span class="str">"BANKNIFTY"</span>, <span class="num-lit">15</span>);
+
+<span class="cmt">// String methods (11)</span>
+<span class="str">"  ₹ 105.50  "</span>.strip();        <span class="cmt">// Unicode-aware trim</span>
+<span class="str">""</span>.isBlank();                   <span class="cmt">// true for empty/whitespace</span>
+<span class="str">"a\nb\nc"</span>.lines().count();      <span class="cmt">// Stream&lt;String&gt; of lines</span>
+<span class="str">"-"</span>.repeat(<span class="num-lit">40</span>);                 <span class="cmt">// separator line</span>
+
+<span class="typ">String</span> cfg = <span class="typ">Files</span>.readString(<span class="typ">Path</span>.of(<span class="str">"app.conf"</span>));   <span class="cmt">// whole file, one call</span></code></pre>
+
+    <h4>4. Module system (JPMS, 9) &amp; single-file execution</h4>
+    <pre><code><span class="cmt">// module-info.java — explicit dependencies and exports</span>
+<span class="kw">module</span> com.trading.engine {
+    <span class="kw">requires</span> com.trading.marketdata;
+    <span class="kw">exports</span> com.trading.engine.api;     <span class="cmt">// everything else is invisible to consumers</span>
+}
+
+<span class="cmt"># Single-file execution (11) — no javac step</span>
+$ java TradeReport.java</code></pre>
+    <p>Most apps stay on the classpath, but the <em>JDK itself</em> is modularized &mdash; enabling jlink custom runtimes and the later lockdown of <code>sun.misc.*</code> backdoors.</p>
+
+    <h4>5. Removals &amp; JVM changes &mdash; the migration story</h4>
     <ul>
-      <li><strong>Lambdas &amp; functional interfaces</strong> &mdash; behavior as data. <code>Runnable r = () -&gt; work();</code> backed by <code>invokedynamic</code>, not anonymous classes (Day 9 covers the internals).</li>
-      <li><strong>Streams API</strong> &mdash; declarative, lazy, composable collection processing; parallelizable via the ForkJoin common pool.</li>
-      <li><strong>Optional</strong> &mdash; a return-type contract for &ldquo;absence is normal&rdquo;, ending the null-or-not guessing game.</li>
-      <li><strong>Default &amp; static interface methods</strong> &mdash; interfaces could finally evolve without breaking implementors. This is <em>how</em> Streams could be added: <code>Collection.stream()</code> is a default method.</li>
-      <li><strong>java.time (JSR-310)</strong> &mdash; immutable, thread-safe dates replacing the broken <code>Date</code>/<code>Calendar</code>. <code>LocalDate</code>, <code>Instant</code>, <code>ZonedDateTime</code>, <code>Duration</code>.</li>
-      <li><strong>CompletableFuture</strong> &mdash; composable async pipelines: <code>thenApply</code>, <code>thenCompose</code>, <code>exceptionally</code>.</li>
-      <li><strong>JVM: PermGen removed, Metaspace introduced</strong> &mdash; class metadata moved to native memory; <code>OutOfMemoryError: PermGen space</code> became <code>Metaspace</code>, sized by <code>-XX:MaxMetaspaceSize</code>.</li>
+      <li><strong>Java EE &amp; CORBA modules removed</strong> (JAXB, JAX-WS) &mdash; the #1 breakage migrating 8&rarr;11; re-add them as Maven dependencies.</li>
+      <li><strong>JFR open-sourced</strong> &mdash; commercial in 8, free in 11. The reason &ldquo;always-on production profiling&rdquo; is now standard practice.</li>
+      <li><strong>ZGC and Epsilon</strong> arrive as experimental collectors.</li>
     </ul>
 
-    <h4>Java 11 (2018) &mdash; the cleanup LTS</h4>
-    <p>The first LTS of the 6-month release era; it bundles Java 9/10 changes, so credit those here:</p>
-    <ul>
-      <li><strong>Module system (JPMS, from 9)</strong> &mdash; <code>module-info.java</code>, strong encapsulation of JDK internals. Most apps stay on the classpath, but the <em>JDK itself</em> is modularized &mdash; which is what later enabled jlink custom runtimes and the eventual lockdown of <code>sun.misc.*</code> hacks.</li>
-      <li><strong><code>var</code> (from 10)</strong> &mdash; local-variable type inference. Compile-time only; the bytecode is identical. Also legal on lambda params in 11 (<code>(var a, var b) -&gt; ...</code>) so you can annotate them.</li>
-      <li><strong>Standard HTTP Client</strong> &mdash; <code>java.net.http.HttpClient</code>: HTTP/2, async via CompletableFuture, WebSockets. Killed the need for Apache HttpClient in most services.</li>
-      <li><strong>Collection/String conveniences</strong> &mdash; <code>List.of()</code>/<code>Map.of()</code> immutable factories (9); <code>String.strip()</code>, <code>isBlank()</code>, <code>lines()</code>, <code>repeat()</code>; <code>Files.readString()</code>; <code>Predicate.not()</code>.</li>
-      <li><strong>Single-file execution</strong> &mdash; <code>java Script.java</code> runs without explicit compilation.</li>
-      <li><strong>Removed:</strong> Java EE &amp; CORBA modules (JAXB, JAX-WS) &mdash; the #1 migration breakage from 8 to 11; you re-add them as Maven dependencies.</li>
-      <li><strong>JVM:</strong> ZGC and Epsilon arrive as experimental; JFR is open-sourced and free in production (it was a commercial feature in 8 &mdash; a great interview detail).</li>
-    </ul>
+    <h3 style="color:var(--accent); font-family:'JetBrains Mono',monospace; font-size:15px; letter-spacing:1px; margin-top:36px">&#x2503; JAVA 17 (2021) &mdash; THE DATA-MODELING LTS</h3>
+    <p>Bundles 12&ndash;16. The release this whole lesson is built on &mdash; Stages 1&ndash;4 covered the big four in depth, so here&rsquo;s each feature with its version and a capsule example.</p>
 
-    <h4>Java 17 (2021) &mdash; the data-modeling LTS</h4>
-    <p>The release that made this whole lesson possible. Bundles 12&ndash;16:</p>
-    <ul>
-      <li><strong>Records (16)</strong> &mdash; Stage 1. Transparent immutable carriers with compiler-generated members.</li>
-      <li><strong>Sealed classes (17)</strong> &mdash; Stage 2. Closed hierarchies; the compiler knows every subtype.</li>
-      <li><strong>Pattern matching for instanceof (16)</strong> &mdash; Stage 3. Test-and-bind with flow scoping.</li>
-      <li><strong>Switch expressions (14)</strong> &mdash; arrow labels, <code>yield</code>, exhaustiveness.</li>
-      <li><strong>Text blocks (15)</strong> &mdash; Stage 4. Triple-quoted multi-line strings.</li>
-      <li><strong>Helpful NullPointerExceptions (14)</strong> &mdash; the JVM tells you <em>which</em> variable was null in a chain: &ldquo;Cannot invoke String.length() because the return value of User.getName() is null&rdquo;.</li>
-      <li><strong>Strong encapsulation by default (17)</strong> &mdash; <code>--illegal-access</code> ends; reflective access to JDK internals now requires explicit <code>--add-opens</code>. The #1 migration pain from 11 to 17 (old versions of Lombok, Mockito, serializers break until upgraded).</li>
-      <li><strong>JVM:</strong> ZGC and Shenandoah production-ready (15); biased locking removed; always-strict floating point.</li>
-    </ul>
+    <h4>1. Records (16) &mdash; Stage 1 in one line</h4>
+    <pre><code><span class="kw">public record</span> <span class="typ">Trade</span>(<span class="typ">String</span> symbol, <span class="typ">long</span> qty, <span class="typ">BigDecimal</span> price) {
+    <span class="kw">public</span> <span class="typ">Trade</span> { <span class="kw">if</span> (qty &lt;= <span class="num-lit">0</span>) <span class="kw">throw new</span> <span class="typ">IllegalArgumentException</span>(<span class="str">"qty"</span>); }
+}</code></pre>
 
-    <h4>Java 21 (2023) &mdash; the concurrency LTS</h4>
-    <ul>
-      <li><strong>Virtual threads (final!)</strong> &mdash; the headline. Millions of cheap threads multiplexed onto carrier threads; blocking code that scales like async. Thread-per-request returns as a sane architecture. (Week 2, Day 14 goes deep.)</li>
-      <li><strong>Pattern matching for switch + record patterns (final)</strong> &mdash; Stage 3. Exhaustive switch over sealed hierarchies with deconstruction and <code>when</code> guards.</li>
-      <li><strong>Sequenced Collections</strong> &mdash; Stage 4. <code>getFirst/getLast/reversed()</code> unified across ordered collections.</li>
-      <li><strong>Structured Concurrency (preview)</strong> &mdash; Stage 5. <code>StructuredTaskScope</code>; subtasks scoped to a block.</li>
-      <li><strong>Scoped Values (preview)</strong> &mdash; immutable, inheritable per-thread context; the ThreadLocal replacement designed for virtual threads (a million virtual threads &times; mutable ThreadLocals = memory disaster).</li>
-      <li><strong>Generational ZGC</strong> &mdash; ZGC gains young/old generations: most workloads see lower CPU and better allocation throughput at the same sub-ms pauses. Ties directly back to Day 4.</li>
-      <li><strong>String templates (preview)</strong> &mdash; later withdrawn for redesign (Stage 5&rsquo;s table).</li>
-    </ul>
+    <h4>2. Sealed classes (17) &mdash; Stage 2 in one line</h4>
+    <pre><code><span class="kw">public sealed interface</span> <span class="typ">PaymentResult</span> <span class="kw">permits</span> <span class="typ">Approved</span>, <span class="typ">Declined</span>, <span class="typ">Pending</span> {}</code></pre>
+
+    <h4>3. Switch expressions (14) + pattern matching for instanceof (16) &mdash; Stage 3</h4>
+    <pre><code><span class="typ">int</span> lot = <span class="kw">switch</span> (symbol) { <span class="kw">case</span> <span class="str">"NIFTY"</span> -&gt; <span class="num-lit">50</span>; <span class="kw">case</span> <span class="str">"BANKNIFTY"</span> -&gt; <span class="num-lit">15</span>; <span class="kw">default</span> -&gt; <span class="num-lit">1</span>; };
+<span class="kw">if</span> (msg <span class="kw">instanceof</span> <span class="typ">TradeEvent</span> te &amp;&amp; te.qty() &gt; <span class="num-lit">0</span>) process(te);</code></pre>
+
+    <h4>4. Text blocks (15) &mdash; Stage 4</h4>
+    <pre><code><span class="typ">String</span> q = <span class="str">"""
+    SELECT symbol, SUM(qty) FROM trades GROUP BY symbol
+    """</span>;</code></pre>
+
+    <h4>5. Helpful NullPointerExceptions (14)</h4>
+    <pre><code><span class="cmt">// Before: NullPointerException at line 42 — WHICH of the three calls was null?</span>
+order.getCustomer().getAddress().getCity();
+<span class="cmt">// Java 14+: the JVM tells you exactly:</span>
+<span class="cmt">// "Cannot invoke Address.getCity() because the return value of</span>
+<span class="cmt">//  Customer.getAddress() is null"</span></code></pre>
+
+    <h4>6. Strong encapsulation by default (17) &mdash; the migration pain</h4>
+    <pre><code><span class="cmt"># Reflective access to JDK internals now fails unless explicitly opened:</span>
+$ java <span class="kw">--add-opens</span> java.base/java.lang=ALL-UNNAMED -jar legacy-app.jar</code></pre>
+    <p>This is why old Lombok, Mockito, and ASM-based serializers broke on 17 until upgraded. JVM side: ZGC and Shenandoah went production-ready (15); biased locking was removed.</p>
+
+    <h3 style="color:var(--accent); font-family:'JetBrains Mono',monospace; font-size:15px; letter-spacing:1px; margin-top:36px">&#x2503; JAVA 21 (2023) &mdash; THE CONCURRENCY LTS</h3>
+
+    <h4>1. Virtual threads &mdash; the headline</h4>
+    <pre><code><span class="cmt">// Platform threads: ~1MB stack each, OS-scheduled — 10k is a lot</span>
+<span class="cmt">// Virtual threads: cheap, JVM-scheduled — millions are fine</span>
+<span class="kw">try</span> (<span class="kw">var</span> executor = <span class="typ">Executors</span>.newVirtualThreadPerTaskExecutor()) {
+    <span class="kw">for</span> (<span class="typ">Order</span> o : orders) {
+        executor.submit(() -&gt; enrich(o));   <span class="cmt">// 100,000 blocking HTTP calls? Fine.</span>
+    }
+}</code></pre>
+    <p>Blocking code that scales like async &mdash; when a virtual thread blocks on I/O, it unmounts from its carrier thread and the carrier runs another one. Thread-per-request is a sane architecture again. (Week 2, Day 14 goes deep.)</p>
+
+    <h4>2. Pattern matching for switch + record patterns (final) &mdash; Stage 3</h4>
+    <pre><code><span class="kw">return switch</span> (result) {
+    <span class="kw">case</span> <span class="typ">Approved</span>(<span class="kw">var</span> id, <span class="kw">var</span> amt)                 -&gt; settle(id, amt);
+    <span class="kw">case</span> <span class="typ">Declined</span>(<span class="kw">var</span> r, <span class="kw">var</span> retry) <span class="kw">when</span> retry     -&gt; requeue(r);
+    <span class="kw">case</span> <span class="typ">Declined</span>(<span class="kw">var</span> r, <span class="kw">var</span> x)                   -&gt; reject(r);
+    <span class="kw">case</span> <span class="typ">Pending</span> p                                -&gt; defer(p);
+};  <span class="cmt">// sealed ⇒ exhaustive ⇒ no default</span></code></pre>
+
+    <h4>3. Sequenced Collections &mdash; Stage 4</h4>
+    <pre><code>history.addFirst(latest);  history.removeLast();  <span class="kw">var</span> newest = history.getFirst();
+<span class="kw">for</span> (<span class="kw">var</span> e : auditLog.reversed().entrySet()) { ... }  <span class="cmt">// view, zero-copy</span></code></pre>
+
+    <h4>4. Structured Concurrency (preview) &mdash; Stage 5</h4>
+    <pre><code><span class="kw">try</span> (<span class="kw">var</span> scope = <span class="kw">new</span> <span class="typ">StructuredTaskScope.ShutdownOnFailure</span>()) {
+    <span class="kw">var</span> user = scope.fork(() -&gt; fetchUser(id));
+    <span class="kw">var</span> order = scope.fork(() -&gt; fetchOrder(id));
+    scope.join().throwIfFailed();
+    <span class="kw">return new</span> <span class="typ">Response</span>(user.get(), order.get());
+}</code></pre>
+
+    <h4>5. Scoped Values (preview)</h4>
+    <pre><code><span class="kw">static final</span> <span class="typ">ScopedValue</span>&lt;<span class="typ">String</span>&gt; REQUEST_ID = <span class="typ">ScopedValue</span>.newInstance();
+
+<span class="typ">ScopedValue</span>.where(REQUEST_ID, <span class="str">"req-8861"</span>).run(() -&gt; handle());
+<span class="cmt">// Inside handle() and everything it calls: REQUEST_ID.get() — immutable, no cleanup,</span>
+<span class="cmt">// safe with a million virtual threads where mutable ThreadLocals are a memory disaster</span></code></pre>
+
+    <h4>6. Generational ZGC</h4>
+    <p>ZGC gains young/old generations &mdash; lower CPU overhead and better allocation throughput at the same sub-millisecond pauses. Day 4&rsquo;s collector table gets a free upgrade. (String templates also previewed in 21 &mdash; later withdrawn for redesign; see Stage 5&rsquo;s table.)</p>
 
     <div class="key-rule insight">
       <p><strong>The one-line-per-LTS summary to deliver in interviews:</strong></p>
