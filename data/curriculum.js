@@ -117,8 +117,8 @@ const CURRICULUM = {
         },
         {
           day: 9, title: "Java Internals + Java 21 LTS",
-          topic: "Java Language", status: "current", file: "week-01/day-9.html", duration: 120,
-          audio: { available: false, voice: 'en-US-Wavenet-D', sectionCount: 7, estimatedMinutes: 28 },
+          topic: "Java Language", status: "current", file: "week-01/day-9.html", duration: 150,
+          audio: { available: false, voice: 'en-US-Wavenet-D', sectionCount: 7, estimatedMinutes: 32 },
           note: "Functional interface mechanics: @FunctionalInterface, SAM types, method references (4 kinds) vs lambdas, capture semantics (effectively-final, heap pollution with varargs); Lambda desugaring via invokedynamic — how the JVM avoids generating anonymous classes; Stream internals: spliterator-based lazy pipeline, encounter order, stateful vs stateless ops, short-circuit evaluation; Advanced collectors: Collectors.teeing, downstream collectors, custom Collector<T,A,R> implementation, groupingBy with counting/mapping/filtering; flatMap vs mapMulti (Java 16) — when mapMulti wins on performance; Parallel streams: ForkJoinPool.commonPool, spliterator SIZED/ORDERED/SUBSIZED characteristics, when parallel hurts (stateful, ordered, small N); Gatherers API (Java 22 preview): window, fold, scan, custom Gatherer<T,A,R> — stream operations that were impossible before; Optional deep-dive: chaining flatMap, or(), ifPresentOrElse, stream() bridge, anti-patterns (Optional as field, isPresent/get); Custom spliterators: implementing trySplit for parallel-capable infinite sources; Reactive bridge: Flux.fromStream pitfalls, Stream.generate for push-to-pull conversion; Real patterns: pagination with Stream.iterate + takeWhile, lazy DB cursor wrapping, multi-level groupBy for report generation, collector fusion"
         },
       ]

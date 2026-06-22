@@ -62,13 +62,13 @@
       Java Internals + Java 21 LTS
       <span class="sub">How the foundations actually work under the hood &mdash; lambdas, streams, collectors &mdash; plus the newest LTS additions that build on them.</span>
     </h1>
-    <div class="scope"><strong>SCOPE</strong> &middot; 120 min &middot; 7 stages &mdash; internals first, then Java 21. Assumes you are fluent in lambdas and streams from Day 8.</div>
+    <div class="scope"><strong>SCOPE</strong> &middot; 150 min &middot; 7 stages &mdash; deep internals first, then Java 21 in depth. Assumes you are fluent in lambdas and streams from Day 8.</div>
   <div id="play-full-lesson-mount"></div>
   </header>
 
   <div class="recap">
-    <span class="recap-tag">RECAP FROM DAY 8</span>
-    <p>You can now <em>read and write</em> lambdas, streams, <code>Optional</code>, records, sealed classes, and pattern matching across the Java 8&ndash;17 timeline. Today is the other half: <strong>how those tools actually work</strong> &mdash; what the JVM does with a lambda, why a stream is lazy and one-pass, how collectors compose, and when parallel streams take down a service &mdash; followed by <strong>Java 21</strong>, the current LTS, whose features (virtual threads, exhaustive pattern switch, structured concurrency) build directly on the Day 8 foundations.</p>
+    <span class="recap-tag">RECAP FROM DAY 8 &mdash; AND WHAT THIS DAY IS NOT</span>
+    <p>Day 8 taught you to <em>use</em> lambdas, streams, <code>Optional</code>, records, sealed classes, and pattern matching across the Java 8&ndash;17 timeline. <strong>Today is not a re-tour of those features.</strong> Stages 1&ndash;4 dissect the <em>mechanics</em> underneath the Java 8 toolkit &mdash; what bytecode a lambda compiles to, how a stream pipeline executes element-by-element, the exact contract a collector must satisfy, and the thread model that makes parallel streams dangerous. This is the deep analysis senior interviews probe: not &ldquo;what does <code>map</code> do&rdquo; but &ldquo;what happens in the JVM when this pipeline runs.&rdquo; Stages 5&ndash;6 then cover <strong>Java 21</strong>, the current LTS, in the same depth &mdash; not headline bullets, but the scheduling model, the failure modes, and the design rationale.</p>
   </div>
 
   <!-- STAGE 1 — LAMBDA INTERNALS -->
@@ -242,21 +242,46 @@ data.parallelStream().forEach(out::add);          <span class="cmt">// ✗ data 
     <span class="kw">case</span> <span class="typ">Pending</span> p                            -&gt; defer(p);
 };  <span class="cmt">// sealed ⇒ exhaustive ⇒ no default needed</span></code></pre>
     <ul>
-      <li><strong>Type patterns</strong> bind the matched type; <strong>guarded patterns</strong> add a <code>when</code> condition (must precede the unguarded form, or you get a dominance error).</li>
-      <li><strong>Null handling</strong> &mdash; <code>case null</code> is now allowed; without it, a null selector still throws NPE (exhaustiveness covers types, not null).</li>
-      <li><strong>Exhaustiveness checking</strong> &mdash; over a sealed type, the compiler proves all cases are covered, so <code>default</code> is unnecessary (and omitting it preserves the refactoring safety net).</li>
     </ul>
 
+    <h4>Type patterns and the death of the cast-after-test</h4>
+    <p>A <strong>type pattern</strong> (<code>case Approved a</code>) does three things at once: tests the runtime type, and if it matches, binds a new variable of that type already narrowed &mdash; no explicit cast, and the binding is only in scope on that branch. This is the same flow-scoping you saw with pattern <code>instanceof</code> in Stage 1, now lifted into <code>switch</code>. The practical payoff: the long <code>if (x instanceof A) { A a = (A) x; ... } else if (x instanceof B) ...</code> chain &mdash; historically the place where a stale cast and a stale test silently drift apart &mdash; collapses into a switch where the compiler guarantees test and binding can never disagree.</p>
+
+    <h4>Guarded patterns and dominance &mdash; order is a compile-time contract</h4>
+    <p>A <strong>guard</strong> (<code>when retry</code>) refines a pattern with a boolean. The subtlety interviewers push on: cases are evaluated top-to-bottom, and the compiler enforces <em>dominance</em> &mdash; a broader pattern placed above a narrower one that it subsumes is a compile error, because the narrower case could never be reached. Concretely, the guarded <code>case Declined(var r, var retry) when retry</code> <strong>must</strong> appear before the unguarded <code>case Declined(var r, var x)</code>; reverse them and the unguarded case dominates, making the guard dead code, and the compiler rejects it. This is not a style rule &mdash; it is the compiler preventing a whole class of unreachable-branch bugs.</p>
+
+    <h4>Null handling &mdash; a deliberate semantic change</h4>
+    <p>Historically <code>switch</code> threw <code>NullPointerException</code> on a null selector before any case ran. Java 21 keeps that default <em>unless</em> you write an explicit <code>case null</code> &mdash; only then does null flow into the switch. The reasoning: exhaustiveness reasons about <em>types</em>, and null inhabits every reference type, so silently treating null as &ldquo;some case&rdquo; would be unsound. Making <code>case null</code> explicit forces you to decide null&rsquo;s fate consciously. You can also combine it: <code>case null, default -&gt; ...</code> handles null and everything-else together.</p>
+
+    <h4>Exhaustiveness &mdash; how the compiler actually proves it</h4>
+    <p>Over a sealed type, the compiler walks the <code>permits</code> list (recursively, through nested sealed types) and verifies every permitted subtype is matched by some case. If it can prove total coverage, the switch is legal with <strong>no <code>default</code></strong>; the compiler even synthesizes a hidden fallback that throws <code>MatchException</code> for the theoretically-impossible case of a subtype added via separate compilation. This is why omitting <code>default</code> is the <em>correct</em> choice on a closed hierarchy: <code>default</code> would silently absorb future subtypes, while its absence turns &ldquo;a new subtype was added&rdquo; into a build break that names every switch needing an update.</p>
+
     <h3 class="ver-head">&#x2503; RECORD PATTERNS (standard)</h3>
-    <pre><code><span class="cmt">// Destructure a record in the pattern itself — and nest deeply</span>
+    <p>A record pattern matches a type <em>and</em> deconstructs it into its components in one move, binding each component to a variable. Because records publish their exact component list, the compiler knows the deconstruction is total &mdash; and patterns nest, so you can destructure a whole object graph in a single line:</p>
+    <pre><code><span class="cmt">// Flat: match Approved and pull out both components</span>
+<span class="kw">case</span> <span class="typ">Approved</span>(<span class="typ">String</span> txnId, <span class="typ">BigDecimal</span> amount) -&gt; settle(txnId, amount);
+
+<span class="cmt">// Nested: destructure two levels deep — no intermediate getters</span>
 <span class="kw">if</span> (obj <span class="kw">instanceof</span> <span class="typ">Line</span>(<span class="typ">Point</span>(<span class="kw">var</span> x1, <span class="kw">var</span> y1), <span class="typ">Point</span>(<span class="kw">var</span> x2, <span class="kw">var</span> y2))) {
-    <span class="cmt">// x1, y1, x2, y2 all bound from two levels of deconstruction</span>
+    <span class="kw">double</span> len = <span class="typ">Math</span>.hypot(x2 - x1, y2 - y1);   <span class="cmt">// all four bound at once</span>
 }</code></pre>
+    <p>Two depth points. First, <code>var</code> in a record pattern infers each component&rsquo;s declared type &mdash; you don&rsquo;t restate <code>BigDecimal</code>. Second, record patterns and sealed switches <strong>compose into the complete algebraic-data-type story from Day 8</strong>: sealed gives the closed set, the record pattern destructures each shape, exhaustiveness proves nothing is missed. That triad is what replaces the visitor pattern entirely &mdash; and unlike a visitor, adding a variant doesn&rsquo;t require touching an interface every implementor must re-implement; it just lights up the compile errors at the switches that care.</p>
+
+    <div class="key-rule insight">
+      <p><strong>Why this matters beyond syntax.</strong> Pattern matching for switch is the feature that finally lets Java do <em>data-oriented programming</em> &mdash; behavior kept outside the data, dispatched by shape, verified exhaustive at compile time. It is the deep reason records and sealed classes were worth adding: alone they&rsquo;re nicer data holders; together with pattern switch they change how you architect a domain model. The Day 8 challenge built the types; this is the machinery that consumes them safely.</p>
+    </div>
 
     <div class="interview-q">
       <span class="iq-tag">&#x1F3AF; INTERVIEW QUESTIONS</span>
-      <p><strong>Q: Explain exhaustiveness checking and why it matters for refactoring.</strong> &mdash; Over a sealed type, a switch must cover every permitted subtype or it won&rsquo;t compile. Add a new subtype and every exhaustive switch lacking <code>default</code> breaks the build &mdash; the compiler enumerates exactly where to update. &ldquo;Forgot a case&rdquo; moves from runtime to compile time.</p>
-      <p><strong>Q: What happens if you switch over a sealed type and pass null?</strong> &mdash; NPE, unless you add <code>case null</code> explicitly. Exhaustiveness covers types, not null.</p>
+      <p><strong>Q: Explain exhaustiveness checking and why it matters for refactoring.</strong> &mdash; Over a sealed type the compiler walks the <code>permits</code> list and proves every subtype is covered; a switch with no <code>default</code> then compiles. Add a subtype and every such switch breaks the build, naming exactly where to update &mdash; &ldquo;forgot a case&rdquo; moves from a production incident to a compile error. A <code>default</code> branch silently defeats this, which is why you omit it on closed hierarchies.</p>
+      <p><strong>Q: Why must a guarded case precede its unguarded form?</strong> &mdash; Dominance: the unguarded pattern subsumes the guarded one, so if it came first the guarded case is unreachable. The compiler rejects unreachable patterns to prevent silent dead branches.</p>
+      <p><strong>Q: What happens if you switch over a sealed type and pass null?</strong> &mdash; NPE before any case, unless you add an explicit <code>case null</code> (optionally <code>case null, default</code>). Exhaustiveness covers types, not null, because null inhabits every reference type.</p>
+      <p><strong>Q: Pattern switch vs the visitor pattern?</strong> &mdash; Both dispatch over a closed set. Visitor scatters behavior across an <code>accept</code> method on every type and a growing visitor interface; pattern switch keeps each operation in one local, readable place and gets compiler-checked exhaustiveness for free. Visitor wins only when the type set is open to third parties &mdash; where sealed wouldn&rsquo;t apply anyway.</p>
+    </div>
+
+    <div class="check">
+      <span class="check-tag">QUICK CHECK</span>
+      <p>You write <code>case Declined(var r, var retry)</code> first, then <code>case Declined(var r, var retry) when retry</code> below it. What does the compiler say, and what is the fix?</p>
     </div>
   </div>
 
@@ -265,45 +290,79 @@ data.parallelStream().forEach(out::add);          <span class="cmt">// ✗ data 
     <span class="stage-tag">STAGE 6 <span class="time">15 MIN</span></span>
     <h2>Java 21 &mdash; virtual threads, structured concurrency &amp; the platform</h2>
 
-    <h3 class="ver-head">&#x2503; VIRTUAL THREADS (standard) &mdash; the headline</h3>
-    <pre><code><span class="cmt">// Platform threads: ~1MB stack, OS-scheduled — 10k is a lot</span>
-<span class="cmt">// Virtual threads: cheap, M:N scheduled onto carrier threads — millions are fine</span>
+    <h3 class="ver-head">&#x2503; VIRTUAL THREADS (standard) &mdash; the headline feature</h3>
+    <pre><code><span class="cmt">// One virtual thread per task — the executor creates them on demand</span>
 <span class="kw">try</span> (<span class="kw">var</span> exec = <span class="typ">Executors</span>.newVirtualThreadPerTaskExecutor()) {
     <span class="kw">for</span> (<span class="typ">Order</span> o : orders) exec.submit(() -&gt; enrich(o));  <span class="cmt">// 100k blocking calls? Fine.</span>
 }
 <span class="typ">Thread</span>.ofVirtual().start(() -&gt; doWork());</code></pre>
-    <p>When a virtual thread blocks on I/O it <strong>unmounts</strong> from its carrier, which runs another virtual thread &mdash; so blocking code scales like async. Thread-per-request is sane again.</p>
+
+    <h4>The platform-thread problem they solve</h4>
+    <p>A platform thread is a thin wrapper over an OS thread: ~1 MB of reserved stack, scheduled by the kernel, and expensive to create. That caps you at a few thousand. So for high-concurrency I/O, the industry went <em>asynchronous</em> &mdash; callbacks, futures, reactive &mdash; trading readable, debuggable, blocking code for throughput. Virtual threads remove that trade: they make blocking cheap.</p>
+
+    <h4>How the scheduling actually works (M:N)</h4>
+    <p>A virtual thread is a Java object holding a <em>continuation</em> plus a small heap-allocated stack &mdash; not an OS thread. Many virtual threads are multiplexed onto a small pool of <strong>carrier threads</strong> (platform threads in a dedicated <code>ForkJoinPool</code>, defaulting to the CPU count). The lifecycle:</p>
+    <ul>
+      <li><strong>Mount:</strong> to run, a virtual thread mounts onto a carrier &mdash; its stack frames are copied onto the carrier&rsquo;s stack and it executes as normal Java code.</li>
+      <li><strong>Unmount:</strong> when it hits a blocking call the JDK has instrumented (socket read, <code>Thread.sleep</code>, most <code>java.util.concurrent</code> waits, blocking I/O), the runtime captures its continuation, copies its stack back to the heap, and <strong>unmounts</strong> it &mdash; freeing the carrier to run another virtual thread immediately.</li>
+      <li><strong>Resume:</strong> when the I/O completes, the virtual thread is rescheduled onto any free carrier and continues from exactly where it parked.</li>
+    </ul>
+    <p>The result: code is written in plain blocking style (<code>var resp = client.send(req)</code>), but the carrier never actually blocks &mdash; so a handful of OS threads serve hundreds of thousands of concurrent in-flight operations. <strong>Thread-per-request becomes a sane architecture again.</strong></p>
+
     <div class="key-rule">
-      <p><strong>Watch for pinning.</strong> A virtual thread inside a <code>synchronized</code> block (or a JNI call) is <em>pinned</em> to its carrier &mdash; it can&rsquo;t unmount, defeating the scaling benefit. In virtual-thread-heavy code, prefer <code>ReentrantLock</code> over <code>synchronized</code>.</p>
+      <p><strong>Pinning &mdash; the one failure mode to know cold.</strong> A virtual thread that cannot unmount while blocked is <em>pinned</em> to its carrier, which sits idle &mdash; reintroducing the exact thread-starvation virtual threads were meant to eliminate. The two causes: (1) blocking inside a <code>synchronized</code> block or method &mdash; the JDK can&rsquo;t safely unmount across a monitor; (2) blocking in a native (JNI) call. <strong>Fix:</strong> replace <code>synchronized</code> with <code>ReentrantLock</code> in hot, blocking paths &mdash; the lock&rsquo;s park is unmount-aware. <strong>Detect</strong> it with <code>-Djdk.tracePinnedThreads=full</code>, which prints a stack trace at every pinning event. Pinning during brief, non-blocking critical sections is harmless; pinning around I/O is the bug.</p>
     </div>
 
+    <p><strong>What virtual threads are NOT:</strong> not faster for CPU-bound work (you&rsquo;re still limited by cores &mdash; they help <em>concurrency</em>, not <em>compute</em>); not pooled (you create one per task and let it die &mdash; pooling them is an anti-pattern); and not a reason to size them with semaphores unless you&rsquo;re protecting a limited downstream resource (a DB connection pool), in which case you bound concurrency at <em>that</em> resource, not at the threads.</p>
+
     <h3 class="ver-head">&#x2503; STRUCTURED CONCURRENCY (preview)</h3>
+    <p>Virtual threads make spawning concurrency cheap; structured concurrency makes it <em>safe</em>. The problem it fixes: with a bare executor, if you fork two subtasks and the first fails, the second keeps running &mdash; orphaned, burning a connection, its result destined for the garbage. Error handling and cancellation become manual and leaky. Structured concurrency gives concurrent tasks the same lifecycle discipline as a code block.</p>
     <pre><code><span class="kw">try</span> (<span class="kw">var</span> scope = <span class="kw">new</span> <span class="typ">StructuredTaskScope.ShutdownOnFailure</span>()) {
-    <span class="kw">var</span> user  = scope.fork(() -&gt; fetchUser(id));
+    <span class="kw">var</span> user  = scope.fork(() -&gt; fetchUser(id));    <span class="cmt">// each fork → its own virtual thread</span>
     <span class="kw">var</span> order = scope.fork(() -&gt; fetchOrder(id));
-    scope.join().throwIfFailed();              <span class="cmt">// first failure cancels the siblings</span>
-    <span class="kw">return new</span> <span class="typ">Response</span>(user.get(), order.get());
-}  <span class="cmt">// subtasks CANNOT outlive this block — cancellation propagates down, errors up</span></code></pre>
+    scope.join();                                  <span class="cmt">// wait for ALL forks to finish/fail</span>
+    scope.throwIfFailed();                          <span class="cmt">// propagate the first failure as an exception</span>
+    <span class="kw">return new</span> <span class="typ">Response</span>(user.get(), order.get());     <span class="cmt">// both guaranteed complete here</span>
+}  <span class="cmt">// scope close: no subtask can outlive this block</span></code></pre>
+    <ul>
+      <li><strong><code>ShutdownOnFailure</code></strong> &mdash; the &ldquo;I need ALL results&rdquo; policy: the first subtask to throw triggers cancellation (interruption) of its still-running siblings, so you don&rsquo;t wait on work whose result you&rsquo;ll discard.</li>
+      <li><strong><code>ShutdownOnSuccess</code></strong> &mdash; the &ldquo;I need ANY result&rdquo; policy: the first success cancels the rest. This is hedged requests &mdash; fire the same query at two replicas, take the faster, cancel the slower.</li>
+      <li><strong>The structural guarantee:</strong> the try-with-resources block cannot exit until every fork has joined. Cancellation propagates <em>down</em> to children, exceptions propagate <em>up</em> to the parent, and a thread dump shows the real parent&ndash;child tree instead of a flat pool &mdash; observability that bare executors never gave you.</li>
+    </ul>
 
     <h3 class="ver-head">&#x2503; SCOPED VALUES (preview)</h3>
+    <p><code>ThreadLocal</code> was the old way to carry per-request context (a request id, a tenant, a security principal) without threading it through every method signature. It has three flaws that virtual threads turn fatal: it&rsquo;s <em>mutable</em> anywhere downstream (action at a distance), it has an unbounded lifetime until explicitly removed (leaks, and a forgotten <code>remove()</code> in a pooled thread is a classic bug), and with a million virtual threads each carrying a mutable map, the memory cost explodes.</p>
     <pre><code><span class="kw">static final</span> <span class="typ">ScopedValue</span>&lt;<span class="typ">String</span>&gt; REQUEST_ID = <span class="typ">ScopedValue</span>.newInstance();
-<span class="typ">ScopedValue</span>.where(REQUEST_ID, <span class="str">"req-8861"</span>).run(() -&gt; handle());
-<span class="cmt">// Immutable, bound to a dynamic scope — the ThreadLocal replacement for the</span>
-<span class="cmt">// virtual-thread era, where a million mutable ThreadLocals would be a memory disaster</span></code></pre>
 
-    <h3 class="ver-head">&#x2503; SEQUENCED COLLECTIONS (standard) &amp; GENERATIONAL ZGC</h3>
-    <pre><code><span class="cmt">// Unified first/last/reversed across List, Deque, LinkedHashSet, LinkedHashMap</span>
-history.addFirst(latest);  <span class="kw">var</span> newest = history.getFirst();  history.removeLast();
-<span class="kw">for</span> (<span class="kw">var</span> e : auditLog.reversed().entrySet()) { ... }   <span class="cmt">// reversed() is a zero-copy view</span></code></pre>
-    <p><strong>Generational ZGC</strong> splits ZGC&rsquo;s heap into young/old generations &mdash; improved throughput while keeping the sub-millisecond pauses from Day 4&rsquo;s collector table.</p>
+<span class="typ">ScopedValue</span>.where(REQUEST_ID, <span class="str">"req-8861"</span>).run(() -&gt; handle());
+<span class="cmt">// Anywhere inside handle() and everything it transitively calls:</span>
+<span class="typ">String</span> id = REQUEST_ID.get();   <span class="cmt">// reads the value bound for THIS dynamic scope</span></code></pre>
+    <p>Scoped values flip every flaw: the binding is <strong>immutable</strong> (you can only rebind in a nested scope, never mutate), its lifetime is <strong>exactly the dynamic extent</strong> of the <code>run</code>/<code>call</code> &mdash; automatically torn down when the block exits, so no leaks &mdash; and they&rsquo;re <strong>inherited by forked subtasks</strong> in a <code>StructuredTaskScope</code>, so request context flows correctly across the fan-out. The two features are co-designed: scoped values are the context mechanism for the structured-concurrency + virtual-thread world.</p>
+
+    <h3 class="ver-head">&#x2503; SEQUENCED COLLECTIONS (standard)</h3>
+    <p>A twenty-year inconsistency, fixed. &ldquo;First element&rdquo; was spelled differently on every collection (<code>list.get(0)</code>, <code>deque.getFirst()</code>, <code>sortedSet.first()</code>) and <code>LinkedHashSet</code> had <em>no</em> way to reach its last element without a full iteration. JEP 431 retrofits three interfaces &mdash; <code>SequencedCollection</code>, <code>SequencedSet</code>, <code>SequencedMap</code> &mdash; into the existing hierarchy:</p>
+    <pre><code><span class="cmt">// One vocabulary across List, Deque, LinkedHashSet, LinkedHashMap, SortedSet/Map</span>
+history.addFirst(latest);  history.removeLast();  <span class="kw">var</span> newest = history.getFirst();
+<span class="kw">for</span> (<span class="kw">var</span> e : auditLog.reversed().entrySet()) { ... }   <span class="cmt">// descending iteration</span></code></pre>
+    <p>The standout is <code>reversed()</code>: it returns a <strong>view, not a copy</strong> &mdash; O(1) to create, and writes through to the backing collection. Iterating a <code>LinkedHashMap</code> newest-first used to require copying keys into a list and reversing; now it&rsquo;s allocation-free. One sharp edge worth knowing: positional writes like <code>addFirst</code> on a <code>SortedSet</code> throw <code>UnsupportedOperationException</code> &mdash; a sorted set&rsquo;s order comes from its comparator, so you can read its ends but can&rsquo;t impose a position.</p>
+
+    <h3 class="ver-head">&#x2503; GENERATIONAL ZGC (standard)</h3>
+    <p>ZGC (Day 4) already gave sub-millisecond pauses on huge heaps via colored pointers and load barriers. Java 21 makes it <strong>generational</strong> &mdash; separate young and old regions &mdash; exploiting the weak generational hypothesis from Day 3 (most objects die young). Collecting the young generation far more often than the old one means less total GC work, lower CPU overhead, and lower allocation stalls, all <em>while keeping</em> the sub-ms pause guarantee. It becomes the recommended default ZGC mode: the same latency, materially better throughput. This ties the whole memory arc together &mdash; Day 3&rsquo;s hypothesis, Day 4&rsquo;s ZGC mechanics, now the production-grade refinement.</p>
 
     <h4>Coming next: Gatherers (Java 22+ preview)</h4>
-    <p>Collectors customize the <em>terminal</em> step; <code>Stream.gather(...)</code> finally customizes the <em>intermediate</em> step &mdash; <code>windowFixed</code> (batching), <code>windowSliding</code> (moving averages), <code>scan</code> (running totals), and custom <code>Gatherer</code>s. Java 21 is the current LTS, so know this exists &mdash; no deep dive needed yet.</p>
+    <p>Collectors customize a stream&rsquo;s <em>terminal</em> step; <code>Stream.gather(...)</code> finally customizes the <em>intermediate</em> step &mdash; <code>windowFixed</code> (batching), <code>windowSliding</code> (moving averages), <code>scan</code> (running totals), and custom <code>Gatherer</code>s. Java 21 is the current LTS, so know it exists and what gap it fills &mdash; the full treatment waits until it&rsquo;s standard.</p>
 
     <div class="interview-q">
       <span class="iq-tag">&#x1F3AF; INTERVIEW QUESTIONS</span>
-      <p><strong>Q: When would you prefer virtual threads over Project Reactor?</strong> &mdash; When the work is blocking I/O and you want simple, debuggable, synchronous-looking code that still scales. Reactor still wins for backpressure, streaming, and complex async composition; virtual threads remove the &ldquo;go reactive just to scale blocking calls&rdquo; pressure.</p>
-      <p><strong>Q: Why can&rsquo;t you use ThreadLocal effectively with virtual threads?</strong> &mdash; A million virtual threads each holding mutable ThreadLocals is a memory disaster and breaks the cheap-thread model. Scoped values are immutable, scoped to a dynamic extent, and inheritable &mdash; designed for that world.</p>
+      <p><strong>Q: Walk me through what happens when a virtual thread blocks on a socket read.</strong> &mdash; The instrumented blocking call captures the thread&rsquo;s continuation, copies its stack to the heap, and unmounts it from the carrier, which immediately runs another virtual thread. When the read completes the virtual thread is rescheduled onto a free carrier and resumes from the park point. The OS thread never blocked.</p>
+      <p><strong>Q: What is pinning, what causes it, how do you detect and fix it?</strong> &mdash; A virtual thread that can&rsquo;t unmount while blocked, holding its carrier idle. Caused by blocking inside <code>synchronized</code> or a JNI call. Detect with <code>-Djdk.tracePinnedThreads=full</code>; fix by switching hot blocking sections from <code>synchronized</code> to <code>ReentrantLock</code>.</p>
+      <p><strong>Q: When would you prefer virtual threads over Project Reactor?</strong> &mdash; For blocking I/O where you want simple, debuggable, synchronous-looking code that still scales to high concurrency. Reactor still wins for backpressure, streaming, and complex async composition; virtual threads remove the &ldquo;go reactive purely to scale blocking calls&rdquo; pressure.</p>
+      <p><strong>Q: Why can&rsquo;t you use <code>ThreadLocal</code> effectively with virtual threads, and what replaces it?</strong> &mdash; A million virtual threads each holding mutable, unbounded-lifetime ThreadLocals is a memory and leak hazard. Scoped values replace it: immutable, lifetime bound to a dynamic scope (auto-torn-down), and inherited by structured-concurrency subtasks.</p>
+    </div>
+
+    <div class="check">
+      <span class="check-tag">QUICK CHECK</span>
+      <p>You move a service to virtual threads and throughput barely improves; a profiler shows carriers mostly idle. One synchronized method guards a call to a slow external API. Explain exactly what&rsquo;s happening and the one-line-ish fix.</p>
     </div>
   </div>
 
