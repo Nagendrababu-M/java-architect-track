@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Week 2 · Day 12 — Atomics, CAS &amp; Lock-Free Patterns</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,800&family=JetBrains+Mono:wght@400;500;700&family=Inter+Tight:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/styles.css">
+<link rel="stylesheet" href="../assets/audio-player.css">
+<link rel="stylesheet" href="../assets/glossary.css">
+<link rel="stylesheet" href="../assets/abbreviations.css">
+<style>
+  body {
+    background-image:
+      radial-gradient(ellipse 800px 600px at 20% 0%, rgba(110,211,184,0.07), transparent 60%),
+      radial-gradient(ellipse 600px 400px at 90% 100%, rgba(110,211,184,0.04), transparent 60%);
+  }
+  .interview-q {
+    margin: 20px 0;
+    padding: 18px 22px;
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--yellow);
+    border-radius: 0 8px 8px 0;
+    background: rgba(230,200,90,0.04);
+  }
+  .interview-q .iq-tag {
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: var(--yellow);
+    margin-bottom: 10px;
+  }
+  .interview-q p { margin: 0 0 10px; color: var(--ink-dim); line-height: 1.7; }
+  .interview-q p:last-child { margin-bottom: 0; }
+</style>
+</head>
+<body>
+<div class="grain"></div>
+
+<div class="container">
+
+  <header class="lesson-header">
+    <a href="../index.html" class="back-link">&larr; Back to curriculum</a>
+    <div class="meta">
+      <span class="dot"></span>
+      <span class="phase">Phase 1 &middot; Concurrency</span>
+      <span>&middot;</span>
+      <span>Week 2 / Day 12</span>
+    </div>
+    <h1>
+      Atomics, <abbr data-abbr="CAS">CAS</abbr> &amp; Lock-Free Patterns
+      <span class="sub">Thread-safety without locks &mdash; how compare-and-swap works, where it wins, and the failure modes (ABA) that bite the unwary.</span>
+    </h1>
+    <div class="scope"><strong>SCOPE</strong> &middot; 170 min &middot; 6 stages &mdash; the optimistic alternative to Day 11&rsquo;s locks, and the engine under all of java.util.concurrent.</div>
+  <div id="play-full-lesson-mount"></div>
+  </header>
+
+  <div class="recap">
+    <span class="recap-tag">RECAP FROM DAY 11</span>
+    <p>Day 11 made shared state safe with <strong>locks</strong> &mdash; pessimistic concurrency: &ldquo;assume a conflict, exclude everyone else.&rdquo; That&rsquo;s correct but it serializes, and contention silently caps throughput. Today is the other philosophy: <strong>optimistic concurrency</strong> &mdash; &ldquo;assume no conflict, do the work, and only retry if someone beat me.&rdquo; Its primitive is <strong>compare-and-swap (CAS)</strong>, a single hardware instruction, and it&rsquo;s the foundation of every atomic, every lock-free data structure, and the entire <code>java.util.concurrent</code> package. The architect&rsquo;s lesson: lock-free isn&rsquo;t magic free-speed &mdash; it&rsquo;s a different trade-off, with its own contention behavior and a famous, subtle failure mode called ABA.</p>
+  </div>
+
+  <!-- STAGE 1 -->
+  <div class="stage" data-section="1">
+    <span class="stage-tag">STAGE 1 <span class="time">30 MIN</span></span>
+    <h2>Compare-and-swap &mdash; the foundation</h2>
+
+    <p><abbr data-abbr="CAS">CAS</abbr> is one atomic CPU instruction with three operands: a memory location, an <em>expected</em> value, and a <em>new</em> value. Its meaning: &ldquo;if the location still holds the expected value, set it to the new value and report success; otherwise change nothing and report failure.&rdquo; The compare and the swap happen <strong>indivisibly</strong> &mdash; no other thread can sneak in between.</p>
+    <pre><code><span class="cmt">// The shape of every atomic update — the CAS retry loop</span>
+<span class="kw">int</span> oldVal, newVal;
+<span class="kw">do</span> {
+    oldVal = counter.get();          <span class="cmt">// 1. read the current value</span>
+    newVal = oldVal + <span class="num-lit">1</span>;            <span class="cmt">// 2. compute the new value</span>
+} <span class="kw">while</span> (!counter.compareAndSet(oldVal, newVal));  <span class="cmt">// 3. swap iff unchanged, else retry</span></code></pre>
+    <p>If another thread changed the value between steps 1 and 3, <code>compareAndSet</code> returns <code>false</code> and the loop retries with the fresh value. No thread ever blocks; a thread only ever <em>redoes</em> its own work. Under the hood this is a single instruction (<code>CMPXCHG</code> on x86, load-linked/store-conditional on ARM) &mdash; cheaper than a lock, which needs OS arbitration when contended.</p>
+
+    <div class="key-rule insight">
+      <p><strong>CAS gives all three Day-5 guarantees for a single variable.</strong> The atomic classes are built on <code>volatile</code> fields plus CAS, so: <strong>atomicity</strong> (the read-modify-write is indivisible), <strong>visibility</strong> (the volatile read/write flushes caches), and <strong>ordering</strong> (a successful CAS establishes a happens-before edge, like a lock release). This is why an <code>AtomicInteger</code> needs no <code>synchronized</code> &mdash; the hardware does the mutual exclusion for that one word.</p>
+    </div>
+
+    <h4>Optimistic vs pessimistic &mdash; the mental model</h4>
+    <p>A lock is <strong>pessimistic</strong>: acquire first, assume a conflict, block others. CAS is <strong>optimistic</strong>: do the work, then check; pay only when there&rsquo;s an actual conflict. Optimistic wins when conflicts are rare (the common case) &mdash; no blocking, no context switches, no scheduler involvement. The catch you must internalize: under contention, CAS doesn&rsquo;t block, it <em>spins and retries</em>, burning CPU. We&rsquo;ll see in Stage 3 that under <em>very</em> high contention a lock can actually win.</p>
+
+    <div class="interview-q">
+      <span class="iq-tag">&#x1F3AF; INTERVIEW QUESTIONS</span>
+      <p><strong>Q: What is CAS and what does it guarantee?</strong> &mdash; An atomic compare-and-set instruction (expected, new). It atomically updates only if the value is unchanged, giving atomicity, visibility, and ordering for a single variable without a lock.</p>
+      <p><strong>Q: How does a non-blocking counter work?</strong> &mdash; A CAS retry loop: read, compute, compareAndSet; on failure re-read and retry. No thread blocks; a thread only redoes its own computation.</p>
+      <p><strong>Q: Optimistic vs pessimistic locking?</strong> &mdash; Pessimistic (locks) blocks up front assuming conflict; optimistic (CAS) proceeds and retries only on actual conflict. Optimistic wins under low contention; locks can win under heavy contention.</p>
+    </div>
+
+    <div class="check">
+      <span class="check-tag">QUICK CHECK</span>
+      <p>Why does an <code>AtomicInteger</code> not need <code>synchronized</code> to be thread-safe, yet a plain <code>volatile int</code> with <code>i++</code> still has a race? Name the exact property CAS adds that <code>volatile</code> lacks.</p>
+    </div>
+  </div>
+
+  <!-- STAGE 2 -->
+  <div class="stage" data-section="2">
+    <span class="stage-tag">STAGE 2 <span class="time">25 MIN</span></span>
+    <h2>The atomic family &mdash; counters, references &amp; functional updates</h2>
+
+    <p><code>java.util.concurrent.atomic</code> wraps CAS in friendly classes: <code>AtomicInteger</code>, <code>AtomicLong</code>, <code>AtomicBoolean</code>, and the general <code>AtomicReference&lt;T&gt;</code>. The convenience methods hide the retry loop:</p>
+    <pre><code>counter.incrementAndGet();              <span class="cmt">// atomic ++i (CAS loop inside)</span>
+counter.getAndAdd(<span class="num-lit">10</span>);                 <span class="cmt">// returns old, adds 10, atomically</span>
+flag.compareAndSet(<span class="kw">false</span>, <span class="kw">true</span>);       <span class="cmt">// one-shot guard (do-once patterns)</span></code></pre>
+
+    <h4>Functional updates (Java 8) &mdash; CAS loops you don&rsquo;t write</h4>
+    <pre><code><span class="cmt">// updateAndGet / accumulateAndGet run a CAS loop with YOUR function</span>
+max.accumulateAndGet(candidate, <span class="typ">Math</span>::max);     <span class="cmt">// atomic "running max"</span>
+ref.updateAndGet(s -&gt; s.withLastSeen(now()));     <span class="cmt">// atomic transform of a reference</span></code></pre>
+    <p><strong>Caution:</strong> the function you pass may be <em>retried</em> (the loop re-runs it on CAS failure), so it must be <strong>pure and side-effect-free</strong> &mdash; no logging, no mutation, no I/O inside it. This is a frequent subtle bug.</p>
+
+    <h4>AtomicReference + immutable snapshots &mdash; the architect&rsquo;s pattern</h4>
+    <p>This is the lock-free way to manage <em>compound</em> state safely &mdash; and it ties Day 5 and Day 8 together:</p>
+    <pre><code><span class="kw">record</span> <span class="typ">Config</span>(<span class="typ">String</span> url, <span class="kw">int</span> timeout) {}            <span class="cmt">// immutable (Day 8)</span>
+<span class="typ">AtomicReference</span>&lt;<span class="typ">Config</span>&gt; cfg = <span class="kw">new</span> <span class="typ">AtomicReference</span>&lt;&gt;(initial);
+cfg.updateAndGet(c -&gt; <span class="kw">new</span> <span class="typ">Config</span>(c.url(), newTimeout));  <span class="cmt">// swap a whole new snapshot atomically</span></code></pre>
+    <p>Readers do <code>cfg.get()</code> and see a consistent, fully-built snapshot (safe publication, Day 5) &mdash; never a torn half-update &mdash; with zero locking. Updates create a new immutable object and CAS the reference. This is copy-on-write at the reference level, and it&rsquo;s how you publish configuration, routing tables, and feature flags in a hot path.</p>
+
+    <p>(For the last drop of performance there are <code>AtomicIntegerFieldUpdater</code> / <code>AtomicReferenceFieldUpdater</code>, which apply CAS to a <code>volatile</code> field directly &mdash; avoiding a wrapper object per field. Niche, but worth knowing the name.)</p>
+
+    <div class="interview-q">
+      <span class="iq-tag">&#x1F3AF; INTERVIEW QUESTIONS</span>
+      <p><strong>Q: Implement a thread-safe counter without <code>synchronized</code>.</strong> &mdash; <code>AtomicInteger</code> with <code>incrementAndGet()</code> (a CAS loop). For very high write contention, prefer <code>LongAdder</code> (Stage 3).</p>
+      <p><strong>Q: Why must the lambda passed to <code>updateAndGet</code> be side-effect-free?</strong> &mdash; It can be re-executed on CAS failure (the retry loop), so side effects would run multiple times.</p>
+      <p><strong>Q: How do you safely publish a config object that changes occasionally, lock-free?</strong> &mdash; An immutable record in an <code>AtomicReference</code>; readers <code>get()</code> a consistent snapshot, writers CAS a new instance.</p>
+    </div>
+
+    <div class="check">
+      <span class="check-tag">QUICK CHECK</span>
+      <p>A teammate puts a <code>log.info(...)</code> inside the lambda passed to <code>updateAndGet</code> to trace updates. Under contention the log line sometimes prints twice for one logical update. Why?</p>
+    </div>
+  </div>
+
+  <!-- STAGE 3 -->
+  <div class="stage" data-section="3">
+    <span class="stage-tag">STAGE 3 <span class="time">25 MIN</span></span>
+    <h2>Contention &amp; LongAdder &mdash; when CAS spins too much</h2>
+
+    <p>CAS&rsquo;s weakness is its strength inverted. Under low contention it&rsquo;s near-free. Under <em>high</em> write contention &mdash; many threads hammering one <code>AtomicLong</code> &mdash; they all read the same value, all try to CAS, all but one fail, and all retry. The hot cache line ping-pongs between cores (&ldquo;cache-line bouncing&rdquo;), and throughput collapses even though nobody is blocked. Spinning isn&rsquo;t free; it&rsquo;s wasted CPU.</p>
+
+    <div class="key-rule insight">
+      <p><strong><code>LongAdder</code> beats <code>AtomicLong</code> for high-contention counters &mdash; by not contending.</strong></p>
+      <p><code>LongAdder</code> keeps an array of <em>cells</em>; under contention, different threads update different cells, so their CAS operations rarely collide. The total is computed as the <strong>sum of all cells</strong> on read. You trade a single hot location for many cold ones. The cost: <code>sum()</code> is not a perfectly-atomic instantaneous snapshot and is slightly slower than a single <code>get()</code>. So: <strong><code>LongAdder</code> for write-heavy counters you mostly increment and rarely read</strong> (metrics, request counts); <strong><code>AtomicLong</code> when you need the exact current value frequently</strong> or when contention is low. (<code>LongAccumulator</code>/<code>DoubleAdder</code> generalize this to other reductions.)</p>
+    </div>
+
+    <h4>When a lock actually beats CAS</h4>
+    <p>The &ldquo;lock-free is always faster&rdquo; belief is wrong. Under <em>sustained extreme contention</em> on a single value, a lock can outperform a CAS loop: a lock puts losers to sleep (one cache-line transfer, then quiet), whereas CAS losers keep spinning and bouncing the cache line. The architect&rsquo;s rule: <strong>measure</strong>. Optimistic for low/moderate contention; striped structures (<code>LongAdder</code>) or a lock for the genuinely hot single point.</p>
+
+    <div class="interview-q">
+      <span class="iq-tag">&#x1F3AF; INTERVIEW QUESTIONS</span>
+      <p><strong>Q: <code>LongAdder</code> vs <code>AtomicLong</code>?</strong> &mdash; LongAdder stripes across cells to avoid contention, summed on read &mdash; far faster for high-frequency increments, but <code>sum()</code> isn&rsquo;t a precise atomic snapshot. AtomicLong is better for low contention or when you read the exact value often.</p>
+      <p><strong>Q: Is lock-free always faster than locking?</strong> &mdash; No. Under extreme contention CAS loops spin and bounce the cache line, while a lock parks losers. Measure; sometimes a lock or a striped counter wins.</p>
+    </div>
+
+    <div class="check">
+      <span class="check-tag">QUICK CHECK</span>
+      <p>You have a request counter incremented millions of times/sec across 64 threads and read once/second for a dashboard. <code>AtomicLong</code> or <code>LongAdder</code>? What&rsquo;s the deciding factor, and what do you give up?</p>
+    </div>
+  </div>
+
+  <!-- STAGE 4 -->
+  <div class="stage" data-section="4">
+    <span class="stage-tag">STAGE 4 <span class="time">25 MIN</span></span>
+    <h2>The ABA problem</h2>
+
+    <p>CAS asks &ldquo;is the value still what I expected?&rdquo; But &ldquo;the same value&rdquo; is not the same as &ldquo;nothing happened.&rdquo; If a value goes <strong>A &rarr; B &rarr; A</strong> between your read and your CAS, the CAS <em>succeeds</em> &mdash; it sees A and assumes nothing changed &mdash; even though the world moved underneath you. That&rsquo;s the <strong>ABA problem</strong>.</p>
+
+    <div class="key-rule">
+      <p><strong>Why ABA is usually harmless for numbers but dangerous for references.</strong> For a counter, A&rarr;B&rarr;A genuinely leaves the value at A &mdash; no harm. The danger is with <strong>pointers</strong> in lock-free structures: a node can be removed and a <em>different</em> node recycled to the same memory address, so the reference is &ldquo;equal&rdquo; (A) but now points at a different logical object. Your CAS succeeds and you splice corrupted links &mdash; a lost node, a cycle, or a resurrected element.</p>
+    </div>
+
+    <h4>The fix: version stamps</h4>
+    <pre><code><span class="cmt">// AtomicStampedReference pairs the reference with an int "version"</span>
+<span class="typ">AtomicStampedReference</span>&lt;<span class="typ">Node</span>&gt; top = <span class="kw">new</span> <span class="typ">AtomicStampedReference</span>&lt;&gt;(head, <span class="num-lit">0</span>);
+
+<span class="kw">int</span>[] stampHolder = <span class="kw">new int</span>[<span class="num-lit">1</span>];
+<span class="typ">Node</span> cur = top.get(stampHolder);          <span class="cmt">// read value AND stamp</span>
+<span class="kw">int</span> stamp = stampHolder[<span class="num-lit">0</span>];
+...
+top.compareAndSet(cur, next, stamp, stamp + <span class="num-lit">1</span>);  <span class="cmt">// must match value AND stamp; bump stamp</span></code></pre>
+    <p><code>AtomicStampedReference</code> makes the CAS check <em>both</em> the reference and a monotonically increasing stamp. Now A&rarr;B&rarr;A changes the stamp each transition, so the comeback-to-A no longer looks unchanged &mdash; the CAS fails and you retry correctly. (<code>AtomicMarkableReference</code> is the lighter cousin: a single boolean &ldquo;mark&rdquo; bit instead of a counter &mdash; enough when you only need to flag &ldquo;logically deleted.&rdquo;)</p>
+
+    <div class="interview-q">
+      <span class="iq-tag">&#x1F3AF; INTERVIEW QUESTIONS</span>
+      <p><strong>Q: What is the ABA problem?</strong> &mdash; A value changes A&rarr;B&rarr;A between a thread&rsquo;s read and its CAS; the CAS succeeds because the value matches, missing that intervening changes occurred &mdash; dangerous for pointer-based lock-free structures where a recycled address looks identical.</p>
+      <p><strong>Q: How do you fix ABA?</strong> &mdash; <code>AtomicStampedReference</code> (reference + version stamp) so any change bumps the stamp and a returned-to-A value fails the CAS; or <code>AtomicMarkableReference</code> for a single mark bit. Languages with GC also reduce (but don&rsquo;t eliminate) ABA by preventing immediate address reuse.</p>
+    </div>
+
+    <div class="check">
+      <span class="check-tag">QUICK CHECK</span>
+      <p>Explain why ABA on an <code>AtomicInteger</code> counter is harmless, but ABA on an <code>AtomicReference&lt;Node&gt;</code> in a stack&rsquo;s <code>pop()</code> can corrupt the structure.</p>
+    </div>
+  </div>
+
+  <!-- STAGE 5 -->
+  <div class="stage" data-section="5">
+    <span class="stage-tag">STAGE 5 <span class="time">25 MIN</span></span>
+    <h2>Lock-free structures, progress guarantees &amp; when not to roll your own</h2>
+
+    <h4>The Treiber stack &mdash; lock-free in 6 lines</h4>
+    <pre><code><span class="typ">AtomicReference</span>&lt;<span class="typ">Node</span>&gt; top = <span class="kw">new</span> <span class="typ">AtomicReference</span>&lt;&gt;();
+<span class="kw">void</span> push(<span class="typ">T</span> v) {
+    <span class="typ">Node</span> n = <span class="kw">new</span> <span class="typ">Node</span>(v);
+    <span class="kw">do</span> { n.next = top.get(); } <span class="kw">while</span> (!top.compareAndSet(n.next, n));
+}
+<span class="typ">T</span> pop() {
+    <span class="typ">Node</span> cur;
+    <span class="kw">do</span> { cur = top.get(); <span class="kw">if</span> (cur == <span class="kw">null</span>) <span class="kw">return null</span>; }
+    <span class="kw">while</span> (!top.compareAndSet(cur, cur.next));   <span class="cmt">// &larr; the ABA-vulnerable line</span>
+    <span class="kw">return</span> cur.value;
+}</code></pre>
+    <p>This is the canonical lock-free stack: each operation is a CAS retry loop on the head pointer. It&rsquo;s elegant &mdash; and the <code>pop()</code> CAS is exactly where ABA can strike (Stage 6&rsquo;s challenge).</p>
+
+    <h4>Progress guarantees &mdash; the vocabulary</h4>
+    <ul>
+      <li><strong>Lock-free:</strong> the <em>system</em> always makes progress &mdash; some thread completes in a bounded number of steps. Individual threads may starve (keep losing CAS), but the structure never stalls. (CAS loops are lock-free.)</li>
+      <li><strong>Wait-free:</strong> stronger &mdash; <em>every</em> thread completes in a bounded number of steps. No starvation possible. Hard to build; rare.</li>
+      <li><strong>Obstruction-free:</strong> weakest &mdash; a thread completes if it runs in isolation long enough. (<code>StampedLock</code>&rsquo;s optimistic read is in this family.)</li>
+    </ul>
+
+    <div class="key-rule insight">
+      <p><strong>The architect&rsquo;s rule: almost never hand-write a lock-free structure.</strong> They are extraordinarily hard to get right (ABA, memory reclamation, subtle reorderings) and even harder to debug. Reach instead for the battle-tested lock-free collections in <code>java.util.concurrent</code> &mdash; <code>ConcurrentLinkedQueue</code>/<code>Deque</code> (lock-free, the right answer to &ldquo;I need a concurrent stack/queue&rdquo;), <code>ConcurrentHashMap</code>, <code>LongAdder</code>. For the extreme high-throughput case, study the <strong>LMAX Disruptor</strong> &mdash; a ring buffer using CAS and cache-line padding that powers HFT systems &mdash; but use the library, don&rsquo;t reinvent it. Roll your own only with a very good reason and a lot of testing (jcstress).</p>
+    </div>
+
+    <p>(The low-level engine has modernized: hand-written lock-free code historically used <code>sun.misc.Unsafe</code>; the supported API since Java 9 is <code>VarHandle</code>, which exposes CAS plus fine-grained memory-ordering modes &mdash; plain, opaque, acquire/release, volatile. You almost never need it, but that&rsquo;s what the JDK&rsquo;s own concurrent classes use.)</p>
+
+    <div class="interview-q">
+      <span class="iq-tag">&#x1F3AF; INTERVIEW QUESTIONS</span>
+      <p><strong>Q: Lock-free vs wait-free?</strong> &mdash; Lock-free guarantees system-wide progress (some thread advances); wait-free guarantees per-thread progress (every thread finishes in bounded steps, no starvation). CAS loops are lock-free, not wait-free.</p>
+      <p><strong>Q: I need a concurrent stack/queue &mdash; do I write a Treiber stack?</strong> &mdash; No. Use <code>ConcurrentLinkedDeque</code>/<code>ConcurrentLinkedQueue</code> &mdash; already lock-free and correct. Hand-rolling invites ABA and reclamation bugs.</p>
+    </div>
+
+    <div class="check">
+      <span class="check-tag">QUICK CHECK</span>
+      <p>A CAS retry loop is lock-free but not wait-free. Construct the scenario: which thread could, in theory, never complete &mdash; and why does the <em>structure</em> still count as making progress?</p>
+    </div>
+  </div>
+
+  <!-- STAGE 6 -->
+  <div class="stage" data-section="6">
+    <span class="stage-tag">STAGE 6 <span class="time">35 MIN</span></span>
+    <h2>The challenge &mdash; spot the ABA bug</h2>
+
+    <p>The capstone. Study the lock-free stack and the interleaving, then answer all three parts (50+ characters each) and reveal the model answers.</p>
+
+    <div class="challenge">
+      <span class="challenge-tag">SCENARIO &middot; READ CAREFULLY BEFORE ANSWERING</span>
+      <h3>A recycled-node stack</h3>
+      <p>A Treiber stack (the <code>pop()</code> from Stage 5) is used with an object pool that <strong>recycles popped Node objects</strong> back for reuse (to reduce allocation). Stack contents, top first: <code>A &rarr; B &rarr; C</code>.</p>
+      <p>An interleaving:</p>
+      <ol>
+        <li>Thread 1 enters <code>pop()</code>: reads <code>cur = A</code>, reads <code>cur.next = B</code>. Then it is <strong>paused</strong> by the scheduler, just before its CAS.</li>
+        <li>Thread 2 runs: <code>pop()</code> A, <code>pop()</code> B (both recycled to the pool), then <code>push()</code> a reused node that happens to be the <em>same object</em> A. Stack is now <code>A &rarr; C</code>.</li>
+        <li>Thread 1 resumes and executes <code>compareAndSet(A, B)</code>.</li>
+      </ol>
+    </div>
+
+    <div class="challenge-form" id="challenge-2-12">
+      <span class="challenge-tag">YOUR ANSWERS &middot; MINIMUM 50 CHARS EACH TO UNLOCK MODEL ANSWER</span>
+
+      <div class="textarea-row">
+        <label class="textarea-label" for="ta-2-12-a1">
+          Q1 &mdash; Does Thread 1&rsquo;s CAS succeed, and what is the resulting state of the stack? Walk the exact corruption.
+        </label>
+        <textarea class="answer-textarea" id="ta-2-12-a1" placeholder="top is A again when T1 resumes — does compareAndSet(A, B) match? What does it set top to? Where did C go?"></textarea>
+        <div class="char-count" id="cc-2-12-a1">0 / 50 characters</div>
+        <div style="margin-top:12px">
+          <button class="btn-reveal" id="reveal-2-12-a1" onclick="revealModelAnswer('2-12','a1')" disabled>Reveal model answer</button>
+        </div>
+        <div class="model-answer" id="ma-2-12-a1">
+          <span class="model-answer-tag">MODEL ANSWER</span>
+          <p>The CAS <strong>succeeds</strong> &mdash; and that&rsquo;s the bug. When Thread 1 resumes, <code>top</code> is once again the object <code>A</code> (re-pushed by Thread 2), so <code>compareAndSet(A, B)</code> sees the expected value and sets <code>top = B</code>. But <code>B</code> was already popped and recycled &mdash; it&rsquo;s no longer in the stack. The real stack was <code>A &rarr; C</code>; after the CAS it becomes <code>top = B</code>, whose <code>next</code> pointer is stale/garbage (it pointed at <code>C</code> at read time, but B has since been reused). <strong>C is lost</strong> (leaked or unreachable), and the stack now exposes a node that was supposed to be out of circulation &mdash; structural corruption. The CAS &ldquo;passed&rdquo; an equality check while the world had completely changed: textbook ABA.</p>
+        </div>
+      </div>
+
+      <div class="textarea-row" style="margin-top:28px">
+        <label class="textarea-label" for="ta-2-12-a2">
+          Q2 &mdash; Fix it two ways: a primitive-level fix, and a &ldquo;don&rsquo;t hand-roll this&rdquo; fix. Note any precondition that made the bug possible.
+        </label>
+        <textarea class="answer-textarea" id="ta-2-12-a2" placeholder="What pairs a version with the reference? And what j.u.c. structure removes the problem entirely? What did node recycling enable?"></textarea>
+        <div class="char-count" id="cc-2-12-a2">0 / 50 characters</div>
+        <div style="margin-top:12px">
+          <button class="btn-reveal" id="reveal-2-12-a2" onclick="revealModelAnswer('2-12','a2')" disabled>Reveal model answer</button>
+        </div>
+        <div class="model-answer" id="ma-2-12-a2">
+          <span class="model-answer-tag">MODEL ANSWER</span>
+          <p><strong>Primitive fix:</strong> replace <code>AtomicReference&lt;Node&gt;</code> with <code>AtomicStampedReference&lt;Node&gt;</code>. Read the node <em>and</em> the stamp; CAS on both and bump the stamp. Now Thread 2&rsquo;s pops/push each advance the stamp, so when Thread 1 does its CAS the stamp no longer matches &mdash; it fails and retries against the real current state. <strong>Don&rsquo;t-hand-roll fix:</strong> use <code>ConcurrentLinkedDeque</code> (or <code>ConcurrentLinkedQueue</code>) &mdash; a tested, lock-free j.u.c. structure that handles these hazards for you; deleting the custom stack deletes the bug class. <strong>The precondition:</strong> the bug required <em>node recycling</em> &mdash; reusing the same object identity. Without the object pool, garbage collection alone makes ABA far less likely here, because a popped node can&rsquo;t be reused (and re-appear as the &ldquo;same&rdquo; reference) while Thread 1 still holds a reference to it. The object pool, added to &ldquo;reduce allocation,&rdquo; is what reintroduced ABA &mdash; a cautionary tale about premature optimization.</p>
+        </div>
+      </div>
+
+      <div class="textarea-row" style="margin-top:28px">
+        <label class="textarea-label" for="ta-2-12-a3">
+          Q3 &mdash; Separately: a colleague replaced an <code>AtomicLong</code> request counter with a <code>synchronized</code> block &ldquo;to be safe,&rdquo; and throughput dropped. And a different counter on <code>AtomicLong</code> is now the hottest line in a profile. Diagnose both and prescribe.
+        </label>
+        <textarea class="answer-textarea" id="ta-2-12-a3" placeholder="Why is AtomicLong better than synchronized for a counter? And when does even AtomicLong lose — to what?"></textarea>
+        <div class="char-count" id="cc-2-12-a3">0 / 50 characters</div>
+        <div style="margin-top:12px">
+          <button class="btn-reveal" id="reveal-2-12-a3" onclick="revealModelAnswer('2-12','a3')" disabled>Reveal model answer</button>
+        </div>
+        <div class="model-answer" id="ma-2-12-a3">
+          <span class="model-answer-tag">MODEL ANSWER</span>
+          <p><strong>First counter:</strong> a <code>synchronized</code> block for a single increment is pessimistic overkill &mdash; it forces lock acquisition (and, under contention, parking/waking) where a CAS would suffice. Revert to <code>AtomicLong.incrementAndGet()</code> (or better, see below): non-blocking, no monitor, much higher throughput for an independent increment. <strong>Second counter:</strong> the <code>AtomicLong</code> is the profile hot spot because of extreme write contention &mdash; all threads CAS the same word, fail, retry, and bounce the cache line between cores. The fix is <code>LongAdder</code>: it stripes increments across cells so threads rarely collide, summing on read. You give up a precise instantaneous atomic snapshot (<code>sum()</code> is eventually consistent), which is fine for a metric read once a second. The through-line: match the tool to the contention &mdash; lock for compound invariants, CAS/AtomicLong for low-contention single values, LongAdder for hot single-value writes.</p>
+        </div>
+      </div>
+
+      <div class="unlock-banner" id="unlock-2-12" style="margin-top:24px">
+        <strong style="color:var(--green)">&#x2705; Day 12 complete!</strong> Day 13 is next &mdash;
+        <span style="color:var(--ink-dim)">Concurrent collections &amp; producer-consumer patterns &mdash; ConcurrentHashMap, BlockingQueue &amp; friends, built on today&rsquo;s CAS.</span>
+      </div>
+    </div>
+
+    <!-- REFLECTION -->
+    <div class="reflection">
+      <div class="reflection-header" onclick="toggleReflection(this)">
+        <span class="reflection-icon">&#x1FA9E;</span>
+        <span class="reflection-title">Reflection &amp; Self-Assessment</span>
+        <span class="reflection-chevron">&#x25BE;</span>
+      </div>
+      <div class="reflection-body">
+
+        <div class="takeaways">
+          <div class="takeaways-label">Key Takeaways</div>
+          <ul>
+            <li><strong>CAS is optimistic concurrency</strong> &mdash; read, compute, compare-and-set, retry. One hardware instruction; gives atomicity + visibility + ordering for a single variable, no lock.</li>
+            <li><strong>Atomics</strong> wrap CAS; <code>updateAndGet</code>/<code>accumulateAndGet</code> run your (pure!) function in the loop. <code>AtomicReference</code> + immutable snapshot = lock-free compound state.</li>
+            <li><strong><code>LongAdder</code> for hot counters</strong> (stripes to avoid contention); <code>AtomicLong</code> for low contention / exact reads. Lock-free isn&rsquo;t always faster &mdash; measure.</li>
+            <li><strong>ABA</strong>: A&rarr;B&rarr;A fools CAS; harmless for numbers, corrupting for pointers. Fix with <code>AtomicStampedReference</code>.</li>
+            <li><strong>Don&rsquo;t hand-roll lock-free structures</strong> &mdash; use <code>ConcurrentLinkedQueue</code>/<code>Deque</code>, <code>ConcurrentHashMap</code>, the Disruptor. Lock-free = system progress; wait-free = per-thread progress.</li>
+          </ul>
+        </div>
+
+        <div class="reflection-prompts">
+          <div class="reflection-prompt">
+            <span class="prompt-num">01</span>
+            <p class="prompt-text">Find a counter or accumulator in a codebase you know. Is it <code>synchronized</code>, <code>AtomicLong</code>, or <code>LongAdder</code>? Given its read/write ratio and contention, is that the right choice?</p>
+          </div>
+          <div class="reflection-prompt">
+            <span class="prompt-num">02</span>
+            <p class="prompt-text">Is there any hand-written lock-free or CAS-loop code in your system? Could it hit ABA? Could it be replaced by a <code>java.util.concurrent</code> structure that&rsquo;s already correct?</p>
+          </div>
+          <div class="reflection-prompt">
+            <span class="prompt-num">03</span>
+            <p class="prompt-text">Explain to a teammate, in under 60 seconds, why &ldquo;lock-free is always faster&rdquo; is wrong &mdash; and the one measurement you&rsquo;d take before choosing CAS over a lock.</p>
+          </div>
+        </div>
+
+        <div class="confidence-block">
+          <div class="confidence-label">How confident do you feel about today&rsquo;s material?</div>
+          <div class="confidence-btns">
+            <button class="conf-btn" data-day="2-12" data-level="1" onclick="saveConfidence('2-12', 1)">&#x1F615; Not yet &mdash; need another pass</button>
+            <button class="conf-btn" data-day="2-12" data-level="2" onclick="saveConfidence('2-12', 2)">&#x1F914; Getting there &mdash; mostly clear</button>
+            <button class="conf-btn" data-day="2-12" data-level="3" onclick="saveConfidence('2-12', 3)">&#x2705; Solid &mdash; I could explain this</button>
+          </div>
+          <div class="confidence-saved" id="conf-saved-2-12"></div>
+        </div>
+
+      </div>
+    </div>
+
+  </div><!-- end stage 6 -->
+
+  <footer>
+    DAY 12 OF 158 &middot; ATOMICS &amp; LOCK-FREE &middot; PHASE 1 / 6
+  </footer>
+
+</div>
+
+<script src="../data/curriculum.js"></script>
+<script src="../assets/app.js"></script>
+<script src="../assets/audio-player.js"></script>
+<script src="../data/glossary.js"></script>
+<script src="../assets/glossary.js"></script>
+<script src="../data/abbreviations.js"></script>
+<script src="../assets/abbreviations.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    initOpenEndedChallenge('2-12');
+    initReflection('2-12');
+    initLessonNav();
+  });
+</script>
+</body>
+</html>
