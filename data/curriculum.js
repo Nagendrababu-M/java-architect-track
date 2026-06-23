@@ -130,7 +130,8 @@ const CURRICULUM = {
     {
       week: 2, phase: 1, title: "Concurrency",
       days: [
-        { day: 10,    title: "Threads, Thread Pools, ExecutorService",                                  topic: "Concurrency",    status: "locked", file: null },
+        { day: 10,    title: "Threads, Thread Pools, ExecutorService",                                  topic: "Concurrency",    status: "current", file: "week-02/day-10.html", duration: 165,
+          audio: { available: false, voice: 'en-US-Wavenet-D', sectionCount: 6, estimatedMinutes: 32 } },
         { day: 11,    title: "Synchronization Primitives: synchronized, Lock, ReentrantLock",         topic: "Concurrency",    status: "locked", file: null },
         { day: 12,   title: "Atomics, CAS, Lock-Free Patterns",                                      topic: "Concurrency",    status: "locked", file: null },
         { day: 13,   title: "CompletableFuture & Async Composition",                                 topic: "Concurrency",    status: "locked", file: null },

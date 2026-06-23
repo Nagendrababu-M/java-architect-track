@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Week 2 · Day 10 — Threads, Thread Pools &amp; ExecutorService</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,800&family=JetBrains+Mono:wght@400;500;700&family=Inter+Tight:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/styles.css">
+<link rel="stylesheet" href="../assets/audio-player.css">
+<link rel="stylesheet" href="../assets/glossary.css">
+<link rel="stylesheet" href="../assets/abbreviations.css">
+<style>
+  body {
+    background-image:
+      radial-gradient(ellipse 800px 600px at 20% 0%, rgba(122,140,232,0.07), transparent 60%),
+      radial-gradient(ellipse 600px 400px at 90% 100%, rgba(122,140,232,0.04), transparent 60%);
+  }
+  .interview-q {
+    margin: 20px 0;
+    padding: 18px 22px;
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--yellow);
+    border-radius: 0 8px 8px 0;
+    background: rgba(230,200,90,0.04);
+  }
+  .interview-q .iq-tag {
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: var(--yellow);
+    margin-bottom: 10px;
+  }
+  .interview-q p { margin: 0 0 10px; color: var(--ink-dim); line-height: 1.7; }
+  .interview-q p:last-child { margin-bottom: 0; }
+</style>
+</head>
+<body>
+<div class="grain"></div>
+
+<div class="container">
+
+  <header class="lesson-header">
+    <a href="../index.html" class="back-link">&larr; Back to curriculum</a>
+    <div class="meta">
+      <span class="dot"></span>
+      <span class="phase">Phase 1 &middot; Concurrency</span>
+      <span>&middot;</span>
+      <span>Week 2 / Day 10</span>
+    </div>
+    <h1>
+      Threads, Thread Pools &amp; ExecutorService
+      <span class="sub">How Java runs work concurrently &mdash; and why you almost never manage threads yourself.</span>
+    </h1>
+    <div class="scope"><strong>SCOPE</strong> &middot; 165 min &middot; 6 stages &mdash; Week 2 opens. The execution machinery every server-side system is built on.</div>
+  <div id="play-full-lesson-mount"></div>
+  </header>
+
+  <div class="recap">
+    <span class="recap-tag">WEEK 2 BEGINS &mdash; CONCURRENCY MASTERY</span>
+    <p>Week 1 taught you how memory works and how the JVM behaves under load. Week 2 is about <strong>doing many things at once correctly</strong>. Day 5 gave you the rules (the memory model, happens-before); now you learn the machinery that runs concurrent work: <strong>threads, thread pools, and the <abbr data-abbr="JVM">JVM</abbr>&rsquo;s ExecutorService framework</strong>. The architect&rsquo;s lesson today is counterintuitive: you will spend almost no time creating threads, and almost all your time deciding <em>how many</em>, <em>what queue</em>, and <em>what happens when the system is overwhelmed</em>. Those three decisions are the difference between a service that degrades gracefully and one that falls over.</p>
+  </div>
+
+  <!-- STAGE 1 -->
+  <div class="stage" data-section="1">
+    <span class="stage-tag">STAGE 1 <span class="time">25 MIN</span></span>
+    <h2>Threads &mdash; what they are, what they cost, and their lifecycle</h2>
+
+    <p>A Java <strong>platform thread</strong> is a thin wrapper over an operating-system thread. When you call <code>thread.start()</code>, the JVM asks the OS for a real kernel thread, and the OS scheduler time-slices it across cores. That 1:1 mapping has consequences:</p>
+    <ul>
+      <li><strong>Memory:</strong> each thread reserves a stack (~512KB&ndash;1MB by default, <code>-Xss</code>). 10,000 threads = gigabytes of stacks before any work.</li>
+      <li><strong>Creation cost:</strong> a syscall into the kernel &mdash; expensive relative to the work most tasks do.</li>
+      <li><strong>Context-switch tax:</strong> the OS switching between far more threads than cores burns CPU on bookkeeping instead of your code.</li>
+    </ul>
+    <p>This is <em>why thread pools exist</em>: threads are costly enough that you reuse a fixed set rather than spawning one per task. (Day 8&rsquo;s virtual threads change this calculus for I/O-bound work &mdash; but platform threads, and pools, remain the model for CPU-bound work and the foundation you must understand first.)</p>
+
+    <h4>The thread lifecycle &mdash; the states you read in a thread dump</h4>
+    <p>Every thread is in exactly one state. These are the same states you diagnosed in Day 6&rsquo;s thread dumps:</p>
+    <div class="compare-wrap"><table class="compare">
+      <thead><tr><th>State</th><th>Meaning</th></tr></thead>
+      <tbody>
+        <tr><td><code>NEW</code></td><td>Created but <code>start()</code> not yet called</td></tr>
+        <tr><td><code>RUNNABLE</code></td><td>Executing or ready to execute (includes running in native/I/O)</td></tr>
+        <tr><td><code>BLOCKED</code></td><td>Waiting to acquire a monitor lock held by another thread</td></tr>
+        <tr><td><code>WAITING</code></td><td>Parked indefinitely (<code>wait()</code>, <code>join()</code>, <code>park()</code>) until signalled</td></tr>
+        <tr><td><code>TIMED_WAITING</code></td><td>Parked with a timeout (<code>sleep</code>, timed <code>wait</code>/<code>join</code>)</td></tr>
+        <tr><td><code>TERMINATED</code></td><td>Finished or threw</td></tr>
+      </tbody>
+    </table></div>
+
+    <h4>Runnable, Callable &amp; Future &mdash; describing work</h4>
+    <pre><code><span class="cmt">// Runnable: returns nothing, can't throw checked exceptions</span>
+<span class="typ">Runnable</span> r = () -&gt; log.info(<span class="str">"done"</span>);
+<span class="cmt">// Callable: returns a value, can throw checked exceptions</span>
+<span class="typ">Callable</span>&lt;<span class="typ">BigDecimal</span>&gt; c = () -&gt; price(symbol);
+<span class="cmt">// Future: a handle to a result that may not exist yet</span>
+<span class="typ">Future</span>&lt;<span class="typ">BigDecimal</span>&gt; f = executor.submit(c);
+<span class="typ">BigDecimal</span> p = f.get(<span class="num-lit">2</span>, <span class="typ">TimeUnit</span>.SECONDS);   <span class="cmt">// blocks (with timeout!); may throw</span></code></pre>
+    <p><code>Future.get()</code> <strong>blocks</strong> the calling thread until the result is ready &mdash; always prefer the timed overload so a stuck task can&rsquo;t hang you forever. <code>future.cancel(true)</code> requests cancellation (interrupting the running thread).</p>
+
+    <div class="check">
+      <span class="check-tag">QUICK CHECK</span>
+      <p>You see 200 threads in a dump, almost all <code>WAITING</code>, and CPU near zero. Tie this back to Day 6: what class of problem is this, and what is it <em>not</em>?</p>
+    </div>
+  </div>
+
+  <!-- STAGE 2 -->
+  <div class="stage" data-section="2">
+    <span class="stage-tag">STAGE 2 <span class="time">25 MIN</span></span>
+    <h2>ExecutorService &mdash; and why the convenience factories are traps</h2>
+
+    <p><code>ExecutorService</code> decouples <em>what</em> work runs from <em>how</em> it&rsquo;s scheduled. You submit tasks; the pool decides which thread runs them and when. Two submit styles matter:</p>
+    <pre><code>executor.execute(runnable);              <span class="cmt">// fire-and-forget; uncaught exception → thread's handler (printed)</span>
+<span class="typ">Future</span>&lt;?&gt; f = executor.submit(runnable);  <span class="cmt">// returns a Future; exception is CAPTURED in the Future</span></code></pre>
+
+    <div class="key-rule">
+      <p><strong>The swallowed-exception trap.</strong> A task submitted with <code>submit()</code> that throws does <em>not</em> print anything &mdash; the exception is stored in the <code>Future</code> and only surfaces when you call <code>get()</code>. If you never call <code>get()</code> (fire-and-forget via <code>submit</code>), the failure vanishes silently. Use <code>execute()</code> for fire-and-forget, or always inspect the <code>Future</code>.</p>
+    </div>
+
+    <h4>The Executors factory methods &mdash; convenient and dangerous</h4>
+    <div class="compare-wrap"><table class="compare">
+      <thead><tr><th>Factory</th><th>What you get</th><th>The hidden danger</th></tr></thead>
+      <tbody>
+        <tr><td><code>newFixedThreadPool(n)</code></td><td>n threads, <strong>unbounded</strong> <code>LinkedBlockingQueue</code></td><td>Queue grows without limit under load &rarr; <strong>OutOfMemoryError</strong></td></tr>
+        <tr><td><code>newCachedThreadPool()</code></td><td><strong>Unbounded</strong> threads, <code>SynchronousQueue</code></td><td>One thread per task under burst &rarr; <strong>thread explosion</strong>, OOM</td></tr>
+        <tr><td><code>newSingleThreadExecutor()</code></td><td>1 thread, unbounded queue</td><td>Serial; same unbounded-queue risk</td></tr>
+        <tr><td><code>newScheduledThreadPool(n)</code></td><td>Delayed / periodic tasks</td><td>An uncaught exception silently kills a periodic task (Stage 5)</td></tr>
+      </tbody>
+    </table></div>
+
+    <div class="key-rule insight">
+      <p><strong>The architect&rsquo;s rule: don&rsquo;t use the <code>Executors</code> factories in production &mdash; build a <code>ThreadPoolExecutor</code> explicitly.</strong></p>
+      <p>Both <code>newFixedThreadPool</code> and <code>newCachedThreadPool</code> hide an <em>unbounded</em> resource &mdash; an unbounded queue or unbounded threads. Under sustained overload, &ldquo;unbounded&rdquo; means &ldquo;until the JVM dies.&rdquo; The factories are fine for examples and tests; for a real service you construct the pool yourself so you control the queue size and the saturation behavior (Stages 3&ndash;4). This is one of the most cited pieces of production Java advice.</p>
+    </div>
+
+    <div class="interview-q">
+      <span class="iq-tag">&#x1F3AF; INTERVIEW QUESTIONS</span>
+      <p><strong>Q: Why avoid <code>Executors.newFixedThreadPool</code> in production?</strong> &mdash; It uses an unbounded <code>LinkedBlockingQueue</code>; if tasks arrive faster than they&rsquo;re processed, the queue grows until OOM. Build a <code>ThreadPoolExecutor</code> with a bounded queue instead.</p>
+      <p><strong>Q: Difference between <code>execute()</code> and <code>submit()</code>?</strong> &mdash; <code>execute</code> takes a <code>Runnable</code> and returns nothing (exceptions go to the uncaught handler); <code>submit</code> takes <code>Runnable</code>/<code>Callable</code>, returns a <code>Future</code>, and <em>captures</em> exceptions in it &mdash; silent unless you call <code>get()</code>.</p>
+    </div>
+
+    <div class="check">
+      <span class="check-tag">QUICK CHECK</span>
+      <p>A service uses <code>newCachedThreadPool</code> for incoming requests and falls over under a traffic spike with thousands of threads. What exactly happened, and which factory parameter caused it?</p>
+    </div>
+  </div>
+
+  <!-- STAGE 3 -->
+  <div class="stage" data-section="3">
+    <span class="stage-tag">STAGE 3 <span class="time">30 MIN</span></span>
+    <h2>ThreadPoolExecutor internals &mdash; the real engine</h2>
+
+    <p>Every factory above just calls this constructor with different arguments. Understand these seven parameters and you understand all thread pools:</p>
+    <pre><code><span class="kw">new</span> <span class="typ">ThreadPoolExecutor</span>(
+    <span class="num-lit">8</span>,                              <span class="cmt">// corePoolSize — threads kept alive even when idle</span>
+    <span class="num-lit">16</span>,                             <span class="cmt">// maximumPoolSize — hard ceiling on threads</span>
+    <span class="num-lit">60</span>, <span class="typ">TimeUnit</span>.SECONDS,           <span class="cmt">// keepAliveTime — idle non-core threads die after this</span>
+    <span class="kw">new</span> <span class="typ">ArrayBlockingQueue</span>&lt;&gt;(<span class="num-lit">1000</span>),   <span class="cmt">// workQueue — BOUNDED queue holding waiting tasks</span>
+    namedThreadFactory,             <span class="cmt">// threadFactory — names threads, sets daemon/handler</span>
+    <span class="kw">new</span> <span class="typ">ThreadPoolExecutor</span>.<span class="typ">CallerRunsPolicy</span>() <span class="cmt">// rejection handler — what to do when full (Stage 4)</span>
+);</code></pre>
+
+    <h4>How a submitted task flows &mdash; the exact algorithm</h4>
+    <p>This sequence is the single most important thing to know about thread pools, and it&rsquo;s a frequent interview question:</p>
+    <ol>
+      <li>If fewer than <strong>corePoolSize</strong> threads are running, start a new thread for the task &mdash; <em>even if other threads are idle</em>.</li>
+      <li>Else, try to <strong>enqueue</strong> the task in the work queue.</li>
+      <li>If the queue is <strong>full</strong>, start a new thread up to <strong>maximumPoolSize</strong>.</li>
+      <li>If the pool is at max <em>and</em> the queue is full, <strong>reject</strong> the task via the saturation policy.</li>
+    </ol>
+
+    <div class="key-rule insight">
+      <p><strong>The counterintuitive consequence: max pool size does nothing with an unbounded queue.</strong> Because step 3 only fires when the queue is full, an <em>unbounded</em> queue (the <code>newFixedThreadPool</code> default) can never fill &mdash; so the pool never grows past corePoolSize, and <code>maximumPoolSize</code> is silently ignored. To actually use extra threads under load, you need a <strong>bounded</strong> queue. This trips up almost everyone.</p>
+    </div>
+
+    <h4>The work queue choices</h4>
+    <ul>
+      <li><strong><code>ArrayBlockingQueue</code></strong> &mdash; bounded, fixed capacity. The architect&rsquo;s default: it gives backpressure.</li>
+      <li><strong><code>LinkedBlockingQueue</code></strong> &mdash; optionally bounded; <em>unbounded by default</em> (the trap from Stage 2).</li>
+      <li><strong><code>SynchronousQueue</code></strong> &mdash; zero capacity; each task must be handed directly to a thread (used by <code>newCachedThreadPool</code>, forcing thread creation).</li>
+      <li><strong><code>PriorityBlockingQueue</code></strong> &mdash; unbounded, ordered by priority.</li>
+    </ul>
+
+    <div class="interview-q">
+      <span class="iq-tag">&#x1F3AF; INTERVIEW QUESTIONS</span>
+      <p><strong>Q: Walk me through what a ThreadPoolExecutor does with a submitted task.</strong> &mdash; Core threads first, then queue, then grow to max, then reject. Recite the four-step algorithm.</p>
+      <p><strong>Q: I set corePoolSize=4, maxPoolSize=50, but only ever see 4 threads under heavy load. Why?</strong> &mdash; The queue is unbounded, so it never fills, so step 3 never triggers &mdash; maxPoolSize is dead. Use a bounded queue.</p>
+    </div>
+
+    <div class="check">
+      <span class="check-tag">QUICK CHECK</span>
+      <p>With <code>corePoolSize=2</code>, a bounded queue of capacity 2, and <code>maxPoolSize=4</code>: how many simultaneous tasks can the pool accept before it starts <em>rejecting</em>, and how many threads will be running at that point?</p>
+    </div>
+  </div>
+
+  <!-- STAGE 4 -->
+  <div class="stage" data-section="4">
+    <span class="stage-tag">STAGE 4 <span class="time">25 MIN</span></span>
+    <h2>Saturation policies &amp; backpressure &mdash; what happens when you&rsquo;re full</h2>
+
+    <p>When the pool is at max threads and the queue is full, the next task hits the <strong>rejection handler</strong> (saturation policy). Choosing it is an architectural decision about how your service behaves under overload.</p>
+
+    <div class="compare-wrap"><table class="compare">
+      <thead><tr><th>Policy</th><th>Behavior</th><th>When to use</th></tr></thead>
+      <tbody>
+        <tr><td><code>AbortPolicy</code> (default)</td><td>Throws <code>RejectedExecutionException</code></td><td>Fail fast; caller must handle / retry</td></tr>
+        <tr><td><code>CallerRunsPolicy</code></td><td>Runs the task on the <em>submitting</em> thread</td><td><strong>Backpressure</strong> &mdash; slows the producer naturally</td></tr>
+        <tr><td><code>DiscardPolicy</code></td><td>Silently drops the task</td><td>Lossy-OK work (e.g. best-effort metrics)</td></tr>
+        <tr><td><code>DiscardOldestPolicy</code></td><td>Drops the oldest queued task, retries</td><td>Latest-value-wins (e.g. live quotes)</td></tr>
+      </tbody>
+    </table></div>
+
+    <div class="key-rule insight">
+      <p><strong>The backpressure pattern: bounded queue + <code>CallerRunsPolicy</code>.</strong></p>
+      <p>This is the single most useful production combination. When the pool saturates, the task runs <em>on the caller&rsquo;s thread</em> &mdash; which means the thread that submits work is now busy doing work and can&rsquo;t submit more. The producer is automatically throttled to the rate the pool can sustain, without dropping anything and without unbounded memory growth. The system slows down instead of falling over. That graceful degradation under overload is exactly what an architect designs for.</p>
+    </div>
+
+    <p>The alternative &mdash; an unbounded queue &mdash; doesn&rsquo;t apply backpressure; it absorbs the overload into memory until the JVM dies. &ldquo;Slow down&rdquo; is almost always better than &ldquo;crash later.&rdquo;</p>
+
+    <div class="interview-q">
+      <span class="iq-tag">&#x1F3AF; INTERVIEW QUESTIONS</span>
+      <p><strong>Q: How do you apply backpressure with a thread pool?</strong> &mdash; A bounded queue plus <code>CallerRunsPolicy</code>: saturation pushes work back onto the producer thread, throttling intake to sustainable throughput without dropping tasks or growing memory.</p>
+      <p><strong>Q: When would you use <code>DiscardOldestPolicy</code>?</strong> &mdash; When only the freshest data matters and stale queued tasks are worthless &mdash; live market quotes, sensor readings &mdash; so dropping the oldest and keeping the newest is correct.</p>
+    </div>
+
+    <div class="check">
+      <span class="check-tag">QUICK CHECK</span>
+      <p>Your ingestion service must never lose an event but also must not OOM under a burst. Which queue + policy combination do you choose, and what does the producer experience during the burst?</p>
+    </div>
+  </div>
+
+  <!-- STAGE 5 -->
+  <div class="stage" data-section="5">
+    <span class="stage-tag">STAGE 5 <span class="time">25 MIN</span></span>
+    <h2>Sizing, scheduling &amp; graceful shutdown</h2>
+
+    <h4>How many threads? The sizing formula</h4>
+    <p>The wrong size is either starvation (too few) or context-switch tax (too many). Brian Goetz&rsquo;s formula (from Little&rsquo;s Law):</p>
+    <pre><code>threads = cores &times; targetUtilization &times; (1 + waitTime / computeTime)</code></pre>
+    <ul>
+      <li><strong>CPU-bound</strong> work (wait ≈ 0): <code>threads ≈ cores + 1</code>. More threads just thrash the scheduler &mdash; there&rsquo;s no more CPU to use.</li>
+      <li><strong>I/O-bound</strong> work (wait &raquo; compute): many more threads, because most are parked waiting on I/O, not using a core. A task that waits 9ms per 1ms of compute can keep ~10&times; cores busy.</li>
+    </ul>
+    <p>This is also <em>why virtual threads exist</em> (Day 8): for I/O-bound work the &ldquo;right&rdquo; platform-thread count is huge and expensive &mdash; virtual threads make that count free. For CPU-bound work, a small platform-thread pool sized near the core count remains correct.</p>
+
+    <h4>ScheduledExecutorService &mdash; periodic work</h4>
+    <pre><code>ses.scheduleAtFixedRate(task, <span class="num-lit">0</span>, <span class="num-lit">1</span>, SECONDS);    <span class="cmt">// every 1s from START time (rate)</span>
+ses.scheduleWithFixedDelay(task, <span class="num-lit">0</span>, <span class="num-lit">1</span>, SECONDS); <span class="cmt">// 1s gap AFTER each finishes (delay)</span></code></pre>
+    <ul>
+      <li><strong>fixedRate</strong> aims for a steady cadence; if a run overruns the period, the next starts immediately (runs can bunch up / overlap-pressure).</li>
+      <li><strong>fixedDelay</strong> always leaves a fixed gap between end and next start &mdash; safer when runs vary in length.</li>
+    </ul>
+    <div class="key-rule">
+      <p><strong>The silent-death pitfall:</strong> if a scheduled task throws an uncaught exception, the scheduler <em>cancels all future executions</em> of that task &mdash; silently. Your periodic job just stops, with no error. Always wrap the task body in try/catch so an exception can never escape.</p>
+    </div>
+
+    <h4>Graceful shutdown &mdash; the step everyone forgets</h4>
+    <pre><code>executor.shutdown();                              <span class="cmt">// stop accepting new tasks; finish queued ones</span>
+<span class="kw">if</span> (!executor.awaitTermination(<span class="num-lit">30</span>, SECONDS))     <span class="cmt">// wait for in-flight work</span>
+    executor.shutdownNow();                       <span class="cmt">// interrupt running tasks, drop the queue</span></code></pre>
+    <p><code>shutdown()</code> is graceful (drains the queue); <code>shutdownNow()</code> is forceful (interrupts and returns undone tasks). A pool whose threads are non-daemon will <strong>keep the JVM alive</strong> if you never shut it down &mdash; a classic &ldquo;my app won&rsquo;t exit&rdquo; and resource-leak bug. Also name your threads via a <code>ThreadFactory</code> so dumps (Day 6) are readable.</p>
+
+    <div class="interview-q">
+      <span class="iq-tag">&#x1F3AF; INTERVIEW QUESTIONS</span>
+      <p><strong>Q: Size a pool for CPU-bound vs I/O-bound work.</strong> &mdash; CPU-bound: ~cores+1 (more just thrashes). I/O-bound: cores × (1 + wait/compute) &mdash; many more, since threads are mostly parked.</p>
+      <p><strong>Q: <code>scheduleAtFixedRate</code> vs <code>scheduleWithFixedDelay</code>?</strong> &mdash; fixedRate measures the period from each start (steady cadence, can overlap-pressure); fixedDelay measures the gap after each finish (safe for variable durations).</p>
+      <p><strong>Q: <code>shutdown()</code> vs <code>shutdownNow()</code>?</strong> &mdash; shutdown stops intake and drains the queue; shutdownNow interrupts running tasks and returns the undone ones. Pair shutdown with awaitTermination, then escalate to shutdownNow.</p>
+    </div>
+  </div>
+
+  <!-- STAGE 6 -->
+  <div class="stage" data-section="6">
+    <span class="stage-tag">STAGE 6 <span class="time">35 MIN</span></span>
+    <h2>The challenge &mdash; pick the right executor for three workloads</h2>
+
+    <p>The capstone. For each workload, design the executor (type, queue, size, saturation policy) and justify it. Answer all three parts (50+ characters each), then reveal the model answers.</p>
+
+    <div class="challenge">
+      <span class="challenge-tag">SCENARIO &middot; THREE DIFFERENT WORKLOADS</span>
+      <h3>One framework, three jobs</h3>
+      <p><strong>A.</strong> An image-resizing service: each task is pure CPU (decode, resize, encode), runs ~200ms, on a 16-core box. Requests can burst far above capacity.</p>
+      <p><strong>B.</strong> An order-enrichment service: each task makes 3 sequential REST calls (~150ms total wait, ~5ms compute) and must <em>never drop</em> an order, but must not OOM under a spike.</p>
+      <p><strong>C.</strong> A market-data fan-out: pushes the latest quote to subscribers every 100ms; if the system falls behind, stale quotes are worthless &mdash; only the newest matters.</p>
+    </div>
+
+    <div class="challenge-form" id="challenge-2-10">
+      <span class="challenge-tag">YOUR ANSWERS &middot; MINIMUM 50 CHARS EACH TO UNLOCK MODEL ANSWER</span>
+
+      <div class="textarea-row">
+        <label class="textarea-label" for="ta-2-10-w1">
+          Q1 &mdash; Workload A (CPU-bound, bursty). Size the pool, choose the queue and saturation policy, and justify each from the sizing formula and the overload behavior you want.
+        </label>
+        <textarea class="answer-textarea" id="ta-2-10-w1" placeholder="CPU-bound → how many threads? Bursty above capacity → what queue and policy give graceful degradation?"></textarea>
+        <div class="char-count" id="cc-2-10-w1">0 / 50 characters</div>
+        <div style="margin-top:12px">
+          <button class="btn-reveal" id="reveal-2-10-w1" onclick="revealModelAnswer('2-10','w1')" disabled>Reveal model answer</button>
+        </div>
+        <div class="model-answer" id="ma-2-10-w1">
+          <span class="model-answer-tag">MODEL ANSWER</span>
+          <p>CPU-bound on 16 cores &rarr; <code>corePoolSize = maxPoolSize ≈ 16&ndash;17</code> (cores + 1); more threads only add context-switch tax since there&rsquo;s no spare CPU. Use a <strong>bounded</strong> <code>ArrayBlockingQueue</code> (so excess bursts don&rsquo;t blow memory) plus <strong><code>CallerRunsPolicy</code></strong> so that when saturated, the submitting thread runs the resize itself &mdash; throttling intake to what 16 cores can sustain. Build it as an explicit <code>ThreadPoolExecutor</code>, not <code>newFixedThreadPool</code> (which would use an unbounded queue and ignore maxPoolSize). Net: under a burst the service slows gracefully instead of OOM-ing or thrashing.</p>
+        </div>
+      </div>
+
+      <div class="textarea-row" style="margin-top:28px">
+        <label class="textarea-label" for="ta-2-10-w2">
+          Q2 &mdash; Workload B (I/O-bound, must-not-drop, no-OOM). Size it, choose queue + policy, and explain the producer&rsquo;s experience during a spike. Would virtual threads change your answer?
+        </label>
+        <textarea class="answer-textarea" id="ta-2-10-w2" placeholder="150ms wait / 5ms compute → sizing? 'never drop' + 'no OOM' → which queue/policy? Day 8 angle?"></textarea>
+        <div class="char-count" id="cc-2-10-w2">0 / 50 characters</div>
+        <div style="margin-top:12px">
+          <button class="btn-reveal" id="reveal-2-10-w2" onclick="revealModelAnswer('2-10','w2')" disabled>Reveal model answer</button>
+        </div>
+        <div class="model-answer" id="ma-2-10-w2">
+          <span class="model-answer-tag">MODEL ANSWER</span>
+          <p>I/O-bound: wait/compute ≈ 150/5 = 30, so threads ≈ cores × (1 + 30) &mdash; on 16 cores that&rsquo;s a <em>lot</em> (hundreds), because threads are mostly parked on REST calls. With platform threads, use a generous pool + a <strong>bounded</strong> queue + <strong><code>CallerRunsPolicy</code></strong>: &ldquo;never drop&rdquo; rules out Discard policies, and the bounded queue + CallerRuns gives backpressure so a spike slows the producer (it ends up making the REST calls itself) instead of growing memory until OOM. During a spike the producer experiences rising latency &mdash; the system degrades, doesn&rsquo;t fall over. <strong>Virtual threads (Day 8) are the better answer here:</strong> the workload is blocking I/O, so <code>newVirtualThreadPerTaskExecutor()</code> gives near-unlimited cheap concurrency without pool sizing &mdash; bound concurrency at the real constraint (the downstream service / a semaphore) rather than at threads.</p>
+        </div>
+      </div>
+
+      <div class="textarea-row" style="margin-top:28px">
+        <label class="textarea-label" for="ta-2-10-w3">
+          Q3 &mdash; Workload C (periodic, latest-value-wins). Which executor and which saturation/scheduling choices fit &ldquo;stale data is worthless,&rdquo; and what scheduling pitfall must you guard against?
+        </label>
+        <textarea class="answer-textarea" id="ta-2-10-w3" placeholder="Periodic push → which executor? 'only newest matters' → which policy? What silently kills a scheduled task?"></textarea>
+        <div class="char-count" id="cc-2-10-w3">0 / 50 characters</div>
+        <div style="margin-top:12px">
+          <button class="btn-reveal" id="reveal-2-10-w3" onclick="revealModelAnswer('2-10','w3')" disabled>Reveal model answer</button>
+        </div>
+        <div class="model-answer" id="ma-2-10-w3">
+          <span class="model-answer-tag">MODEL ANSWER</span>
+          <p>Use a <code>ScheduledExecutorService</code> for the 100ms cadence. Because only the freshest quote matters, <strong><code>DiscardOldestPolicy</code></strong> (or an explicit latest-value buffer / small bounded queue) is correct &mdash; drop stale queued pushes and keep the newest. Prefer <strong><code>scheduleWithFixedDelay</code></strong> if each push&rsquo;s duration varies, to avoid runs bunching up; <code>scheduleAtFixedRate</code> is fine only if a push reliably finishes within 100ms. <strong>The pitfall to guard against:</strong> if the push task ever throws an uncaught exception, the scheduler <em>silently cancels all future executions</em> &mdash; the feed just stops with no error. Wrap the task body in try/catch so no exception escapes, and consider alerting on &ldquo;no tick in N seconds.&rdquo;</p>
+        </div>
+      </div>
+
+      <div class="unlock-banner" id="unlock-2-10" style="margin-top:24px">
+        <strong style="color:var(--green)">&#x2705; Day 10 complete!</strong> Day 11 is next &mdash;
+        <span style="color:var(--ink-dim)">Synchronization primitives: <code>synchronized</code>, <code>Lock</code>, <code>ReentrantLock</code>, <code>ReadWriteLock</code> &amp; contention.</span>
+      </div>
+    </div>
+
+    <!-- REFLECTION -->
+    <div class="reflection">
+      <div class="reflection-header" onclick="toggleReflection(this)">
+        <span class="reflection-icon">&#x1FA9E;</span>
+        <span class="reflection-title">Reflection &amp; Self-Assessment</span>
+        <span class="reflection-chevron">&#x25BE;</span>
+      </div>
+      <div class="reflection-body">
+
+        <div class="takeaways">
+          <div class="takeaways-label">Key Takeaways</div>
+          <ul>
+            <li><strong>Platform threads are expensive</strong> (~1MB stack, kernel-backed) &mdash; pools exist to reuse them. Know the six lifecycle states (they&rsquo;re what you read in a thread dump).</li>
+            <li><strong>Don&rsquo;t use the <code>Executors</code> factories in production</strong> &mdash; they hide unbounded queues/threads that OOM under load. Build <code>ThreadPoolExecutor</code> explicitly.</li>
+            <li><strong>Task flow: core &rarr; queue &rarr; max &rarr; reject.</strong> Max pool size is dead with an unbounded queue.</li>
+            <li><strong>Bounded queue + <code>CallerRunsPolicy</code> = backpressure</strong> &mdash; the system slows instead of crashing.</li>
+            <li><strong>Size by workload:</strong> CPU-bound ≈ cores+1; I/O-bound much higher (or virtual threads). Always shut pools down gracefully, and never let a scheduled task throw.</li>
+          </ul>
+        </div>
+
+        <div class="reflection-prompts">
+          <div class="reflection-prompt">
+            <span class="prompt-num">01</span>
+            <p class="prompt-text">Find a thread pool in a codebase you know. Is it a raw <code>Executors</code> factory? What queue does it use, and what happens to it under 10&times; normal load? Would it OOM, drop, or degrade?</p>
+          </div>
+          <div class="reflection-prompt">
+            <span class="prompt-num">02</span>
+            <p class="prompt-text">For your busiest service, is the workload CPU-bound or I/O-bound? Compute the rough thread count from the formula. Is the configured pool anywhere near it?</p>
+          </div>
+          <div class="reflection-prompt">
+            <span class="prompt-num">03</span>
+            <p class="prompt-text">Does every executor in your app get shut down on application stop? Find one that doesn&rsquo;t &mdash; that&rsquo;s a leak and possibly why something hangs on exit.</p>
+          </div>
+        </div>
+
+        <div class="confidence-block">
+          <div class="confidence-label">How confident do you feel about today&rsquo;s material?</div>
+          <div class="confidence-btns">
+            <button class="conf-btn" data-day="2-10" data-level="1" onclick="saveConfidence('2-10', 1)">&#x1F615; Not yet &mdash; need another pass</button>
+            <button class="conf-btn" data-day="2-10" data-level="2" onclick="saveConfidence('2-10', 2)">&#x1F914; Getting there &mdash; mostly clear</button>
+            <button class="conf-btn" data-day="2-10" data-level="3" onclick="saveConfidence('2-10', 3)">&#x2705; Solid &mdash; I could explain this</button>
+          </div>
+          <div class="confidence-saved" id="conf-saved-2-10"></div>
+        </div>
+
+      </div>
+    </div>
+
+  </div><!-- end stage 6 -->
+
+  <footer>
+    DAY 10 OF 158 &middot; THREADS &amp; EXECUTORS &middot; PHASE 1 / 6
+  </footer>
+
+</div>
+
+<script src="../data/curriculum.js"></script>
+<script src="../assets/app.js"></script>
+<script src="../assets/audio-player.js"></script>
+<script src="../data/glossary.js"></script>
+<script src="../assets/glossary.js"></script>
+<script src="../data/abbreviations.js"></script>
+<script src="../assets/abbreviations.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    initOpenEndedChallenge('2-10');
+    initReflection('2-10');
+    initLessonNav();
+  });
+</script>
+</body>
+</html>

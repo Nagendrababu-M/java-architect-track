@@ -1,0 +1,11 @@
+Stage 2: the ExecutorService — and why the convenience factory methods are traps.
+
+ExecutorService decouples what work runs from how it's scheduled. You submit tasks; the pool decides which thread runs them and when. Two submit styles matter. executor dot execute takes a Runnable and is fire-and-forget — an uncaught exception goes to the thread's handler and gets printed. executor dot submit returns a Future, and crucially, it captures any exception inside that Future.
+
+That leads to the swallowed-exception trap. A task submitted with submit that throws does not print anything — the exception is stored in the Future and only surfaces when you call get. If you never call get — fire-and-forget via submit — the failure vanishes silently. So use execute for fire-and-forget, or always inspect the Future. This bites people constantly: "my background task just stopped working and there were no errors in the logs."
+
+Now the Executors factory methods, which are convenient and dangerous. newFixedThreadPool of n gives you n threads — but with an unbounded LinkedBlockingQueue. Under load the queue grows without limit, straight to an OutOfMemoryError. newCachedThreadPool gives you unbounded threads with a SynchronousQueue — so under a burst it creates one thread per task, a thread explosion, again OOM. newSingleThreadExecutor is one thread with an unbounded queue, same risk. And newScheduledThreadPool runs delayed and periodic tasks, with a pitfall we'll cover in Stage 5.
+
+So here is the architect's rule: don't use the Executors factories in production — build a ThreadPoolExecutor explicitly. Both newFixedThreadPool and newCachedThreadPool hide an unbounded resource — an unbounded queue, or unbounded threads. Under sustained overload, "unbounded" means "until the JVM dies." The factories are fine for examples and tests, but for a real service you construct the pool yourself so you control the queue size and the saturation behavior. This is one of the most-cited pieces of production Java advice — it comes straight out of Java Concurrency in Practice.
+
+So when an interviewer asks why you'd avoid newFixedThreadPool in production, the answer is: the unbounded queue grows until OOM when tasks arrive faster than they're processed — build a ThreadPoolExecutor with a bounded queue instead.
