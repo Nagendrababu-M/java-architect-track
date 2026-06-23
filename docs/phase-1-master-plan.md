@@ -83,66 +83,52 @@
   - "Profiling and tuning the JVM" — Marcus Hirt, JFR creator (YouTube)
   - async-profiler README walkthrough
 
-### Day 7 — Week 1 Synthesis: Production Diagnosis
-- **Format:** Integrated scenario challenge — no new concepts
-- **Scenario:** A trading service is missing fills during market open. CPU normal, memory normal on average, but p99 spikes. Walk through diagnosis using everything from Days 1-6.
-- **Deliverable:** Written diagnosis + tuning recommendation
-- **Architect lens:** Synthesis is what separates Senior from Staff
-- **Interview signal:** This IS the interview question pattern for Staff loops
-
-### Day 8 — Java Advanced: Records, Sealed Classes, Pattern Matching & Modern APIs (Java 14–21)
+### Day 7 — Modern Java by Version: Java 8 & Java 11 (Deep Dive) `[HEAVY · 2.75hr]`
+- **Organization:** Every feature under its release-version heading, in depth with code. Day 7 = Java 8 & 11; Day 8 = Java 17 & 21.
 - **Core concepts:**
-  - **Records** (Java 16): immutable data carriers, compact constructors, custom accessors — replaces Lombok `@Value` in modern codebases
-  - **Sealed classes + interfaces** (Java 17): `permits` keyword, exhaustive `switch`, modelling algebraic types and domain hierarchies cleanly
-  - **Pattern matching `instanceof`** (Java 16): binding variables, type narrowing without explicit cast
-  - **Pattern matching `switch`** (Java 21): arrow labels, `yield`, guarded patterns (`case String s when s.length() > 5`), exhaustiveness checking at compile time
-  - **Deconstruction patterns**: record patterns (`case Point(int x, int y)`) and nested deconstruction
-  - **Text blocks** (Java 15): multiline strings, indentation stripping, `\` line continuation, `\s` trailing-space preservation
-  - **Structured Concurrency** (Java 21): `StructuredTaskScope.ShutdownOnFailure` / `ShutdownOnSuccess` — fork child tasks, auto-cancel on first failure; pairs with Virtual Threads
-  - **Sequenced Collections** (Java 21): `SequencedCollection`, `SequencedSet`, `SequencedMap` — `reversed()`, `getFirst()`, `getLast()` added to collection hierarchy
-  - **String templates** (Java 21 preview): interpolation processors, `STR.`, `FMT.`
-  - **Migration patterns**: replacing inheritance hierarchies with sealed+record trees; replacing null checks with pattern switch
-- **Architect lens:** Spring 3.x uses Records heavily for DTOs; sealed classes model API response variants cleanly; pattern matching eliminates visitor boilerplate; Structured Concurrency unlocks safer fan-out with virtual threads
-- **Interview signal:** "Refactor this DTO to a Record" / "Model a Payment with subtypes using sealed classes and process with pattern switch"
-- **Challenge:** Rewrite a traditional Payment class hierarchy using sealed classes + records + pattern matching switch; add a StructuredTaskScope fan-out that cancels on first failure
+  - **Java 8 (2014, LTS):** lambdas & functional interfaces (SAM types, the core four + primitive specializations) **and how they actually work** — `invokedynamic` / `LambdaMetafactory`, capture/effectively-final, non-capturing lambdas as cached singletons; the 4 method-reference kinds; **Stream API + internals** — lazy fused one-pass pipeline, `Spliterator`, stateless vs stateful ops; **Collectors** — the 5-function contract (supplier/accumulator/combiner/finisher/characteristics), `groupingBy`/`partitioningBy`/`joining`; **parallel streams** — the `ForkJoinPool.commonPool` trap; `Optional` + anti-patterns; default & static interface methods; `java.time`; `CompletableFuture` basics
+  - **Java 11 (2018, LTS — bundling 9 & 10):** `var` (incl. lambda params), standardized `HttpClient`, JPMS (brief), collection factories (`List.of`/`Map.of`), String/`Files` conveniences; the functional gap-fillers — `takeWhile`/`dropWhile`, bounded `Stream.iterate`, `Optional.or`/`ifPresentOrElse`/`stream`, `filtering`/`flatMapping` collectors, `Predicate.not`
+- **Architect lens:** Java 8 changed how you express data transformations; `Optional` is a return type only; `var` serves readability; parallel streams share the JVM-wide common pool (never in a request handler); know which LTS gave you each tool.
+- **Interview signal:**
+  - "What does `invokedynamic` do for lambdas? When does a lambda allocate?"
+  - "Why are streams lazy / one-pass / not reusable?"
+  - "When should `Optional` NOT be used?"
+  - "Why was my parallel stream slower than sequential?"
+- **Challenge:** Diagnose a production incident — a service using `parallelStream()` inside a Spring Boot controller handler randomly returns 504s under load. Identify the root cause (common ForkJoinPool starvation), explain the failure mode, and propose two fixes (dedicated `ForkJoinPool`; remove parallelization).
 - **Resources:**
-  - JEP 395 (Records), JEP 409 (Sealed Classes), JEP 441 (Pattern Matching switch), JEP 453 (Structured Concurrency), JEP 431 (Sequenced Collections)
-  - "Java 21 New Features" — JDK 21 release notes and JEP index
+  - *Modern Java in Action* — Urma, Fusco, Mycroft
+  - "Streams in Java" / "Optional in Java" — Stuart Marks (YouTube)
+  - JEP 286 (var), JEP 321 (HttpClient)
 
-### Day 9 — Streams & Functional Interfaces: Advanced Patterns & Internals
+### Day 8 — Modern Java by Version: Java 17 & Java 21 (Deep Dive) `[HEAVY · 2.75hr]`
 - **Core concepts:**
-  - **Functional interface mechanics**: `@FunctionalInterface`, SAM types, 4 kinds of method references (static, instance-unbound, instance-bound, constructor), capture semantics (effectively-final rule), heap pollution with varargs
-  - **Lambda desugaring via `invokedynamic`**: how the JVM avoids generating anonymous classes at compile time; LambdaMetafactory and the cost model
-  - **Stream pipeline internals**: `Spliterator`-based lazy evaluation, encounter order, stateless vs stateful ops, short-circuit evaluation (`findFirst`, `anyMatch`), `ORDERED`/`SIZED`/`SUBSIZED`/`DISTINCT` characteristics
-  - **Advanced collectors**:
-    - `Collectors.teeing` (Java 12) — two downstream collectors merged by a merge function
-    - Downstream collectors: `groupingBy` + `counting`, `mapping`, `filtering`, `collectingAndThen`
-    - Custom `Collector<T,A,R>`: implementing supplier, accumulator, combiner, finisher, characteristics
-  - **`flatMap` vs `mapMulti`** (Java 16): when `mapMulti` avoids boxing and intermediate stream allocation
-  - **Parallel streams**: `ForkJoinPool.commonPool`, how spliterators split, when parallel hurts (stateful ops like `sorted`, ordered pipelines, small N, IO-bound)
-  - **Gatherers API** (Java 22 preview): `window`, `fold`, `scan`, custom `Gatherer<T,A,R>` — stateful one-to-many transformations that were impossible with existing stream ops
-  - **`Optional` deep-dive**: `flatMap`, `or()`, `ifPresentOrElse`, `stream()` bridge to Stream API; anti-patterns (Optional as field, Optional parameter, `isPresent()`+`get()` chains)
-  - **Custom `Spliterator`**: implementing `tryAdvance`, `trySplit`, characteristic flags for parallel-capable infinite sources
-  - **Real-world patterns**:
-    - Pagination with `Stream.iterate` + `takeWhile` (Java 9)
-    - Lazy DB cursor wrapping via Spliterator
-    - Multi-level `groupingBy` for report generation
-    - Collector fusion for single-pass aggregation
-    - Reactive bridge: `Flux.fromStream` pitfalls, push-to-pull via `Stream.generate`
-- **Architect lens:** Streams + lambdas are the backbone of modern Java data pipelines; misusing parallel streams is a common production anti-pattern; custom collectors replace entire utility libraries
-- **Interview signal:** "Implement a custom collector" / "Why is this parallel stream slower than sequential?" / "What's wrong with this Optional chain?"
-- **Challenge:** Write a custom `Collector` that builds a `Map<Category, TopN>` (top-N items per category) in a single pass; then rewrite a nested-loop report using `groupingBy` + `teeing`
+  - **Java 17 (2021, LTS — bundling 12–16):** switch expressions, text blocks, **records in full depth** (compact constructors, custom accessors, shallow immutability + defensive copies, deserialization-through-canonical-constructor safety, NOT for JPA entities), pattern matching for `instanceof` (flow scoping), **sealed classes**, the **algebraic-data-types** big idea (records + sealed + pattern matching), helpful NullPointerExceptions, `Stream.toList()` / `mapMulti` / `teeing`
+  - **Java 21 (2023, LTS):** pattern matching for `switch` + **record patterns** (type patterns, guards with `when`, dominance, `case null`, how exhaustiveness is proven); **virtual threads** (M:N mount/unmount, carrier threads, **pinning** + `-Djdk.tracePinnedThreads`); **structured concurrency** (`StructuredTaskScope`, ShutdownOnFailure/Success); **scoped values** (ThreadLocal replacement); **sequenced collections**; **generational ZGC**
+  - **Java 22+ (preview):** Gatherers (custom intermediate stream ops) — mention only
+- **Big idea:** Records + sealed classes + pattern matching = algebraic data types; the compiler enforces exhaustive case handling, replacing visitor patterns and `instanceof` chains.
+- **Architect lens:** Sealed interfaces over abstract classes for closed type sets; records for values not entities; exhaustive switch turns "forgot a case" into a compile error; virtual threads make blocking code scale (beware pinning under `synchronized`).
+- **Interview signal:**
+  - "Design a payment result type using records and sealed classes; process it with pattern switch."
+  - "Explain exhaustiveness checking and why it matters for refactoring."
+  - "Walk me through what happens when a virtual thread blocks; what is pinning?"
+  - "Why can't you use ThreadLocal effectively with virtual threads?"
+- **Challenge:** Model a trading order state hierarchy with sealed interfaces + records — `Submitted`, `Validated`, `Filled(BigDecimal fillPrice)`, `Rejected(String reason)`, `Cancelled`. Write a pattern-switch status method with no `default`, then add a new state and observe the compile errors that exhaustiveness produces.
 - **Resources:**
-  - "Streams in Java" — Stuart Marks (JavaOne, must-watch for internals)
-  - JEP 461 (Stream Gatherers)
-  - "Optional in Java" — Stuart Marks (YouTube — covers anti-patterns exhaustively)
-  - *Modern Java in Action* — Urma, Fusco, Mycroft — Chapters 4-7
+  - JEP 395 (records), JEP 409 (sealed), JEP 441 (pattern switch), JEP 440 (record patterns), JEP 444 (virtual threads), JEP 453 (structured concurrency)
+  - "Virtual Threads" — Ron Pressler, Devoxx; "Pattern Matching for Java" — Brian Goetz (Inside Java)
+
+### Day 9 — Week 1 Synthesis: Production Diagnosis
+- **Format:** Integrated multi-symptom diagnosis combining **Days 1–8** — no new concepts. Closes Week 1.
+- **Scenario:** A Java 17 order-matching service degrades over the trading day: a 2–3s freeze at market open, p99/heap creeping up to a nightly OOM, an occasionally-wrong position counter, and many `WAITING`/`BLOCKED` threads at peak with moderate CPU. Four interleaved root causes (GC/allocation, a leak, a data race, contention).
+- **Deliverable:** Separate the symptoms into distinct problems and classify each (Day 1–8 ownership); give a diagnostic plan (GC logs, heap dump + MAT, allocation/thread profiling, code review); prescribe fixes (Young-gen/ZGC tuning, bound the cache, `AtomicLong`, isolate parallelism / `ReentrantLock`) — and call out the "just add a bigger heap" trap (delays the OOM while worsening the open-GC pause).
+- **Architect lens:** Synthesis is what separates Senior from Staff — classify the symptom, hypothesize, reach for the owning day's tool, confirm with evidence. Never guess; never "just add heap."
+- **Interview signal:** This IS the production-incident question pattern for Staff loops.
 
 ---
 
 ## Week 2 — Concurrency Mastery (Days 10–16)
 
-### Day 8 — Threads, Thread Pools, ExecutorService
+### Day 10 — Threads, Thread Pools, ExecutorService
 - **Core concepts:** Platform threads, OS thread mapping, `Thread.start()`, `ExecutorService` types (FixedThreadPool, CachedThreadPool, ScheduledExecutor), thread pool sizing formula (Little's Law)
 - **Architect lens:** Wrong pool size = either thread starvation or context-switch tax
 - **Interview signal:** "How would you size a thread pool for a CPU-bound vs IO-bound workload?"
@@ -151,7 +137,7 @@
   - *Java Concurrency in Practice*, Chapter 8
   - "Applying Back Pressure when Overloaded" — Fred Hebert (architecture pattern)
 
-### Day 9 — Synchronization Primitives: synchronized, Lock, ReentrantLock
+### Day 11 — Synchronization Primitives: synchronized, Lock, ReentrantLock
 - **Core concepts:** `synchronized` blocks/methods, monitor pattern, `Lock` interface, `ReentrantLock`, `ReadWriteLock`, fair vs unfair locks, lock contention
 - **Architect lens:** Lock contention silently kills throughput; finer-grained locks scale better
 - **Interview signal:** "When would you prefer ReentrantLock over synchronized?"
@@ -159,7 +145,7 @@
 - **Resources:**
   - "Lock-Free Programming" — Herb Sutter (concept), search for Java equivalents
 
-### Day 10 — Atomics, CAS, Lock-Free Patterns
+### Day 12 — Atomics, CAS, Lock-Free Patterns
 - **Core concepts:** `AtomicInteger`/`AtomicReference`/`AtomicLong`, Compare-and-Swap (CAS), ABA problem, `LongAdder` vs `AtomicLong`, lock-free stack/queue intuition
 - **Architect lens:** CAS-based structures avoid lock contention but trade off readability and have failure modes (ABA)
 - **Interview signal:** "Implement a thread-safe counter without using synchronized"
@@ -168,7 +154,7 @@
   - "Lock-free programming in Java" — Martin Thompson (search "Mechanical Sympathy LMAX Disruptor")
   - LMAX Disruptor pattern (canonical example for HFT)
 
-### Day 11 — CompletableFuture & Async Composition
+### Day 13 — CompletableFuture & Async Composition
 - **Core concepts:** `CompletableFuture` API, `thenApply`/`thenCompose`/`thenCombine`, exception handling with `exceptionally`/`handle`, `allOf`/`anyOf`, custom executors
 - **Architect lens:** Composable async = the modern reactive backbone before Reactor
 - **Interview signal:** "Chain 3 async API calls where the second depends on the first"
@@ -176,7 +162,7 @@
 - **Resources:**
   - "CompletableFuture in Action" — Tomasz Nurkiewicz (YouTube)
 
-### Day 12 — Virtual Threads (Project Loom)
+### Day 14 — Virtual Threads (Project Loom)
 - **Core concepts:** Why platform threads don't scale (1MB stack each, OS scheduler limits), virtual threads as M:N scheduling on carrier threads, `Thread.ofVirtual()`, pinning issues, when virtual threads don't help (CPU-bound, synchronized blocks)
 - **Architect lens:** Virtual threads change microservice design — synchronous code can now scale like async
 - **Interview signal:** "When would virtual threads NOT help you?"
@@ -185,7 +171,7 @@
   - JEP 444: Virtual Threads (search "JEP 444")
   - "Virtual Threads" — Ron Pressler (project lead, YouTube Devoxx talk — essential viewing)
 
-### Day 13 — Concurrent Collections & Producer-Consumer Patterns
+### Day 15 — Concurrent Collections & Producer-Consumer Patterns
 - **Core concepts:** `ConcurrentHashMap` (internals: striping, treeification), `CopyOnWriteArrayList`, `BlockingQueue` variants, producer-consumer pattern, classic Disruptor mention
 - **Architect lens:** Picking the right concurrent collection = order-of-magnitude perf difference
 - **Interview signal:** "Why does ConcurrentHashMap not use a single lock?"
@@ -193,7 +179,7 @@
 - **Resources:**
   - JDK source code of `ConcurrentHashMap` (read the comments)
 
-### Day 14 — Week 2 Synthesis: Design a Rate Limiter
+### Day 16 — Week 2 Synthesis: Design a Rate Limiter
 - **Format:** LLD-style design exercise applying concurrency knowledge
 - **Scenario:** Design a thread-safe distributed rate limiter (single-node first, then hint at distributed). Cover token bucket, leaky bucket, sliding window.
 - **Architect lens:** A rate limiter is a microcosm of concurrency design — every primitive shows up
@@ -204,9 +190,9 @@
 
 ---
 
-## Week 3 — Spring Boot Internals & Reactive Programming (Days 15–21)
+## Week 3 — Spring Boot Internals & Reactive Programming (Days 17–23)
 
-### Day 15 — Spring Boot Auto-Configuration: How the Magic Works
+### Day 17 — Spring Boot Auto-Configuration: How the Magic Works
 - **Core concepts:** `@SpringBootApplication` breakdown, `@EnableAutoConfiguration`, `spring.factories` → `AutoConfiguration.imports`, conditional beans (`@ConditionalOnClass`, `@ConditionalOnMissingBean`), the `META-INF` machinery
 - **Architect lens:** Understanding auto-config = ability to debug "why isn't my bean injected"
 - **Interview signal:** "What happens at startup when Spring Boot bootstraps?"
@@ -215,7 +201,7 @@
   - "Spring Boot Internals" — Stéphane Nicoll (YouTube)
   - Spring Boot reference docs, Auto-configuration section
 
-### Day 16 — Bean Lifecycle, Proxies, AOP
+### Day 18 — Bean Lifecycle, Proxies, AOP
 - **Core concepts:** Bean lifecycle phases, `BeanPostProcessor`, JDK dynamic proxies vs CGLIB, `@Transactional` magic, AOP pointcuts/advice/aspects, self-invocation problem
 - **Architect lens:** Knowing proxies = understanding why `@Transactional` sometimes silently fails
 - **Interview signal:** "Why doesn't @Transactional work when calling a method from within the same class?"
@@ -223,14 +209,14 @@
 - **Resources:**
   - "Inside Spring's Transaction Management" — Juergen Hoeller (YouTube)
 
-### Day 17 — @Transactional Deep-Dive
+### Day 19 — @Transactional Deep-Dive
 - **Core concepts:** Propagation levels (REQUIRED, REQUIRES_NEW, NESTED), isolation levels in Spring, rollback rules, read-only transactions, transaction synchronization
 - **Architect lens:** Wrong propagation = either missing commits or unwanted rollbacks in nested calls
 - **Interview signal:** "What's the difference between REQUIRED and REQUIRES_NEW?"
 - **Resources:**
   - Spring Transaction Management reference docs
 
-### Day 18 — Reactive Programming Foundations
+### Day 20 — Reactive Programming Foundations
 - **Core concepts:** Why reactive? The blocking problem. Publisher/Subscriber/Subscription/Processor (Reactive Streams spec). Cold vs hot streams. Backpressure as a first-class concept.
 - **Architect lens:** Reactive is justified when you have IO-heavy fan-out, not always
 - **Interview signal:** "When is reactive NOT the right choice?"
@@ -239,7 +225,7 @@
   - "Reactive Programming with Java" — Venkat Subramaniam (YouTube)
   - reactive-streams.org spec
 
-### Day 19 — Project Reactor: Mono, Flux, Operators
+### Day 21 — Project Reactor: Mono, Flux, Operators
 - **Core concepts:**
   - `Mono` (0..1 element) vs `Flux` (0..N)
   - Core operators: `map`, `flatMap`, `filter`, `zip`, `merge`, `concat`, `switchIfEmpty`
@@ -253,7 +239,7 @@
   - Project Reactor reference docs (essential reading)
   - "Flight of the Flux" — Simon Baslé (Reactor team lead, YouTube)
 
-### Day 20 — Spring WebFlux & Reactive Data Access
+### Day 22 — Spring WebFlux & Reactive Data Access
 - **Core concepts:** WebFlux vs WebMVC, `RouterFunction` vs annotated controllers, R2DBC for reactive SQL, reactive Redis (Lettuce), `WebClient`
 - **Architect lens:** Mixing blocking JDBC inside WebFlux = silent disaster
 - **Interview signal:** "What happens if I call a blocking API inside a WebFlux endpoint?"
@@ -262,7 +248,7 @@
   - Spring WebFlux docs
   - "WebFlux Performance Tuning" — Rossen Stoyanchev (Spring lead)
 
-### Day 21 — Phase 1 Synthesis: Build a Production-Grade Service Skeleton
+### Day 23 — Phase 1 Synthesis: Build a Production-Grade Service Skeleton
 - **Format:** Integrated mini-project
 - **Scenario:** Sketch the bones of a Spring Boot service handling 10K RPS — pick threading model (Loom or reactive), GC algorithm, profiling strategy, justify every choice
 - **Deliverable:** 2-page architecture decision record (ADR)
