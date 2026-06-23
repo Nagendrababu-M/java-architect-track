@@ -110,19 +110,20 @@ const CURRICULUM = {
           audio: { available: false, voice: 'en-US-Wavenet-D', sectionCount: 6, estimatedMinutes: 30 } },
         { day: 6, title: "Profiling in Anger: JFR, async-profiler, flame graphs", topic: "JVM Memory", status: "current", file: "week-01/day-6.html", duration: 160,
           audio: { available: false, voice: 'en-US-Wavenet-D', sectionCount: 6, estimatedMinutes: 30 } },
-        { day: 7, title: "Week 1 Synthesis: Production Diagnosis",        topic: "JVM Memory",         status: "locked", file: null },
         {
-          day: 8, title: "Modern Java by Version: Java 8 & Java 11 (Deep Dive)",
+          day: 7, title: "Modern Java by Version: Java 8 & Java 11 (Deep Dive)",
+          topic: "Java Language", status: "current", file: "week-01/day-7.html", duration: 165,
+          audio: { available: false, voice: 'en-US-Wavenet-D', sectionCount: 7, estimatedMinutes: 34 },
+          note: "Java 8: lambdas + invokedynamic internals, Stream API + spliterator internals, Collectors (5-fn contract) + parallel streams/common-pool, Optional + anti-patterns, default/static interface methods, java.time, CompletableFuture. Java 11 (bundling 9-10): var, HttpClient, JPMS, collection factories, String/Files conveniences, functional gap-fillers (takeWhile, bounded iterate, Optional.or/stream, filtering/flatMapping)."
+        },
+        {
+          day: 8, title: "Modern Java by Version: Java 17 & Java 21 (Deep Dive)",
           topic: "Java Language", status: "current", file: "week-01/day-8.html", duration: 165,
           audio: { available: false, voice: 'en-US-Wavenet-D', sectionCount: 7, estimatedMinutes: 34 },
-          note: "Records (compact constructors, custom accessors, records-as-value-types); Sealed classes + interfaces for exhaustive algebraic types; Pattern matching instanceof with binding vars; Switch expressions (arrow labels, yield) + guarded patterns (Java 21 when clauses); Deconstruction patterns — record patterns, array patterns; Text blocks (indentation stripping, \\ line continuation); Structured Concurrency: StructuredTaskScope.ShutdownOnFailure / ShutdownOnSuccess — fork/join with automatic cancellation; Sequenced Collections: SequencedCollection, SequencedSet, SequencedMap with reversed views; String templates (preview — interpolation with processors); Value objects & Valhalla preview concepts; Migration paths: how to replace inheritance hierarchies with sealed+record trees, null-checks with pattern switch"
+          note: "Java 17: switch expressions, text blocks, records (full depth — compact constructors, defensive copies, deserialization safety, not-for-JPA), pattern instanceof, sealed classes, algebraic data types, toList/mapMulti/teeing/helpful NPEs. Java 21: pattern matching for switch + record patterns, virtual threads (M:N, pinning), structured concurrency, scoped values, sequenced collections, generational ZGC."
         },
-        {
-          day: 9, title: "Modern Java by Version: Java 17 & Java 21 (Deep Dive)",
-          topic: "Java Language", status: "current", file: "week-01/day-9.html", duration: 165,
-          audio: { available: false, voice: 'en-US-Wavenet-D', sectionCount: 7, estimatedMinutes: 34 },
-          note: "Functional interface mechanics: @FunctionalInterface, SAM types, method references (4 kinds) vs lambdas, capture semantics (effectively-final, heap pollution with varargs); Lambda desugaring via invokedynamic — how the JVM avoids generating anonymous classes; Stream internals: spliterator-based lazy pipeline, encounter order, stateful vs stateless ops, short-circuit evaluation; Advanced collectors: Collectors.teeing, downstream collectors, custom Collector<T,A,R> implementation, groupingBy with counting/mapping/filtering; flatMap vs mapMulti (Java 16) — when mapMulti wins on performance; Parallel streams: ForkJoinPool.commonPool, spliterator SIZED/ORDERED/SUBSIZED characteristics, when parallel hurts (stateful, ordered, small N); Gatherers API (Java 22 preview): window, fold, scan, custom Gatherer<T,A,R> — stream operations that were impossible before; Optional deep-dive: chaining flatMap, or(), ifPresentOrElse, stream() bridge, anti-patterns (Optional as field, isPresent/get); Custom spliterators: implementing trySplit for parallel-capable infinite sources; Reactive bridge: Flux.fromStream pitfalls, Stream.generate for push-to-pull conversion; Real patterns: pagination with Stream.iterate + takeWhile, lazy DB cursor wrapping, multi-level groupBy for report generation, collector fusion"
-        },
+        { day: 9, title: "Week 1 Synthesis: Production Diagnosis",        topic: "JVM Memory",         status: "current", file: "week-01/day-9.html", duration: 170,
+          audio: { available: false, voice: 'en-US-Wavenet-D', sectionCount: 6, estimatedMinutes: 32 } },
       ]
     },
 

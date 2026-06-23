@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Week 1 · Day 7 — Modern Java by Version: Java 8 &amp; Java 11 (Deep Dive)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,800&family=JetBrains+Mono:wght@400;500;700&family=Inter+Tight:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/styles.css">
+<link rel="stylesheet" href="../assets/audio-player.css">
+<link rel="stylesheet" href="../assets/glossary.css">
+<link rel="stylesheet" href="../assets/abbreviations.css">
+<style>
+  body {
+    background-image:
+      radial-gradient(ellipse 800px 600px at 20% 0%, rgba(177,138,224,0.07), transparent 60%),
+      radial-gradient(ellipse 600px 400px at 90% 100%, rgba(177,138,224,0.04), transparent 60%);
+  }
+  .interview-q {
+    margin: 20px 0;
+    padding: 18px 22px;
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--yellow);
+    border-radius: 0 8px 8px 0;
+    background: rgba(230,200,90,0.04);
+  }
+  .interview-q .iq-tag {
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: var(--yellow);
+    margin-bottom: 10px;
+  }
+  .interview-q p { margin: 0 0 10px; color: var(--ink-dim); line-height: 1.7; }
+  .interview-q p:last-child { margin-bottom: 0; }
+  .ver-head {
+    color: var(--accent);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 16px;
+    letter-spacing: 1px;
+    margin-top: 8px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--line);
+  }
+</style>
+</head>
+<body>
+<div class="grain"></div>
+
+<div class="container">
+
+  <header class="lesson-header">
+    <a href="../index.html" class="back-link">&larr; Back to curriculum</a>
+    <div class="meta">
+      <span class="dot"></span>
+      <span class="phase">Phase 1 &middot; Advanced Java</span>
+      <span>&middot;</span>
+      <span>Week 1 / Day 7</span>
+    </div>
+    <h1>
+      Modern Java by Version &mdash; Java 8 &amp; Java 11
+      <span class="sub">Every feature under its release version, in depth: the Java 8 functional core (with its internals) and the Java 11 cleanup LTS.</span>
+    </h1>
+    <div class="scope"><strong>SCOPE</strong> &middot; 165 min &middot; 7 stages &mdash; organized strictly by version. Day 8 continues with Java 17 &amp; Java 21.</div>
+  <div id="play-full-lesson-mount"></div>
+  </header>
+
+  <div class="recap">
+    <span class="recap-tag">HOW THIS DAY IS ORGANIZED</span>
+    <p>Companies live on the <abbr data-abbr="LTS">LTS</abbr> releases &mdash; 8, 11, 17, 21. Days 7 and 8 walk all four, <strong>strictly grouped by release version</strong>, each feature explained in depth with code. Today is <strong>Java 8</strong> (the functional revolution &mdash; including how lambdas and streams actually work under the hood) and <strong>Java 11</strong> (the cleanup LTS, bundling 9 and 10). Day 8 picks up at <strong>Java 17</strong> (records, sealed classes, pattern matching) and <strong>Java 21</strong> (virtual threads, structured concurrency).</p>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- STAGE 1 — JAVA 8: LAMBDAS -->
+  <!-- ============================================================ -->
+  <div class="stage" data-section="1">
+    <span class="stage-tag">STAGE 1 <span class="time">25 MIN</span></span>
+    <h3 class="ver-head">&#x2503; JAVA 8 (2014, LTS) &mdash; LAMBDAS &amp; METHOD REFERENCES</h3>
+    <h2>Behavior as data &mdash; and what the JVM really does with it</h2>
+
+    <h4>Functional interfaces (SAM types)</h4>
+    <p>A functional interface has exactly one abstract method &mdash; a <strong>SAM</strong> (Single Abstract Method) type. <code>default</code> and <code>static</code> methods don&rsquo;t count, and neither do abstract methods that override <code>Object</code>&rsquo;s public methods (which is why <code>Comparator</code> can declare <code>equals</code> and stay functional). The <code>@FunctionalInterface</code> annotation changes nothing at runtime; it makes the compiler <em>fail</em> if a second abstract method is ever added &mdash; a contract annotation like <code>@Override</code>.</p>
+    <p>The <code>java.util.function</code> package ships the core four, plus ~40 primitive specializations to avoid autoboxing:</p>
+    <div class="compare-wrap"><table class="compare">
+      <thead><tr><th>Interface</th><th>Signature</th><th>Used by</th></tr></thead>
+      <tbody>
+        <tr><td><code>Supplier&lt;T&gt;</code></td><td><code>() &rarr; T</code></td><td>lazy values, factories</td></tr>
+        <tr><td><code>Consumer&lt;T&gt;</code></td><td><code>T &rarr; void</code></td><td><code>forEach</code>, side effects</td></tr>
+        <tr><td><code>Function&lt;T,R&gt;</code></td><td><code>T &rarr; R</code></td><td><code>map</code>, transforms</td></tr>
+        <tr><td><code>Predicate&lt;T&gt;</code></td><td><code>T &rarr; boolean</code></td><td><code>filter</code>, validation</td></tr>
+      </tbody>
+    </table></div>
+    <p>The primitive cousins (<code>IntFunction</code>, <code>ToLongFunction</code>, <code>DoublePredicate</code>&hellip;) exist purely to dodge boxing: <code>Stream&lt;Integer&gt;.map(i -&gt; i*2)</code> boxes and unboxes on every element; <code>IntStream.map</code> works on raw ints. Over millions of elements that&rsquo;s the difference between memory-bound and CPU-bound.</p>
+
+    <h4>Lambdas &amp; the four kinds of method reference</h4>
+    <pre><code><span class="cmt">// Lambda</span>
+<span class="typ">Comparator</span>&lt;<span class="typ">Trade</span>&gt; c = (a, b) -&gt; a.price().compareTo(b.price());
+
+<span class="cmt">// 1. Static            2. Bound instance       3. Unbound instance      4. Constructor</span>
+<span class="typ">Integer</span>::parseInt;      myString::length;       <span class="typ">String</span>::length;          <span class="typ">ArrayList</span>::new;</code></pre>
+    <p>The distinction interviewers test is <strong>bound vs unbound</strong>: <code>myString::length</code> is bound to a specific object and takes no args; <code>String::length</code> is unbound &mdash; the receiver <em>becomes the first parameter</em>, so it works as a <code>Function&lt;String,Integer&gt;</code>.</p>
+
+    <h4>Capture semantics: effectively final</h4>
+    <p>A lambda may only capture locals that are <strong>effectively final</strong> (never reassigned). Captured locals are <em>copied</em> into the lambda at creation; permitting reassignment would let the copy and the original silently diverge, so Java forbids it. Fields and statics are <em>not</em> captured &mdash; they&rsquo;re read live through <code>this</code> &mdash; which is why they needn&rsquo;t be final, and why mutating a field from a lambda inside a parallel stream is a data race.</p>
+
+    <div class="key-rule insight">
+      <p><strong>Lambda internals: a lambda is NOT an anonymous class.</strong></p>
+      <p>The compiler does not emit a class file per lambda. The body becomes a private static method, and the call site is an <code>invokedynamic</code> instruction. On <em>first execution</em>, that instruction calls a bootstrap method &mdash; <code>LambdaMetafactory</code> &mdash; which spins a small implementation class <em>at runtime</em> and links the call site; subsequent calls hit the linked site directly. Consequences worth stating in an interview: <strong>non-capturing lambdas are cached singletons</strong> (<code>x -&gt; x*2</code> is allocated once, ever); <strong>capturing lambdas allocate per evaluation</strong> (they must carry the captured values); and because the strategy lives in the JVM, the platform can optimize lambdas without recompiling your code. An anonymous class, by contrast, is a fixed <code>.class</code> file with an allocation on every <code>new</code>.</p>
+    </div>
+
+    <div class="interview-q">
+      <span class="iq-tag">&#x1F3AF; INTERVIEW QUESTIONS</span>
+      <p><strong>Q: What does <code>invokedynamic</code> do for lambdas?</strong> &mdash; Defers lambda-class creation to runtime via <code>LambdaMetafactory</code>: no compile-time class-per-lambda, singleton caching of non-capturing lambdas, and JVM freedom to evolve the strategy.</p>
+      <p><strong>Q: When does a lambda allocate?</strong> &mdash; Only if it captures. Non-capturing = cached singleton; capturing = an object per evaluation, because it carries its captured state.</p>
+      <p><strong>Q: Why must captured locals be effectively final?</strong> &mdash; They&rsquo;re copied by value; allowing reassignment would let the copy and the variable diverge, so the language bans it.</p>
+    </div>
+
+    <div class="check">
+      <span class="check-tag">QUICK CHECK</span>
+      <p>In a classic <code>for (int i = 0; ...)</code> loop, <code>list.forEach(x -&gt; process(x, i))</code> won&rsquo;t compile, yet the same lambda compiles in a for-each loop. Why?</p>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- STAGE 2 — JAVA 8: STREAMS -->
+  <!-- ============================================================ -->
+  <div class="stage" data-section="2">
+    <span class="stage-tag">STAGE 2 <span class="time">25 MIN</span></span>
+    <h3 class="ver-head">&#x2503; JAVA 8 (2014, LTS) &mdash; STREAM API &amp; ITS INTERNALS</h3>
+    <h2>Declarative pipelines, and how they actually execute</h2>
+
+    <h4>The shape of a pipeline</h4>
+    <pre><code><span class="typ">Map</span>&lt;<span class="typ">String</span>, <span class="typ">BigDecimal</span>&gt; notional = trades.stream()   <span class="cmt">// source</span>
+    .filter(t -&gt; t.side() == <span class="typ">Side</span>.BUY)              <span class="cmt">// intermediate (lazy)</span>
+    .filter(t -&gt; t.qty() &gt; <span class="num-lit">10_000</span>)                  <span class="cmt">// intermediate (lazy)</span>
+    .collect(groupingBy(<span class="typ">Trade</span>::symbol,                 <span class="cmt">// terminal (triggers)</span>
+             reducing(<span class="typ">BigDecimal</span>.ZERO, <span class="typ">Trade</span>::value, <span class="typ">BigDecimal</span>::add)));</code></pre>
+
+    <div class="key-rule insight">
+      <p><strong>Intermediate operations do nothing. They build a linked chain of stages. All work happens when the terminal operation pulls.</strong></p>
+      <p>When <code>collect()</code> runs, the pipeline is <em>fused</em>: each element flows through <em>all</em> stages one at a time &mdash; filter, then map, then accumulate &mdash; before the next element starts. There is no intermediate collection between stages. One pass, no materialization, and short-circuit ops (<code>findFirst</code>, <code>anyMatch</code>, <code>limit</code>) can stop pulling the instant they&rsquo;re satisfied &mdash; which is why a filtered <code>findFirst</code> terminates on an infinite stream.</p>
+    </div>
+
+    <h4>Spliterators &mdash; the engine underneath</h4>
+    <p>Every source provides a <code>Spliterator</code> (&ldquo;splittable iterator&rdquo;). <code>tryAdvance(consumer)</code> pushes one element through the pipeline (sequential traversal); <code>trySplit()</code> carves off a chunk for another thread (parallel decomposition). It reports <strong>characteristics</strong> &mdash; <code>SIZED</code>, <code>SUBSIZED</code>, <code>ORDERED</code>, <code>SORTED</code>, <code>DISTINCT</code>, <code>IMMUTABLE</code> &mdash; that let the pipeline skip work: <code>distinct()</code> on a <code>DISTINCT</code> source is a no-op; <code>toArray()</code> on a <code>SIZED</code> source preallocates exactly.</p>
+
+    <h4>Stateless vs stateful; one-pass &amp; non-reusable</h4>
+    <ul>
+      <li><strong>Stateless intermediate</strong> (<code>filter</code>, <code>map</code>, <code>flatMap</code>): each element independent &mdash; fuses and parallelizes perfectly.</li>
+      <li><strong>Stateful intermediate</strong> (<code>sorted</code>, <code>distinct</code>, <code>limit</code>): must see some/all elements before emitting &mdash; <code>sorted</code> buffers the <em>entire</em> stream, breaking the one-pass model and crushing parallel scalability.</li>
+      <li><strong>One-shot:</strong> a stream is a view over a spliterator, not a data structure. The terminal op consumes it; a second terminal op throws <code>IllegalStateException</code>. Re-create from the source, or hold a <code>Supplier&lt;Stream&gt;</code>.</li>
+    </ul>
+
+    <h4>map vs flatMap</h4>
+    <pre><code>stream.map(<span class="typ">Order</span>::status)                <span class="cmt">// 1 → 1</span>
+stream.flatMap(o -&gt; o.lines().stream())  <span class="cmt">// 1 → many, flattening nested streams</span>
+intStream.mapToObj(<span class="typ">Integer</span>::toString) <span class="cmt">// primitive stream → object stream</span></code></pre>
+
+    <div class="interview-q">
+      <span class="iq-tag">&#x1F3AF; INTERVIEW QUESTIONS</span>
+      <p><strong>Q: Why are streams not reusable?</strong> &mdash; A stream is a one-time view over a spliterator; the terminal op consumes it. Reuse throws <code>IllegalStateException</code>.</p>
+      <p><strong>Q: Does <code>peek</code> always run?</strong> &mdash; No. Laziness + short-circuiting means un-pulled elements are never peeked, and ops can be elided entirely (<code>count()</code> on a SIZED source may skip traversal). Never use <code>peek</code> for required side effects.</p>
+      <p><strong>Q: Stream API vs imperative loops &mdash; trade-offs?</strong> &mdash; Streams: declarative, composable, parallelizable, no index bugs; cost: harder step-debugging, overhead on tiny collections, awkward early-exit-with-side-effects. A plain loop is still clearer for genuinely imperative work.</p>
+    </div>
+
+    <div class="check">
+      <span class="check-tag">QUICK CHECK</span>
+      <p>Predict the output of <code>Stream.of("a","b","c").peek(System.out::println).anyMatch(s -&gt; s.equals("a"))</code> &mdash; how many letters print, and why?</p>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- STAGE 3 — JAVA 8: COLLECTORS & PARALLEL -->
+  <!-- ============================================================ -->
+  <div class="stage" data-section="3">
+    <span class="stage-tag">STAGE 3 <span class="time">25 MIN</span></span>
+    <h3 class="ver-head">&#x2503; JAVA 8 (2014, LTS) &mdash; COLLECTORS &amp; PARALLEL STREAMS</h3>
+    <h2>Mutable reduction, composition, and the parallel trap</h2>
+
+    <h4>grouping, partitioning &amp; downstream composition</h4>
+    <pre><code>trades.stream().collect(groupingBy(<span class="typ">Trade</span>::symbol, counting()));         <span class="cmt">// count per symbol</span>
+trades.stream().collect(groupingBy(<span class="typ">Trade</span>::symbol, groupingBy(<span class="typ">Trade</span>::side))); <span class="cmt">// 2-level</span>
+trades.stream().collect(partitioningBy(t -&gt; t.qty() &gt; <span class="num-lit">10_000</span>));            <span class="cmt">// boolean split</span>
+trades.stream().collect(joining(<span class="str">", "</span>, <span class="str">"["</span>, <span class="str">"]"</span>));                          <span class="cmt">// string build</span></code></pre>
+
+    <h4>The 5-function Collector contract</h4>
+    <pre><code><span class="typ">Collector</span>.of(
+    () -&gt; <span class="kw">new</span> <span class="typ">StringJoiner</span>(<span class="str">", "</span>),   <span class="cmt">// 1. supplier — mutable container</span>
+    (j, s) -&gt; j.add(s),               <span class="cmt">// 2. accumulator — fold one element in</span>
+    (j1, j2) -&gt; j1.merge(j2),         <span class="cmt">// 3. combiner — merge two containers (PARALLEL)</span>
+    <span class="typ">StringJoiner</span>::toString            <span class="cmt">// 4. finisher — container → result</span>
+    <span class="cmt">// 5. characteristics — IDENTITY_FINISH, CONCURRENT, UNORDERED</span>
+);</code></pre>
+    <p>The interview point: <strong>the combiner is load-bearing.</strong> Sequential streams never call it, so a broken combiner &ldquo;works&rdquo; in every test, then silently produces garbage under <code>parallelStream()</code>.</p>
+
+    <div class="key-rule">
+      <p><strong>reduce vs collect.</strong> <code>reduce</code> is immutable accumulation &mdash; each step produces a new value (right for ints, O(n&sup2;) for strings because every concat copies). <code>collect</code> is mutable reduction &mdash; one container per thread, mutated in place, merged. Folding strings with <code>reduce(String::concat)</code> is quadratic; <code>joining()</code> is linear.</p>
+    </div>
+
+    <h4>Parallel streams &mdash; how they run, and the common-pool trap</h4>
+    <p>The spliterator <code>trySplit()</code>s the source into chunks, chunks run as ForkJoin tasks, results merge via the collector&rsquo;s combiner. Critically, those tasks run on <code>ForkJoinPool.commonPool()</code> &mdash; <strong>one pool, shared JVM-wide, sized cores&minus;1</strong>. Every parallel stream and every default <code>CompletableFuture</code> async shares it; one parallel stream doing blocking I/O starves every other parallel computation in the process.</p>
+    <p>Reach for parallel <em>only</em> if all hold: large N &times; per-element cost; well-splitting source (ArrayList/array, not LinkedList/<code>iterate</code>); stateless, non-blocking ops; cheap merge; no encounter-order dependence.</p>
+    <pre><code><span class="cmt">// BROKEN under parallel — ArrayList isn't thread-safe</span>
+<span class="typ">List</span>&lt;<span class="typ">String</span>&gt; out = <span class="kw">new</span> <span class="typ">ArrayList</span>&lt;&gt;();
+data.parallelStream().forEach(out::add);          <span class="cmt">// ✗ data race</span>
+<span class="typ">List</span>&lt;<span class="typ">String</span>&gt; out = data.parallelStream().collect(toList()); <span class="cmt">// ✓ collector owns state</span></code></pre>
+
+    <div class="interview-q">
+      <span class="iq-tag">&#x1F3AF; INTERVIEW QUESTIONS</span>
+      <p><strong>Q: <code>toMap</code> throws on duplicate keys &mdash; fix?</strong> &mdash; The 3-arg form with a merge function: <code>toMap(Trade::symbol, Trade::price, (a, b) -&gt; b)</code>. Forgetting it is a top-5 production stream bug.</p>
+      <p><strong>Q: Why was my parallel stream slower than sequential?</strong> &mdash; Too few/cheap elements, badly-splitting source, a stateful op serializing the pipeline, expensive merge, or common-pool contention from elsewhere in the JVM.</p>
+    </div>
+
+    <div class="check">
+      <span class="check-tag">QUICK CHECK</span>
+      <p>In one stream pass, produce both the count of trades and the average price. Which collector composition do you reach for, and could you do it before Java 12?</p>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- STAGE 4 — JAVA 8: OPTIONAL, INTERFACES, TIME, ASYNC -->
+  <!-- ============================================================ -->
+  <div class="stage" data-section="4">
+    <span class="stage-tag">STAGE 4 <span class="time">25 MIN</span></span>
+    <h3 class="ver-head">&#x2503; JAVA 8 (2014, LTS) &mdash; OPTIONAL, INTERFACE EVOLUTION, java.time, CompletableFuture</h3>
+    <h2>The rest of the Java 8 toolkit</h2>
+
+    <h4>Optional&lt;T&gt;</h4>
+    <pre><code><span class="cmt">// The signature itself says "absence is a normal outcome"</span>
+<span class="typ">Optional</span>&lt;<span class="typ">User</span>&gt; findUser(<span class="typ">String</span> id);
+<span class="typ">String</span> name = findUser(id).map(<span class="typ">User</span>::name)
+                          .filter(n -&gt; !n.isBlank())
+                          .orElseGet(() -&gt; expensiveDefault());  <span class="cmt">// lazy fallback</span></code></pre>
+    <div class="compare-wrap"><table class="compare">
+      <thead><tr><th>Anti-pattern</th><th>Why wrong</th><th>Instead</th></tr></thead>
+      <tbody>
+        <tr><td><code>if (o.isPresent()) o.get()</code></td><td>Recreates the null check; <code>get()</code> can throw</td><td><code>map</code>/<code>ifPresent</code>/<code>orElseThrow</code></td></tr>
+        <tr><td>Optional as a field</td><td>Not Serializable; box per read; the Optional itself can be null</td><td>Nullable field, Optional-returning getter</td></tr>
+        <tr><td>Optional parameter</td><td>Caller forced to wrap; three states</td><td>Overloads or <code>@Nullable</code></td></tr>
+        <tr><td><code>orElse(compute())</code></td><td>Always evaluates, even when present</td><td><code>orElseGet(() -&gt; compute())</code></td></tr>
+      </tbody>
+    </table></div>
+    <p>The one-line philosophy: <strong>Optional is a return type</strong> &mdash; a contract that absence is normal &mdash; not a general null replacement.</p>
+
+    <h4>Default &amp; static interface methods</h4>
+    <p>Interfaces can finally carry implementations &mdash; which is <em>how</em> Streams were retrofitted onto every existing collection without breaking implementors:</p>
+    <pre><code><span class="kw">public interface</span> <span class="typ">Collection</span>&lt;E&gt; {
+    <span class="kw">default</span> <span class="typ">Stream</span>&lt;E&gt; stream() { <span class="kw">return</span> <span class="typ">StreamSupport</span>.stream(spliterator(), <span class="kw">false</span>); }
+}</code></pre>
+    <p>The trade-off to know: a class implementing two interfaces with the <em>same</em> default method must override it to resolve the conflict (the &ldquo;diamond&rdquo;), and a class&rsquo;s own method always wins over an inherited default.</p>
+
+    <h4>java.time (JSR-310)</h4>
+    <pre><code><span class="typ">LocalDate</span> expiry  = <span class="typ">LocalDate</span>.of(<span class="num-lit">2026</span>, <span class="typ">Month</span>.JUNE, <span class="num-lit">25</span>);
+<span class="typ">ZonedDateTime</span> open = expiry.atTime(<span class="num-lit">9</span>, <span class="num-lit">15</span>).atZone(<span class="typ">ZoneId</span>.of(<span class="str">"Asia/Kolkata"</span>));
+<span class="typ">Duration</span> left   = <span class="typ">Duration</span>.between(<span class="typ">Instant</span>.now(), open.toInstant());</code></pre>
+    <p>The fix over <code>Date</code>/<code>Calendar</code>: every type is <strong>immutable and thread-safe</strong>, so instances can be shared freely. <code>Instant</code> is a machine timestamp (UTC); <code>LocalDateTime</code> has no zone; <code>ZonedDateTime</code> binds a zone &mdash; knowing which to store is an interview favorite (store <code>Instant</code> for events, <code>LocalDate</code> for birthdays).</p>
+
+    <h4>CompletableFuture</h4>
+    <pre><code><span class="typ">CompletableFuture</span>.supplyAsync(() -&gt; fetchSpot(sym))
+    .thenCombine(supplyAsync(() -&gt; fetchVol(sym)), (spot, vol) -&gt; price(spot, vol))
+    .exceptionally(ex -&gt; fallbackPrice(sym))
+    .thenAccept(quoteCache::put);</code></pre>
+    <p>Composable async: <code>thenApply</code> (transform), <code>thenCompose</code> (flatMap for futures), <code>thenCombine</code> (join two), <code>exceptionally</code>/<code>handle</code> (recover). Caveat to state: the <code>*Async</code> variants without an explicit executor run on the <em>common pool</em> &mdash; the same trap as parallel streams.</p>
+
+    <div class="interview-q">
+      <span class="iq-tag">&#x1F3AF; INTERVIEW QUESTIONS</span>
+      <p><strong>Q: When should <code>Optional</code> NOT be used?</strong> &mdash; As a field, method parameter, or collection element; and never <code>get()</code> without checking. It&rsquo;s a return-type vehicle for &ldquo;no result.&rdquo;</p>
+      <p><strong>Q: <code>orElse</code> vs <code>orElseGet</code>?</strong> &mdash; <code>orElse(x)</code> always evaluates <code>x</code>, even when the value is present; <code>orElseGet(supplier)</code> only runs on empty. Use <code>orElseGet</code> when the fallback is expensive.</p>
+      <p><strong>Q: <code>thenApply</code> vs <code>thenCompose</code>?</strong> &mdash; <code>thenApply</code> is <code>map</code> (returns a value); <code>thenCompose</code> is <code>flatMap</code> (returns another future) &mdash; use it to avoid <code>CompletableFuture&lt;CompletableFuture&lt;T&gt;&gt;</code>.</p>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- STAGE 5 — JAVA 11: LANGUAGE & PLATFORM -->
+  <!-- ============================================================ -->
+  <div class="stage" data-section="5">
+    <span class="stage-tag">STAGE 5 <span class="time">20 MIN</span></span>
+    <h3 class="ver-head">&#x2503; JAVA 11 (2018, LTS) &mdash; LANGUAGE &amp; PLATFORM (bundling 9 &amp; 10)</h3>
+    <h2>The cleanup LTS &mdash; var, HttpClient, modules, conveniences</h2>
+
+    <h4><code>var</code> &mdash; local-variable type inference (10)</h4>
+    <pre><code><span class="kw">var</span> bySymbol = <span class="kw">new</span> <span class="typ">HashMap</span>&lt;<span class="typ">String</span>, <span class="typ">List</span>&lt;<span class="typ">Trade</span>&gt;&gt;();   <span class="cmt">// inferred at COMPILE time</span>
+<span class="kw">for</span> (<span class="kw">var</span> e : bySymbol.entrySet()) { ... }
+(<span class="typ">@Nonnull</span> <span class="kw">var</span> a, <span class="typ">@Nonnull</span> <span class="kw">var</span> b) -&gt; a.merge(b)             <span class="cmt">// var in lambda params (11)</span></code></pre>
+    <p>It is <strong>inference, not dynamic typing</strong> &mdash; the variable has a fixed static type and the bytecode is identical. Locals only: never fields, parameters, or return types. The judgment rule: <code>var</code> should aid readability, not hide the type from a reviewer (<code>var result = service.process()</code> is worse than the explicit type).</p>
+
+    <h4>Standard <code>HttpClient</code> (11)</h4>
+    <pre><code><span class="typ">HttpClient</span> client = <span class="typ">HttpClient</span>.newBuilder().version(<span class="typ">Version</span>.HTTP_2).build();
+<span class="typ">HttpRequest</span> req = <span class="typ">HttpRequest</span>.newBuilder(<span class="typ">URI</span>.create(url))
+                             .timeout(<span class="typ">Duration</span>.ofSeconds(<span class="num-lit">2</span>)).build();
+<span class="typ">HttpResponse</span>&lt;<span class="typ">String</span>&gt; r = client.send(req, <span class="typ">BodyHandlers</span>.ofString());   <span class="cmt">// sync</span>
+client.sendAsync(req, <span class="typ">BodyHandlers</span>.ofString())                       <span class="cmt">// async, composes with CF</span>
+      .thenApply(<span class="typ">HttpResponse</span>::body).thenAccept(cache::update);</code></pre>
+    <p>HTTP/2, WebSocket, and async built in &mdash; removed the mandatory Apache HttpClient dependency from most services.</p>
+
+    <h4>Module system (JPMS, 9) &amp; single-file execution (11)</h4>
+    <pre><code><span class="kw">module</span> com.trading.engine {
+    <span class="kw">requires</span> com.trading.marketdata;
+    <span class="kw">exports</span> com.trading.engine.api;   <span class="cmt">// everything else invisible to consumers</span>
+}
+<span class="cmt">// 11: run a single source file with no javac step</span>
+$ java TradeReport.java</code></pre>
+    <p>Brief by design &mdash; most applications stay on the classpath. The lasting impact is that the <em>JDK itself</em> is modularized, which later enabled jlink custom runtimes and the lockdown of <code>sun.misc.*</code> internals.</p>
+
+    <h4>String, File &amp; collection conveniences (9&ndash;11)</h4>
+    <pre><code><span class="typ">List</span>&lt;<span class="typ">String</span>&gt; syms = <span class="typ">List</span>.of(<span class="str">"NIFTY"</span>, <span class="str">"BANKNIFTY"</span>);   <span class="cmt">// (9) immutable, null-rejecting</span>
+<span class="str">"  x  "</span>.strip();  <span class="str">""</span>.isBlank();  <span class="str">"a\nb"</span>.lines();  <span class="str">"-"</span>.repeat(<span class="num-lit">40</span>);  <span class="cmt">// (11)</span>
+<span class="typ">String</span> cfg = <span class="typ">Files</span>.readString(<span class="typ">Path</span>.of(<span class="str">"app.conf"</span>));            <span class="cmt">// (11) whole file</span></code></pre>
+
+    <div class="interview-q">
+      <span class="iq-tag">&#x1F3AF; INTERVIEW QUESTIONS</span>
+      <p><strong>Q: Is <code>var</code> dynamic typing?</strong> &mdash; No. Compile-time inference; fixed static type; identical bytecode. Locals only.</p>
+      <p><strong>Q: We&rsquo;re on Java 8 &mdash; what does moving to 11 buy us, and what breaks?</strong> &mdash; Buys: free production JFR, the standard HttpClient, <code>var</code>, collection factories, the stream/Optional gap-fillers (Stage 6). Breaks: JAXB/JAX-WS/CORBA removed (re-add as Maven deps); reflection into JDK internals starts warning.</p>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- STAGE 6 — JAVA 11: FUNCTIONAL GAP-FILLERS -->
+  <!-- ============================================================ -->
+  <div class="stage" data-section="6">
+    <span class="stage-tag">STAGE 6 <span class="time">20 MIN</span></span>
+    <h3 class="ver-head">&#x2503; JAVA 11 (2018, LTS) &mdash; STREAM, OPTIONAL &amp; COLLECTOR GAP-FILLERS (9&ndash;11)</h3>
+    <h2>The functional API grows up</h2>
+
+    <p>Java 8 shipped the functional model with real gaps &mdash; you couldn&rsquo;t conditionally stop a stream, <code>Stream.iterate</code> was infinite-only, and bridging an Optional into a stream was ugly. The 9&ndash;11 releases (delivered to most fleets <em>as</em> Java 11) filled them.</p>
+
+    <h4>takeWhile / dropWhile &amp; bounded iterate (9)</h4>
+    <pre><code><span class="cmt">// Ordered, conditional truncation — stops at the FIRST failing element</span>
+prices.stream().takeWhile(p -&gt; p &lt; limit);
+prices.stream().dropWhile(p -&gt; p &lt; limit);   <span class="cmt">// skip until first passing</span>
+
+<span class="cmt">// 3-arg iterate: a for-loop as a stream, finally bounded</span>
+<span class="typ">Stream</span>.iterate(<span class="num-lit">1</span>, i -&gt; i &lt;= <span class="num-lit">100</span>, i -&gt; i * <span class="num-lit">2</span>).forEach(<span class="typ">System</span>.out::println);
+
+<span class="cmt">// Together: the pagination pattern — lazy pages until an empty one comes back</span>
+<span class="typ">Stream</span>.iterate(fetchPage(<span class="num-lit">0</span>), pg -&gt; fetchPage(pg.number() + <span class="num-lit">1</span>))
+      .takeWhile(pg -&gt; !pg.items().isEmpty())
+      .flatMap(pg -&gt; pg.items().stream());</code></pre>
+
+    <h4>Optional grows up (9&ndash;11)</h4>
+    <pre><code>repo.findById(id)
+    .or(() -&gt; cache.find(id))                <span class="cmt">// (9) lazy alternative source</span>
+    .ifPresentOrElse(this::audit,            <span class="cmt">// (9) both branches</span>
+                     () -&gt; log.warn(<span class="str">"missing"</span>));
+
+ids.stream().map(repo::findById)
+   .flatMap(<span class="typ">Optional</span>::stream)                <span class="cmt">// (9) the bridge — Java 8's monstrosity, gone</span>
+   .toList();
+
+<span class="kw">if</span> (result.isEmpty()) { ... }                <span class="cmt">// (11) the readable negative</span></code></pre>
+    <p>Before the <code>stream()</code> bridge, turning an <code>Optional</code> into a 0-or-1 stream required <code>opt.map(Stream::of).orElseGet(Stream::empty)</code>. Now <code>flatMap(Optional::stream)</code> over a stream of Optionals keeps the present values and drops the empties in one step.</p>
+
+    <h4>New downstream collectors &amp; small gems (9&ndash;11)</h4>
+    <pre><code><span class="cmt">// filtering (9) as downstream — keeps EMPTY groups, unlike pre-filtering</span>
+trades.stream().collect(groupingBy(<span class="typ">Trade</span>::symbol,
+       filtering(t -&gt; t.qty() &gt; <span class="num-lit">10_000</span>, toList())));
+
+<span class="cmt">// flatMapping (9) — flatten inside a group</span>
+orders.stream().collect(groupingBy(<span class="typ">Order</span>::customer,
+       flatMapping(o -&gt; o.lines().stream(), toList())));
+
+stream.filter(<span class="typ">Predicate</span>.not(<span class="typ">String</span>::isBlank));    <span class="cmt">// (11) negate a method ref</span>
+<span class="typ">Files</span>.lines(path).filter(l -&gt; l.contains(<span class="str">"ERROR"</span>)); <span class="cmt">// lazy file processing</span></code></pre>
+    <p>The <code>filtering</code> vs pre-filter distinction is a classic probe: <code>.filter(...).collect(groupingBy(...))</code> drops a key entirely if nothing passes; <code>groupingBy(..., filtering(...))</code> keeps the key with an empty list. Different report shapes.</p>
+
+    <div class="interview-q">
+      <span class="iq-tag">&#x1F3AF; INTERVIEW QUESTIONS</span>
+      <p><strong>Q: How did Optional change after Java 8?</strong> &mdash; 9 added <code>or()</code>, <code>ifPresentOrElse()</code>, and <code>stream()</code>; 10 added no-arg <code>orElseThrow()</code>; 11 added <code>isEmpty()</code>. A candidate who only knows <code>isPresent/get</code> learned Optional in 2014 and stopped.</p>
+      <p><strong>Q: <code>takeWhile</code> vs <code>filter</code>?</strong> &mdash; <code>filter</code> tests every element; <code>takeWhile</code> stops at the first failure (order-sensitive). On <code>[1,2,5,1]</code> with <code>&lt; 3</code>: filter &rarr; <code>[1,2,1]</code>, takeWhile &rarr; <code>[1,2]</code>.</p>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- STAGE 7 — CHALLENGE -->
+  <!-- ============================================================ -->
+  <div class="stage" data-section="7">
+    <span class="stage-tag">STAGE 7 <span class="time">15 MIN</span></span>
+    <h2>The challenge &mdash; a Java 8 internals incident</h2>
+
+    <p>A real on-call scenario built from today&rsquo;s Java 8 internals. Answer all three parts (50+ characters each), then reveal the model answers.</p>
+
+    <div class="challenge">
+      <span class="challenge-tag">SCENARIO &middot; READ CAREFULLY BEFORE ANSWERING</span>
+      <h3>The 504s under load</h3>
+      <p><strong>System:</strong> a Spring Boot service. A controller handler runs a CPU-light aggregation using <code>list.parallelStream().map(...).collect(...)</code> over a few hundred items per request.</p>
+      <p><strong>Symptom:</strong> under production load the service randomly returns <strong>504 Gateway Timeout</strong>. CPU is not pegged. It works perfectly in load tests that hit one endpoint at a time. The same code with a sequential stream never times out.</p>
+    </div>
+
+    <div class="challenge-form" id="challenge-1-7">
+      <span class="challenge-tag">YOUR ANSWERS &middot; MINIMUM 50 CHARS EACH TO UNLOCK MODEL ANSWER</span>
+
+      <div class="textarea-row">
+        <label class="textarea-label" for="ta-1-7-pi1">
+          Q1 &mdash; What is the root cause, and the exact failure mode? Why does it only show up under concurrent load and not in single-endpoint tests?
+        </label>
+        <textarea class="answer-textarea" id="ta-1-7-pi1" placeholder="Where do parallelStream() threads come from? What is shared across the whole JVM?"></textarea>
+        <div class="char-count" id="cc-1-7-pi1">0 / 50 characters</div>
+        <div style="margin-top:12px">
+          <button class="btn-reveal" id="reveal-1-7-pi1" onclick="revealModelAnswer('1-7','pi1')" disabled>Reveal model answer</button>
+        </div>
+        <div class="model-answer" id="ma-1-7-pi1">
+          <span class="model-answer-tag">MODEL ANSWER</span>
+          <p><strong>Root cause: common ForkJoinPool starvation.</strong> <code>parallelStream()</code> submits its tasks to <code>ForkJoinPool.commonPool()</code>, shared across the whole JVM and sized cores&minus;1 (often 3&ndash;7 threads). Each in-flight request consumes pool threads for its pipeline. Under concurrent load, many requests compete for that tiny shared pool; requests queue waiting for a thread, latency climbs past the gateway timeout, and you get 504s &mdash; while CPU isn&rsquo;t pegged because threads are <em>waiting</em>, not computing. Single-endpoint tests never contend, so it doesn&rsquo;t reproduce there. (Any blocking I/O in the map would make it far worse, since blocked threads hold pool slots without doing CPU work.)</p>
+        </div>
+      </div>
+
+      <div class="textarea-row" style="margin-top:28px">
+        <label class="textarea-label" for="ta-1-7-pi2">
+          Q2 &mdash; Fix #1: keep parallelism but isolate it. How, exactly? What are the caveats?
+        </label>
+        <textarea class="answer-textarea" id="ta-1-7-pi2" placeholder="How do you make a parallel stream run on a pool you control instead of the common pool?"></textarea>
+        <div class="char-count" id="cc-1-7-pi2">0 / 50 characters</div>
+        <div style="margin-top:12px">
+          <button class="btn-reveal" id="reveal-1-7-pi2" onclick="revealModelAnswer('1-7','pi2')" disabled>Reveal model answer</button>
+        </div>
+        <div class="model-answer" id="ma-1-7-pi2">
+          <span class="model-answer-tag">MODEL ANSWER</span>
+          <p>Submit the pipeline from inside a <strong>dedicated <code>ForkJoinPool</code></strong>: <code>var pool = new ForkJoinPool(8); pool.submit(() -&gt; list.parallelStream().map(...).collect(...)).get();</code> A parallel stream run from within a custom pool uses <em>that</em> pool&rsquo;s threads, not the common pool &mdash; so this request can no longer starve unrelated work or be starved by it. Caveats: it relies on documented-by-behavior (not formally specified); you must size and lifecycle-manage the pool (a managed singleton, never one-per-request); and you&rsquo;ve only <em>contained</em> contention &mdash; an undersized dedicated pool just starves within itself. Size for actual concurrency &times; per-request parallelism.</p>
+        </div>
+      </div>
+
+      <div class="textarea-row" style="margin-top:28px">
+        <label class="textarea-label" for="ta-1-7-pi3">
+          Q3 &mdash; Fix #2: remove parallelization entirely. Why is this often the <em>better</em> fix here, and when would parallel actually be justified?
+        </label>
+        <textarea class="answer-textarea" id="ta-1-7-pi3" placeholder="Recall the 'parallel only if ALL' checklist. Does a few-hundred-item, CPU-light aggregation qualify?"></textarea>
+        <div class="char-count" id="cc-1-7-pi3">0 / 50 characters</div>
+        <div style="margin-top:12px">
+          <button class="btn-reveal" id="reveal-1-7-pi3" onclick="revealModelAnswer('1-7','pi3')" disabled>Reveal model answer</button>
+        </div>
+        <div class="model-answer" id="ma-1-7-pi3">
+          <span class="model-answer-tag">MODEL ANSWER</span>
+          <p>Use a <strong>sequential stream</strong>: <code>list.stream().map(...).collect(...)</code>. The workload fails the checklist: only a few hundred elements (N too small), CPU-light per element (Q too small), so fork/join orchestration overhead likely exceeded any speedup <em>even before</em> the contention. And in a web handler the <em>server</em> already provides parallelism by running many requests at once; parallelizing <em>within</em> each request just multiplies pressure on shared threads. Sequential makes each request&rsquo;s latency predictable and independent &mdash; usually right for request-scoped work. Parallel streams are justified for <em>batch/CPU-bound</em> work: large N (100k+), expensive per element, well-splitting source, stateless ops, cheap merge, in a context you control (a background job) &mdash; ideally on a dedicated pool.</p>
+        </div>
+      </div>
+
+      <div class="unlock-banner" id="unlock-1-7" style="margin-top:24px">
+        <strong style="color:var(--green)">&#x2705; Day 7 complete!</strong> Day 8 continues the version walk &mdash;
+        <span style="color:var(--ink-dim)">Java 17 (records in full depth, sealed classes, pattern matching, text blocks) and Java 21 (virtual threads, structured concurrency, scoped values).</span>
+      </div>
+    </div>
+
+    <!-- REFLECTION -->
+    <div class="reflection">
+      <div class="reflection-header" onclick="toggleReflection(this)">
+        <span class="reflection-icon">&#x1FA9E;</span>
+        <span class="reflection-title">Reflection &amp; Self-Assessment</span>
+        <span class="reflection-chevron">&#x25BE;</span>
+      </div>
+      <div class="reflection-body">
+
+        <div class="takeaways">
+          <div class="takeaways-label">Key Takeaways</div>
+          <ul>
+            <li><strong>Java 8</strong> is lambdas (invokedynamic, not anonymous classes), the lazy one-pass Stream pipeline over spliterators, the 5-function Collector contract, Optional as a return-type contract, default methods (which made Streams possible), java.time, and CompletableFuture.</li>
+            <li><strong>Parallel streams share the common pool</strong> &mdash; never in a request handler; CPU-bound, well-splitting, big-N batch work only.</li>
+            <li><strong>Java 11</strong> (bundling 9&ndash;10) is the cleanup LTS: <code>var</code>, the standard HttpClient, modules, collection factories, and the functional gap-fillers (takeWhile, bounded iterate, Optional.or/stream, filtering/flatMapping).</li>
+            <li><strong>Judgment:</strong> Optional is a return type only; <code>var</code> serves readability; <code>orElseGet</code> over <code>orElse</code> for expensive fallbacks.</li>
+          </ul>
+        </div>
+
+        <div class="reflection-prompts">
+          <div class="reflection-prompt">
+            <span class="prompt-num">01</span>
+            <p class="prompt-text">Run <code>javap -c</code> on a class with one lambda and one anonymous class doing the same thing. Find the <code>invokedynamic</code> instruction. How many <code>.class</code> files did each approach produce?</p>
+          </div>
+          <div class="reflection-prompt">
+            <span class="prompt-num">02</span>
+            <p class="prompt-text">Find one <code>parallelStream()</code> in a codebase you know. Walk it through the five-point checklist out loud. Is it in a request path? Does it survive?</p>
+          </div>
+          <div class="reflection-prompt">
+            <span class="prompt-num">03</span>
+            <p class="prompt-text">Place each on its LTS: lambdas, <code>var</code>, the standard HttpClient, <code>List.of()</code>, <code>takeWhile</code>, <code>flatMap(Optional::stream)</code>.</p>
+          </div>
+        </div>
+
+        <div class="confidence-block">
+          <div class="confidence-label">How confident do you feel about today&rsquo;s material?</div>
+          <div class="confidence-btns">
+            <button class="conf-btn" data-day="1-7" data-level="1" onclick="saveConfidence('1-7', 1)">&#x1F615; Not yet &mdash; need another pass</button>
+            <button class="conf-btn" data-day="1-7" data-level="2" onclick="saveConfidence('1-7', 2)">&#x1F914; Getting there &mdash; mostly clear</button>
+            <button class="conf-btn" data-day="1-7" data-level="3" onclick="saveConfidence('1-7', 3)">&#x2705; Solid &mdash; I could explain this</button>
+          </div>
+          <div class="confidence-saved" id="conf-saved-1-7"></div>
+        </div>
+
+      </div>
+    </div>
+
+  </div><!-- end stage 7 -->
+
+  <footer>
+    DAY 7 OF 158 &middot; JAVA 8 &amp; JAVA 11 &middot; PHASE 1 / 6
+  </footer>
+
+</div>
+
+<script src="../data/curriculum.js"></script>
+<script src="../assets/app.js"></script>
+<script src="../assets/audio-player.js"></script>
+<script src="../data/glossary.js"></script>
+<script src="../assets/glossary.js"></script>
+<script src="../data/abbreviations.js"></script>
+<script src="../assets/abbreviations.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    initOpenEndedChallenge('1-7');
+    initReflection('1-7');
+    initLessonNav();
+  });
+</script>
+</body>
+</html>

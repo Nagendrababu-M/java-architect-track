@@ -1,17 +1,15 @@
-Stage 5: structured concurrency, plus the thirty-second answers for the rest of modern Java.
+Stage 5: Optional discipline, the pagination pattern, and Gatherers — the newest piece of the stream API.
 
-Start with the problem. With a plain ExecutorService, you fork two subtasks — fetch the user, fetch the order. The user fetch fails. What happens to the order fetch? It keeps running. Burning CPU, holding a connection, computing a result nobody will read. Unless you hand-write cancellation logic, threads outlive the code block that created them. That's the concurrency equivalent of goto — control flow that escapes its lexical structure.
+Optional first. The philosophy in one sentence, straight from the API's designers: Optional is a return type — a contract that absence is a normal outcome — not a general-purpose null replacement.
 
-StructuredTaskScope, Java 21 preview, fixes this with one idea: concurrency gets block scope. You open a scope in a try-with-resources, fork your subtasks inside it, join, and return. The guarantee is absolute: no subtask outlives the block. When the scope closes, everything it forked is done or cancelled.
+The good chain: findById returns an Optional. Dot or tries another source, lazily. FlatMap when the next step itself returns an Optional — nickname returns Optional, so map would give you Optional of Optional; flatMap flattens. Filter, then orElseGet for the fallback. Why orElseGet and not orElse? OrElse evaluates its argument ALWAYS — even when the value is present. If the default is expensive, you just paid for it every time. OrElseGet takes a supplier and only runs it on empty.
 
-Two policies to know. ShutdownOnFailure: the first subtask to fail cancels all the others — use it when you need ALL the results. ShutdownOnSuccess: the first to succeed cancels the rest — use it when you need ANY result. That's hedged requests, racing two replicas and taking the faster answer.
+The anti-patterns, because interviewers ask for them by name. IsPresent followed by get — you've recreated the null check with extra steps. Optional as a field — it's not serializable, costs an object per read, and the Optional itself can be null, so you've moved the problem up a level. Optional as a method parameter — now the caller juggles three states: null, empty, present. Return type. That's it.
 
-And the structure pays beyond cancellation: errors propagate up like normal exceptions, and a thread dump shows the parent-child task tree instead of a flat soup of pool threads.
+And the bridge: from a stream of Optionals, flatMap with Optional colon-colon stream keeps the present values and drops the empties. One idiom, very common in interviews.
 
-Now the rapid-fire features — interviewers often probe whether you track the platform.
+Next, the pagination pattern — Stream dot iterate plus takeWhile. Fetch page zero, iterate to the next page, takeWhile pages are non-empty, flatMap the items. The beauty is laziness doing real work: pages are fetched only as the consumer pulls, so a limit downstream literally stops the HTTP calls. This wraps any paged API or DB cursor as a lazy stream.
 
-String templates: interpolation through processors — STR dot, then the string with embedded expressions. The processor can validate and escape, which prevents SQL injection by construction. But here's the differentiator: the API was withdrawn after Java 22 for redesign. Knowing it was withdrawn shows you actually follow the platform rather than skimming feature lists.
+Finally, Gatherers, Java 22. Collectors customize the terminal step. Until Gatherers, you could NOT customize an intermediate step — and some operations were simply impossible. Stream dot gather fills the gap. WindowFixed of three turns one-two-three-four-five-six into two batches of three — batching, the most-requested stream feature in history. WindowSliding gives overlapping windows — pairwise comparison, moving averages. Scan emits running totals. And a custom Gatherer has an initializer, an integrator that sees each element plus state plus the downstream — returning false to short-circuit — and a finisher.
 
-Project Valhalla: value classes. Objects without identity, which the JVM can flatten into arrays and stack-allocate. An array of value-class Points becomes a contiguous block of coordinates instead of a row of pointers. The tagline: codes like a class, works like an int.
-
-And the migration playbook, which is its own interview question: replace inheritance hierarchies over data with sealed interface plus records. Replace getter-chain null checks with record patterns in switch. Replace the visitor pattern with exhaustive switch. Three refactors, one theme: let the compiler enforce what used to be convention.
+The example that lands in interviews: a moving average over a price stream. Before Gatherers, that required an external mutable deque — broken under parallelism, ugly everywhere. Now it's a self-contained, reusable pipeline stage. For our trading context: windowSliding of twenty over a tick stream is a rolling VWAP window, declared in one line.

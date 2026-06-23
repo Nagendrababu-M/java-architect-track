@@ -1,0 +1,11 @@
+Stage 4 covers two quality-of-life features that still carry interview-worthy details: text blocks and Sequenced Collections.
+
+Text blocks first. Triple quotes, multi-line string, perfect for SQL and JSON. The detail everyone misses is incidental indentation stripping: the position of the closing triple-quote determines the left margin. Whitespace common to the left of it gets stripped; everything to the right is preserved. Move the closing delimiter left, and you've added indentation to every line. Two escapes worth knowing: a backslash at the end of a line suppresses the newline — one logical line split for readability — and backslash-s preserves a trailing space that would otherwise be stripped. And remember: a text block is still just a String. Same type, same methods, same constant pool.
+
+Now Sequenced Collections, Java 21 — a fix for a twenty-year-old inconsistency. Getting the first element was spelled differently on every collection: list dot get zero, deque dot getFirst, sortedSet dot first. And LinkedHashSet — a collection whose entire purpose is maintaining order — had no way to get its last element without iterating the whole thing.
+
+JEP 431 retrofits three interfaces. SequencedCollection gives every ordered collection getFirst, getLast, addFirst, addLast, removeFirst, removeLast, and reversed. SequencedSet covers LinkedHashSet and SortedSet. SequencedMap gives LinkedHashMap firstEntry, lastEntry, putFirst, putLast.
+
+The headline method is reversed(). It returns a view, not a copy. Zero allocation, and mutations write through to the original. Iterating a LinkedHashMap backwards used to mean copying all the keys into a list and reversing it — now it's just map dot reversed.
+
+Two interview details. First: what does addFirst do on a SortedSet? It throws UnsupportedOperationException — a sorted set's order comes from its comparator; you can't impose a position on it. The interface gives sorted collections the read methods, not positional writes. Second, the LRU trick: on a LinkedHashSet, addFirst with an element that already exists moves it to the front. So an LRU-style structure becomes: addFirst on access, removeLast to evict. Two method calls that used to require a hand-rolled data structure.

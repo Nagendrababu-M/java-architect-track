@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Week 1 · Day 8 — Modern Java by Version: Java 8 &amp; Java 11 (Deep Dive)</title>
+<title>Week 1 · Day 8 — Modern Java by Version: Java 17 &amp; Java 21 (Deep Dive)</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,800&family=JetBrains+Mono:wght@400;500;700&family=Inter+Tight:wght@400;500;600&display=swap" rel="stylesheet">
@@ -14,8 +14,8 @@
 <style>
   body {
     background-image:
-      radial-gradient(ellipse 800px 600px at 20% 0%, rgba(177,138,224,0.07), transparent 60%),
-      radial-gradient(ellipse 600px 400px at 90% 100%, rgba(177,138,224,0.04), transparent 60%);
+      radial-gradient(ellipse 800px 600px at 20% 0%, rgba(122,184,232,0.07), transparent 60%),
+      radial-gradient(ellipse 600px 400px at 90% 100%, rgba(122,184,232,0.04), transparent 60%);
   }
   .interview-q {
     margin: 20px 0;
@@ -61,315 +61,317 @@
       <span>Week 1 / Day 8</span>
     </div>
     <h1>
-      Modern Java by Version &mdash; Java 8 &amp; Java 11
-      <span class="sub">Every feature under its release version, in depth: the Java 8 functional core (with its internals) and the Java 11 cleanup LTS.</span>
+      Modern Java by Version &mdash; Java 17 &amp; Java 21
+      <span class="sub">Every feature under its release version, in depth: Java 17&rsquo;s data-modeling toolkit (records, sealed, pattern matching) and Java 21&rsquo;s concurrency revolution.</span>
     </h1>
-    <div class="scope"><strong>SCOPE</strong> &middot; 165 min &middot; 7 stages &mdash; organized strictly by version. Day 9 continues with Java 17 &amp; Java 21.</div>
+    <div class="scope"><strong>SCOPE</strong> &middot; 165 min &middot; 7 stages &mdash; organized strictly by version, continuing from Day 7 (Java 8 &amp; 11).</div>
   <div id="play-full-lesson-mount"></div>
   </header>
 
   <div class="recap">
-    <span class="recap-tag">HOW THIS DAY IS ORGANIZED</span>
-    <p>Companies live on the <abbr data-abbr="LTS">LTS</abbr> releases &mdash; 8, 11, 17, 21. Days 8 and 9 walk all four, <strong>strictly grouped by release version</strong>, each feature explained in depth with code. Today is <strong>Java 8</strong> (the functional revolution &mdash; including how lambdas and streams actually work under the hood) and <strong>Java 11</strong> (the cleanup LTS, bundling 9 and 10). Day 9 picks up at <strong>Java 17</strong> (records, sealed classes, pattern matching) and <strong>Java 21</strong> (virtual threads, structured concurrency).</p>
+    <span class="recap-tag">CONTINUING FROM DAY 7</span>
+    <p>Day 7 covered <strong>Java 8</strong> (the functional core and its internals) and <strong>Java 11</strong> (the cleanup LTS). Today completes the timeline with <strong>Java 17</strong> &mdash; the data-modeling LTS that introduced records, sealed classes, and pattern matching (bundling everything from 12&ndash;16) &mdash; and <strong>Java 21</strong>, the current LTS, whose virtual threads and structured concurrency change how you architect concurrent systems. Same rule as Day 7: every feature lives under its release version, explained in depth with code.</p>
   </div>
 
   <!-- ============================================================ -->
-  <!-- STAGE 1 — JAVA 8: LAMBDAS -->
+  <!-- STAGE 1 — JAVA 17: SWITCH EXPRESSIONS & TEXT BLOCKS -->
   <!-- ============================================================ -->
   <div class="stage" data-section="1">
-    <span class="stage-tag">STAGE 1 <span class="time">25 MIN</span></span>
-    <h3 class="ver-head">&#x2503; JAVA 8 (2014, LTS) &mdash; LAMBDAS &amp; METHOD REFERENCES</h3>
-    <h2>Behavior as data &mdash; and what the JVM really does with it</h2>
+    <span class="stage-tag">STAGE 1 <span class="time">20 MIN</span></span>
+    <h3 class="ver-head">&#x2503; JAVA 17 (2021, LTS) &mdash; SWITCH EXPRESSIONS &amp; TEXT BLOCKS</h3>
+    <h2>The ergonomics that set up records &amp; pattern matching</h2>
 
-    <h4>Functional interfaces (SAM types)</h4>
-    <p>A functional interface has exactly one abstract method &mdash; a <strong>SAM</strong> (Single Abstract Method) type. <code>default</code> and <code>static</code> methods don&rsquo;t count, and neither do abstract methods that override <code>Object</code>&rsquo;s public methods (which is why <code>Comparator</code> can declare <code>equals</code> and stay functional). The <code>@FunctionalInterface</code> annotation changes nothing at runtime; it makes the compiler <em>fail</em> if a second abstract method is ever added &mdash; a contract annotation like <code>@Override</code>.</p>
-    <p>The <code>java.util.function</code> package ships the core four, plus ~40 primitive specializations to avoid autoboxing:</p>
-    <div class="compare-wrap"><table class="compare">
-      <thead><tr><th>Interface</th><th>Signature</th><th>Used by</th></tr></thead>
-      <tbody>
-        <tr><td><code>Supplier&lt;T&gt;</code></td><td><code>() &rarr; T</code></td><td>lazy values, factories</td></tr>
-        <tr><td><code>Consumer&lt;T&gt;</code></td><td><code>T &rarr; void</code></td><td><code>forEach</code>, side effects</td></tr>
-        <tr><td><code>Function&lt;T,R&gt;</code></td><td><code>T &rarr; R</code></td><td><code>map</code>, transforms</td></tr>
-        <tr><td><code>Predicate&lt;T&gt;</code></td><td><code>T &rarr; boolean</code></td><td><code>filter</code>, validation</td></tr>
-      </tbody>
-    </table></div>
-    <p>The primitive cousins (<code>IntFunction</code>, <code>ToLongFunction</code>, <code>DoublePredicate</code>&hellip;) exist purely to dodge boxing: <code>Stream&lt;Integer&gt;.map(i -&gt; i*2)</code> boxes and unboxes on every element; <code>IntStream.map</code> works on raw ints. Over millions of elements that&rsquo;s the difference between memory-bound and CPU-bound.</p>
-
-    <h4>Lambdas &amp; the four kinds of method reference</h4>
-    <pre><code><span class="cmt">// Lambda</span>
-<span class="typ">Comparator</span>&lt;<span class="typ">Trade</span>&gt; c = (a, b) -&gt; a.price().compareTo(b.price());
-
-<span class="cmt">// 1. Static            2. Bound instance       3. Unbound instance      4. Constructor</span>
-<span class="typ">Integer</span>::parseInt;      myString::length;       <span class="typ">String</span>::length;          <span class="typ">ArrayList</span>::new;</code></pre>
-    <p>The distinction interviewers test is <strong>bound vs unbound</strong>: <code>myString::length</code> is bound to a specific object and takes no args; <code>String::length</code> is unbound &mdash; the receiver <em>becomes the first parameter</em>, so it works as a <code>Function&lt;String,Integer&gt;</code>.</p>
-
-    <h4>Capture semantics: effectively final</h4>
-    <p>A lambda may only capture locals that are <strong>effectively final</strong> (never reassigned). Captured locals are <em>copied</em> into the lambda at creation; permitting reassignment would let the copy and the original silently diverge, so Java forbids it. Fields and statics are <em>not</em> captured &mdash; they&rsquo;re read live through <code>this</code> &mdash; which is why they needn&rsquo;t be final, and why mutating a field from a lambda inside a parallel stream is a data race.</p>
-
-    <div class="key-rule insight">
-      <p><strong>Lambda internals: a lambda is NOT an anonymous class.</strong></p>
-      <p>The compiler does not emit a class file per lambda. The body becomes a private static method, and the call site is an <code>invokedynamic</code> instruction. On <em>first execution</em>, that instruction calls a bootstrap method &mdash; <code>LambdaMetafactory</code> &mdash; which spins a small implementation class <em>at runtime</em> and links the call site; subsequent calls hit the linked site directly. Consequences worth stating in an interview: <strong>non-capturing lambdas are cached singletons</strong> (<code>x -&gt; x*2</code> is allocated once, ever); <strong>capturing lambdas allocate per evaluation</strong> (they must carry the captured values); and because the strategy lives in the JVM, the platform can optimize lambdas without recompiling your code. An anonymous class, by contrast, is a fixed <code>.class</code> file with an allocation on every <code>new</code>.</p>
-    </div>
-
-    <div class="interview-q">
-      <span class="iq-tag">&#x1F3AF; INTERVIEW QUESTIONS</span>
-      <p><strong>Q: What does <code>invokedynamic</code> do for lambdas?</strong> &mdash; Defers lambda-class creation to runtime via <code>LambdaMetafactory</code>: no compile-time class-per-lambda, singleton caching of non-capturing lambdas, and JVM freedom to evolve the strategy.</p>
-      <p><strong>Q: When does a lambda allocate?</strong> &mdash; Only if it captures. Non-capturing = cached singleton; capturing = an object per evaluation, because it carries its captured state.</p>
-      <p><strong>Q: Why must captured locals be effectively final?</strong> &mdash; They&rsquo;re copied by value; allowing reassignment would let the copy and the variable diverge, so the language bans it.</p>
-    </div>
-
-    <div class="check">
-      <span class="check-tag">QUICK CHECK</span>
-      <p>In a classic <code>for (int i = 0; ...)</code> loop, <code>list.forEach(x -&gt; process(x, i))</code> won&rsquo;t compile, yet the same lambda compiles in a for-each loop. Why?</p>
-    </div>
-  </div>
-
-  <!-- ============================================================ -->
-  <!-- STAGE 2 — JAVA 8: STREAMS -->
-  <!-- ============================================================ -->
-  <div class="stage" data-section="2">
-    <span class="stage-tag">STAGE 2 <span class="time">25 MIN</span></span>
-    <h3 class="ver-head">&#x2503; JAVA 8 (2014, LTS) &mdash; STREAM API &amp; ITS INTERNALS</h3>
-    <h2>Declarative pipelines, and how they actually execute</h2>
-
-    <h4>The shape of a pipeline</h4>
-    <pre><code><span class="typ">Map</span>&lt;<span class="typ">String</span>, <span class="typ">BigDecimal</span>&gt; notional = trades.stream()   <span class="cmt">// source</span>
-    .filter(t -&gt; t.side() == <span class="typ">Side</span>.BUY)              <span class="cmt">// intermediate (lazy)</span>
-    .filter(t -&gt; t.qty() &gt; <span class="num-lit">10_000</span>)                  <span class="cmt">// intermediate (lazy)</span>
-    .collect(groupingBy(<span class="typ">Trade</span>::symbol,                 <span class="cmt">// terminal (triggers)</span>
-             reducing(<span class="typ">BigDecimal</span>.ZERO, <span class="typ">Trade</span>::value, <span class="typ">BigDecimal</span>::add)));</code></pre>
-
-    <div class="key-rule insight">
-      <p><strong>Intermediate operations do nothing. They build a linked chain of stages. All work happens when the terminal operation pulls.</strong></p>
-      <p>When <code>collect()</code> runs, the pipeline is <em>fused</em>: each element flows through <em>all</em> stages one at a time &mdash; filter, then map, then accumulate &mdash; before the next element starts. There is no intermediate collection between stages. One pass, no materialization, and short-circuit ops (<code>findFirst</code>, <code>anyMatch</code>, <code>limit</code>) can stop pulling the instant they&rsquo;re satisfied &mdash; which is why a filtered <code>findFirst</code> terminates on an infinite stream.</p>
-    </div>
-
-    <h4>Spliterators &mdash; the engine underneath</h4>
-    <p>Every source provides a <code>Spliterator</code> (&ldquo;splittable iterator&rdquo;). <code>tryAdvance(consumer)</code> pushes one element through the pipeline (sequential traversal); <code>trySplit()</code> carves off a chunk for another thread (parallel decomposition). It reports <strong>characteristics</strong> &mdash; <code>SIZED</code>, <code>SUBSIZED</code>, <code>ORDERED</code>, <code>SORTED</code>, <code>DISTINCT</code>, <code>IMMUTABLE</code> &mdash; that let the pipeline skip work: <code>distinct()</code> on a <code>DISTINCT</code> source is a no-op; <code>toArray()</code> on a <code>SIZED</code> source preallocates exactly.</p>
-
-    <h4>Stateless vs stateful; one-pass &amp; non-reusable</h4>
+    <h4>Switch expressions (standard in 14)</h4>
+    <pre><code><span class="cmt">// Arrow labels: no fall-through, each case is an expression that yields a value</span>
+<span class="typ">int</span> lot = <span class="kw">switch</span> (symbol) {
+    <span class="kw">case</span> <span class="str">"NIFTY"</span>, <span class="str">"FINNIFTY"</span> -&gt; <span class="num-lit">25</span>;       <span class="cmt">// multiple labels per case</span>
+    <span class="kw">case</span> <span class="str">"BANKNIFTY"</span>          -&gt; <span class="num-lit">15</span>;
+    <span class="kw">default</span> -&gt; {
+        <span class="typ">int</span> v = lookup(symbol);
+        <span class="kw">yield</span> v;                          <span class="cmt">// yield returns a value from a block case</span>
+    }
+};</code></pre>
     <ul>
-      <li><strong>Stateless intermediate</strong> (<code>filter</code>, <code>map</code>, <code>flatMap</code>): each element independent &mdash; fuses and parallelizes perfectly.</li>
-      <li><strong>Stateful intermediate</strong> (<code>sorted</code>, <code>distinct</code>, <code>limit</code>): must see some/all elements before emitting &mdash; <code>sorted</code> buffers the <em>entire</em> stream, breaking the one-pass model and crushing parallel scalability.</li>
-      <li><strong>One-shot:</strong> a stream is a view over a spliterator, not a data structure. The terminal op consumes it; a second terminal op throws <code>IllegalStateException</code>. Re-create from the source, or hold a <code>Supplier&lt;Stream&gt;</code>.</li>
+      <li><strong>Expression, not statement</strong> &mdash; produces a value you assign directly.</li>
+      <li><strong>No fall-through</strong> with arrow labels &mdash; the #1 historical switch bug, eliminated.</li>
+      <li><strong>Exhaustiveness</strong> &mdash; a switch expression must cover all inputs; over an enum or sealed type the compiler proves it without a <code>default</code> (the foundation Stage 5 builds on).</li>
     </ul>
 
-    <h4>map vs flatMap</h4>
-    <pre><code>stream.map(<span class="typ">Order</span>::status)                <span class="cmt">// 1 → 1</span>
-stream.flatMap(o -&gt; o.lines().stream())  <span class="cmt">// 1 → many, flattening nested streams</span>
-intStream.mapToObj(<span class="typ">Integer</span>::toString) <span class="cmt">// primitive stream → object stream</span></code></pre>
+    <h4>Text blocks (standard in 15)</h4>
+    <pre><code><span class="typ">String</span> query = <span class="str">"""
+        SELECT t.symbol, SUM(t.qty)
+        FROM trades t
+        WHERE t.executed_at &gt; :since
+        GROUP BY t.symbol
+        """</span>;</code></pre>
+    <ul>
+      <li><strong>Incidental indentation stripping</strong> &mdash; the position of the closing <code>"""</code> sets the left margin; whitespace to its left is stripped, everything to its right kept.</li>
+      <li><strong><code>\</code> at line end</strong> suppresses the newline (one logical line split for readability); <strong><code>\s</code></strong> preserves a trailing space that would otherwise be stripped.</li>
+      <li>It is still a plain <code>String</code> &mdash; same type, same methods, same constant-pool entry.</li>
+    </ul>
 
     <div class="interview-q">
       <span class="iq-tag">&#x1F3AF; INTERVIEW QUESTIONS</span>
-      <p><strong>Q: Why are streams not reusable?</strong> &mdash; A stream is a one-time view over a spliterator; the terminal op consumes it. Reuse throws <code>IllegalStateException</code>.</p>
-      <p><strong>Q: Does <code>peek</code> always run?</strong> &mdash; No. Laziness + short-circuiting means un-pulled elements are never peeked, and ops can be elided entirely (<code>count()</code> on a SIZED source may skip traversal). Never use <code>peek</code> for required side effects.</p>
-      <p><strong>Q: Stream API vs imperative loops &mdash; trade-offs?</strong> &mdash; Streams: declarative, composable, parallelizable, no index bugs; cost: harder step-debugging, overhead on tiny collections, awkward early-exit-with-side-effects. A plain loop is still clearer for genuinely imperative work.</p>
-    </div>
-
-    <div class="check">
-      <span class="check-tag">QUICK CHECK</span>
-      <p>Predict the output of <code>Stream.of("a","b","c").peek(System.out::println).anyMatch(s -&gt; s.equals("a"))</code> &mdash; how many letters print, and why?</p>
+      <p><strong>Q: Switch expression vs switch statement?</strong> &mdash; The expression yields a value, forbids fall-through (arrow labels), and is exhaustiveness-checked. The old statement form still exists for side-effecting branches but is where fall-through bugs live.</p>
+      <p><strong>Q: Does a text block strip all leading whitespace?</strong> &mdash; No &mdash; only the <em>incidental</em> indentation common to all lines, measured against the closing delimiter. Indentation to the right of that margin is preserved.</p>
     </div>
   </div>
 
   <!-- ============================================================ -->
-  <!-- STAGE 3 — JAVA 8: COLLECTORS & PARALLEL -->
+  <!-- STAGE 2 — JAVA 17: RECORDS (FULL DEPTH) -->
+  <!-- ============================================================ -->
+  <div class="stage" data-section="2">
+    <span class="stage-tag">STAGE 2 <span class="time">30 MIN</span></span>
+    <h3 class="ver-head">&#x2503; JAVA 17 (2021, LTS) &mdash; RECORDS (standard in 16)</h3>
+    <h2>Transparent carriers of immutable data &mdash; in full</h2>
+
+    <p>A record is a class whose state <em>is</em> its API. Declared in one line, the compiler generates the canonical constructor, the accessors, <code>equals()</code>, <code>hashCode()</code>, and <code>toString()</code>:</p>
+    <pre><code><span class="kw">public record</span> <span class="typ">Trade</span>(<span class="typ">String</span> symbol, <span class="typ">long</span> quantity, <span class="typ">BigDecimal</span> price) {}</code></pre>
+
+    <div class="key-rule insight">
+      <p><strong>A record is a promise: this type is a transparent, immutable carrier of its components.</strong></p>
+      <p>All fields are <code>private final</code>. There are no setters. The accessor for <code>symbol</code> is <code>symbol()</code>, not <code>getSymbol()</code>. <code>equals()</code>/<code>hashCode()</code> are component-wise &mdash; two records with equal components are equal. A record cannot extend a class (it implicitly extends <code>java.lang.Record</code>) and cannot be extended (implicitly final). It <em>can</em> implement interfaces.</p>
+    </div>
+
+    <h4>Compact constructors &mdash; validation &amp; normalization</h4>
+    <p>The compact constructor omits the parameter list. It runs <em>before</em> field assignment, and you normalize by reassigning the parameters:</p>
+    <pre><code><span class="kw">public record</span> <span class="typ">Trade</span>(<span class="typ">String</span> symbol, <span class="typ">long</span> quantity, <span class="typ">BigDecimal</span> price) {
+    <span class="kw">public</span> <span class="typ">Trade</span> {                                   <span class="cmt">// no parameter list</span>
+        <span class="typ">Objects</span>.requireNonNull(symbol);
+        <span class="kw">if</span> (quantity &lt;= <span class="num-lit">0</span>) <span class="kw">throw new</span> <span class="typ">IllegalArgumentException</span>(<span class="str">"quantity must be positive"</span>);
+        symbol = symbol.toUpperCase();                <span class="cmt">// reassigns the PARAMETER, not the field</span>
+    }
+}</code></pre>
+
+    <h4>Custom accessors, static factories, extra members</h4>
+    <pre><code><span class="kw">public record</span> <span class="typ">Range</span>(<span class="kw">int</span> lo, <span class="kw">int</span> hi) {
+    <span class="kw">public</span> <span class="typ">Range</span>(<span class="kw">int</span> lo, <span class="kw">int</span> hi) {                    <span class="cmt">// canonical ctor (full form) for derived logic</span>
+        <span class="kw">this</span>.lo = <span class="typ">Math</span>.min(lo, hi);
+        <span class="kw">this</span>.hi = <span class="typ">Math</span>.max(lo, hi);
+    }
+    <span class="kw">public</span> <span class="kw">int</span> span() { <span class="kw">return</span> hi - lo; }              <span class="cmt">// extra methods are fine</span>
+    <span class="kw">public static</span> <span class="typ">Range</span> unit() { <span class="kw">return new</span> <span class="typ">Range</span>(<span class="num-lit">0</span>, <span class="num-lit">1</span>); } <span class="cmt">// static factory</span>
+}</code></pre>
+
+    <h4>What records are NOT &mdash; three traps</h4>
+    <ul>
+      <li><strong>Not deeply immutable.</strong> If a component is a <code>List</code> or array, the reference is final but the contents are still mutable. Defensive-copy in the compact constructor: <code>items = List.copyOf(items);</code> &mdash; one line for deep immutability.</li>
+      <li><strong>Not JavaBeans.</strong> No no-arg constructor, no <code>get</code> prefix. Frameworks that reflect on bean conventions may choke (modern Jackson/Spring support records; ancient versions don&rsquo;t).</li>
+      <li><strong>Not JPA entities.</strong> Entities need mutability and identity-based equality; records have value-based equality and are final. Use records for DTOs, API payloads, value objects, and map keys &mdash; <em>not</em> for ORM entities.</li>
+    </ul>
+
+    <div class="key-rule">
+      <p><strong>The deserialization-safety angle (a senior signal).</strong> Normal Java deserialization bypasses constructors entirely &mdash; your validation never runs. <strong>Record deserialization goes through the canonical constructor</strong>, always. So your compact-constructor validation cannot be skipped, making records strictly safer than regular classes for untrusted/serialized data. Stating this in an interview separates you from candidates who only know &ldquo;records are short.&rdquo;</p>
+    </div>
+
+    <div class="interview-q">
+      <span class="iq-tag">&#x1F3AF; INTERVIEW QUESTIONS</span>
+      <p><strong>Q: When would you NOT use a record?</strong> &mdash; Mutable state, JPA entities, classes needing inheritance, or beans requiring a no-arg constructor. Records model <em>values</em>; entities model <em>identity over time</em>.</p>
+      <p><strong>Q: Are records immutable?</strong> &mdash; Shallowly. Fields are final, but a mutable component can be mutated through its reference. Defensive copies in the compact constructor make them deeply immutable.</p>
+      <p><strong>Q: How do records interact with serialization?</strong> &mdash; They deserialize through the canonical constructor, so validation always runs &mdash; unlike regular classes, where deserialization bypasses constructors.</p>
+    </div>
+
+    <div class="check">
+      <span class="check-tag">QUICK CHECK</span>
+      <p>A teammate writes <code>record Config(Map&lt;String,String&gt; settings)</code> and shares it across threads, calling it &ldquo;immutable, so it&rsquo;s safe.&rdquo; What&rsquo;s the flaw and the one-line fix?</p>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- STAGE 3 — JAVA 17: SEALED + PATTERN INSTANCEOF + ADT -->
   <!-- ============================================================ -->
   <div class="stage" data-section="3">
     <span class="stage-tag">STAGE 3 <span class="time">25 MIN</span></span>
-    <h3 class="ver-head">&#x2503; JAVA 8 (2014, LTS) &mdash; COLLECTORS &amp; PARALLEL STREAMS</h3>
-    <h2>Mutable reduction, composition, and the parallel trap</h2>
+    <h3 class="ver-head">&#x2503; JAVA 17 (2021, LTS) &mdash; SEALED CLASSES &amp; PATTERN MATCHING <code>instanceof</code></h3>
+    <h2>Closing the hierarchy &mdash; and the big idea</h2>
 
-    <h4>grouping, partitioning &amp; downstream composition</h4>
-    <pre><code>trades.stream().collect(groupingBy(<span class="typ">Trade</span>::symbol, counting()));         <span class="cmt">// count per symbol</span>
-trades.stream().collect(groupingBy(<span class="typ">Trade</span>::symbol, groupingBy(<span class="typ">Trade</span>::side))); <span class="cmt">// 2-level</span>
-trades.stream().collect(partitioningBy(t -&gt; t.qty() &gt; <span class="num-lit">10_000</span>));            <span class="cmt">// boolean split</span>
-trades.stream().collect(joining(<span class="str">", "</span>, <span class="str">"["</span>, <span class="str">"]"</span>));                          <span class="cmt">// string build</span></code></pre>
+    <h4>Pattern matching for instanceof (standard in 16)</h4>
+    <pre><code><span class="cmt">// Test and bind in one step; flow scoping limits the binding to where it's proven</span>
+<span class="kw">if</span> (msg <span class="kw">instanceof</span> <span class="typ">TradeEvent</span> te &amp;&amp; te.qty() &gt; <span class="num-lit">0</span>) process(te);
+<span class="kw">if</span> (!(msg <span class="kw">instanceof</span> <span class="typ">TradeEvent</span> te)) <span class="kw">return</span>;   <span class="cmt">// te is in scope BELOW this line</span></code></pre>
+    <p>The binding variable uses <strong>flow scoping</strong>: it&rsquo;s in scope exactly where the compiler can prove the test passed &mdash; including after an early return. This kills the historical &ldquo;test, then cast on the next line&rdquo; pattern where the cast and the test could silently drift apart.</p>
 
-    <h4>The 5-function Collector contract</h4>
-    <pre><code><span class="typ">Collector</span>.of(
-    () -&gt; <span class="kw">new</span> <span class="typ">StringJoiner</span>(<span class="str">", "</span>),   <span class="cmt">// 1. supplier — mutable container</span>
-    (j, s) -&gt; j.add(s),               <span class="cmt">// 2. accumulator — fold one element in</span>
-    (j1, j2) -&gt; j1.merge(j2),         <span class="cmt">// 3. combiner — merge two containers (PARALLEL)</span>
-    <span class="typ">StringJoiner</span>::toString            <span class="cmt">// 4. finisher — container → result</span>
-    <span class="cmt">// 5. characteristics — IDENTITY_FINISH, CONCURRENT, UNORDERED</span>
-);</code></pre>
-    <p>The interview point: <strong>the combiner is load-bearing.</strong> Sequential streams never call it, so a broken combiner &ldquo;works&rdquo; in every test, then silently produces garbage under <code>parallelStream()</code>.</p>
+    <h4>Sealed classes (standard in 17)</h4>
+    <p>Before 17, a hierarchy was either fully open (<code>public class</code>) or fully closed (<code>final</code>). Sealed adds the middle ground &mdash; open to exactly the types you name:</p>
+    <pre><code><span class="kw">public sealed interface</span> <span class="typ">PaymentResult</span>
+        <span class="kw">permits</span> <span class="typ">Approved</span>, <span class="typ">Declined</span>, <span class="typ">Pending</span> {}
 
-    <div class="key-rule">
-      <p><strong>reduce vs collect.</strong> <code>reduce</code> is immutable accumulation &mdash; each step produces a new value (right for ints, O(n&sup2;) for strings because every concat copies). <code>collect</code> is mutable reduction &mdash; one container per thread, mutated in place, merged. Folding strings with <code>reduce(String::concat)</code> is quadratic; <code>joining()</code> is linear.</p>
+<span class="kw">public record</span> <span class="typ">Approved</span>(<span class="typ">String</span> txnId, <span class="typ">BigDecimal</span> amount)  <span class="kw">implements</span> <span class="typ">PaymentResult</span> {}
+<span class="kw">public record</span> <span class="typ">Declined</span>(<span class="typ">String</span> reason, <span class="typ">boolean</span> retryable) <span class="kw">implements</span> <span class="typ">PaymentResult</span> {}
+<span class="kw">public record</span> <span class="typ">Pending</span>(<span class="typ">String</span> txnId, <span class="typ">Instant</span> checkAfter)  <span class="kw">implements</span> <span class="typ">PaymentResult</span> {}</code></pre>
+    <p>Each permitted subtype must choose one modifier: <code>final</code> (the branch ends), <code>sealed</code> (continues, controlled), or <code>non-sealed</code> (re-opens to anyone). Records are implicitly final, which is why records + sealed interfaces pair so naturally. Rules: permitted subtypes live in the same module (or package, unnamed module); if they&rsquo;re nested in the same file the <code>permits</code> clause can be inferred.</p>
+
+    <div class="key-rule insight">
+      <p><strong>The big idea: records + sealed classes + pattern matching = algebraic data types.</strong></p>
+      <p>A sealed interface with record implementations is a <em>sum type of product types</em>: a <code>PaymentResult</code> is <em>exactly one of</em> Approved, Declined, or Pending &mdash; and the compiler knows the complete list. That knowledge powers <strong>exhaustive switch</strong> (Stage 5): no <code>default</code> needed, and the day someone adds a fourth result type, every switch over <code>PaymentResult</code> stops compiling until it handles the new case. This replaces the visitor pattern and long <code>instanceof</code> chains, and turns &ldquo;forgot a case&rdquo; from a production bug into a compile error.</p>
     </div>
-
-    <h4>Parallel streams &mdash; how they run, and the common-pool trap</h4>
-    <p>The spliterator <code>trySplit()</code>s the source into chunks, chunks run as ForkJoin tasks, results merge via the collector&rsquo;s combiner. Critically, those tasks run on <code>ForkJoinPool.commonPool()</code> &mdash; <strong>one pool, shared JVM-wide, sized cores&minus;1</strong>. Every parallel stream and every default <code>CompletableFuture</code> async shares it; one parallel stream doing blocking I/O starves every other parallel computation in the process.</p>
-    <p>Reach for parallel <em>only</em> if all hold: large N &times; per-element cost; well-splitting source (ArrayList/array, not LinkedList/<code>iterate</code>); stateless, non-blocking ops; cheap merge; no encounter-order dependence.</p>
-    <pre><code><span class="cmt">// BROKEN under parallel — ArrayList isn't thread-safe</span>
-<span class="typ">List</span>&lt;<span class="typ">String</span>&gt; out = <span class="kw">new</span> <span class="typ">ArrayList</span>&lt;&gt;();
-data.parallelStream().forEach(out::add);          <span class="cmt">// ✗ data race</span>
-<span class="typ">List</span>&lt;<span class="typ">String</span>&gt; out = data.parallelStream().collect(toList()); <span class="cmt">// ✓ collector owns state</span></code></pre>
 
     <div class="interview-q">
       <span class="iq-tag">&#x1F3AF; INTERVIEW QUESTIONS</span>
-      <p><strong>Q: <code>toMap</code> throws on duplicate keys &mdash; fix?</strong> &mdash; The 3-arg form with a merge function: <code>toMap(Trade::symbol, Trade::price, (a, b) -&gt; b)</code>. Forgetting it is a top-5 production stream bug.</p>
-      <p><strong>Q: Why was my parallel stream slower than sequential?</strong> &mdash; Too few/cheap elements, badly-splitting source, a stateful op serializing the pipeline, expensive merge, or common-pool contention from elsewhere in the JVM.</p>
+      <p><strong>Q: Sealed classes vs enums?</strong> &mdash; Enum when every variant has the same shape (or none). Sealed when variants carry <em>different</em> data: Approved has a txnId, Declined a reason. Enums = fixed set of <em>instances</em>; sealed = fixed set of <em>shapes</em>.</p>
+      <p><strong>Q: Why not just a final class, or an open hierarchy?</strong> &mdash; Final closes it to everyone; open lets anyone extend. Sealed gives compiler-verified, <em>controlled</em> polymorphism &mdash; you keep the extensibility you choose and deny the rest, which is what unlocks exhaustiveness.</p>
+      <p><strong>Q: When is sealed the wrong choice?</strong> &mdash; When third parties must extend your type (a plugin SPI, a public result type). Closed domain model: seal it. Open extension point: don&rsquo;t.</p>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- STAGE 4 — JAVA 17: STREAM/API ERGONOMICS OF THE ERA -->
+  <!-- ============================================================ -->
+  <div class="stage" data-section="4">
+    <span class="stage-tag">STAGE 4 <span class="time">15 MIN</span></span>
+    <h3 class="ver-head">&#x2503; JAVA 17 (2021, LTS) &mdash; STREAM &amp; API ERGONOMICS (12&ndash;16)</h3>
+    <h2>The smaller wins bundled into 17</h2>
+
+    <h4>Stream.toList() (16) &mdash; and its migration trap</h4>
+    <pre><code><span class="typ">List</span>&lt;<span class="typ">String</span>&gt; a = stream.collect(<span class="typ">Collectors</span>.toList()); <span class="cmt">// happens to be a mutable ArrayList</span>
+<span class="typ">List</span>&lt;<span class="typ">String</span>&gt; b = stream.toList();                     <span class="cmt">// UNMODIFIABLE; also no collector indirection</span>
+b.add(<span class="str">"x"</span>);  <span class="cmt">// UnsupportedOperationException — mechanical migration can break mutating code</span></code></pre>
+
+    <h4>mapMulti (16) &amp; teeing (12)</h4>
+    <pre><code><span class="cmt">// mapMulti: allocation-free 1→0-or-many — no per-element Stream object like flatMap</span>
+orders.stream().&lt;<span class="typ">OrderLine</span>&gt;mapMulti((o, push) -&gt; o.lines().forEach(push)).toList();
+
+<span class="cmt">// teeing: feed every element to TWO collectors, merge results — min and max in one pass</span>
+trades.stream().collect(teeing(
+    minBy(comparing(<span class="typ">Trade</span>::price)), maxBy(comparing(<span class="typ">Trade</span>::price)), <span class="typ">PriceRange</span>::<span class="kw">new</span>));</code></pre>
+
+    <h4>Records as stream tuples (16) &mdash; including local records</h4>
+    <pre><code><span class="typ">List</span>&lt;<span class="typ">String</span>&gt; report(<span class="typ">List</span>&lt;<span class="typ">Trade</span>&gt; trades) {
+    <span class="kw">record</span> <span class="typ">SymbolValue</span>(<span class="typ">String</span> symbol, <span class="typ">BigDecimal</span> value) {}   <span class="cmt">// declared INSIDE the method</span>
+    <span class="kw">return</span> trades.stream()
+        .map(t -&gt; <span class="kw">new</span> <span class="typ">SymbolValue</span>(t.symbol(), t.value()))
+        .sorted(comparing(<span class="typ">SymbolValue</span>::value).reversed())
+        .map(sv -&gt; sv.symbol() + <span class="str">": "</span> + sv.value())
+        .toList();
+}</code></pre>
+    <p>Before records, one-off intermediate pipeline shapes meant <code>AbstractMap.SimpleEntry</code> or a hand-written class; local records make them free.</p>
+
+    <h4>Helpful NullPointerExceptions (14)</h4>
+    <pre><code><span class="cmt">// Before: "NullPointerException" at a line — which of three calls was null?</span>
+order.getCustomer().getAddress().getCity();
+<span class="cmt">// Java 14+: "Cannot invoke Address.getCity() because the return value of</span>
+<span class="cmt">//           Customer.getAddress() is null"</span></code></pre>
+    <p>(Also in this era: enhanced pseudo-random generators &mdash; the <code>RandomGenerator</code> interface family in 17.)</p>
+
+    <div class="interview-q">
+      <span class="iq-tag">&#x1F3AF; INTERVIEW QUESTIONS</span>
+      <p><strong>Q: <code>Stream.toList()</code> vs <code>collect(Collectors.toList())</code> &mdash; just style?</strong> &mdash; No. <code>toList()</code> returns an <em>unmodifiable</em> list; <code>Collectors.toList()</code> returns a mutable ArrayList (documented as no-guarantees). Mechanical migration can break code that mutates the result, and <code>toList()</code> can be faster (no accumulator indirection, sized allocation).</p>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- STAGE 5 — JAVA 21: PATTERN SWITCH + RECORD PATTERNS -->
+  <!-- ============================================================ -->
+  <div class="stage" data-section="5">
+    <span class="stage-tag">STAGE 5 <span class="time">20 MIN</span></span>
+    <h3 class="ver-head">&#x2503; JAVA 21 (2023, LTS) &mdash; PATTERN MATCHING FOR SWITCH &amp; RECORD PATTERNS</h3>
+    <h2>The data-modeling story reaches its conclusion</h2>
+
+    <p>The Java 17 foundations (sealed types, records, pattern <code>instanceof</code>) reach their conclusion here: full pattern matching for <code>switch</code> and record deconstruction, both <strong>standard</strong> in 21.</p>
+    <pre><code><span class="kw">return switch</span> (result) {
+    <span class="kw">case</span> <span class="typ">Approved</span>(<span class="kw">var</span> id, <span class="kw">var</span> amt)             -&gt; settle(id, amt);
+    <span class="kw">case</span> <span class="typ">Declined</span>(<span class="kw">var</span> r, <span class="kw">var</span> retry) <span class="kw">when</span> retry -&gt; requeue(r);   <span class="cmt">// guarded: 'when'</span>
+    <span class="kw">case</span> <span class="typ">Declined</span>(<span class="kw">var</span> r, <span class="kw">var</span> x)               -&gt; reject(r);
+    <span class="kw">case null</span>                                  -&gt; handleNull();   <span class="cmt">// explicit null case</span>
+    <span class="kw">case</span> <span class="typ">Pending</span> p                            -&gt; defer(p);
+};  <span class="cmt">// sealed ⇒ exhaustive ⇒ no default needed</span></code></pre>
+
+    <h4>Type patterns &amp; the death of cast-after-test</h4>
+    <p>A <strong>type pattern</strong> (<code>case Approved a</code>) tests the runtime type and, on match, binds a pre-narrowed variable scoped to that branch &mdash; no cast. The long <code>if (x instanceof A) { A a = (A) x; ... }</code> chain, where a stale cast and stale test silently drift apart, collapses into a switch where the compiler guarantees they can never disagree.</p>
+
+    <h4>Guards &amp; dominance &mdash; ordering is a compile-time contract</h4>
+    <p>A <strong>guard</strong> (<code>when retry</code>) refines a pattern with a boolean. Cases run top-to-bottom and the compiler enforces <em>dominance</em>: a broader pattern above a narrower one it subsumes is a compile error, because the narrower case is unreachable. So the guarded <code>case Declined(...) when retry</code> <strong>must</strong> precede the unguarded <code>case Declined(...)</code>. This is the compiler preventing dead branches, not a style rule.</p>
+
+    <h4>Null handling &amp; how exhaustiveness is proven</h4>
+    <p><code>switch</code> still throws <code>NullPointerException</code> on a null selector <em>unless</em> you write <code>case null</code> (optionally <code>case null, default</code>) &mdash; because exhaustiveness reasons about types, and null inhabits every reference type. Over a sealed type the compiler walks the <code>permits</code> list recursively, proves total coverage, and lets you omit <code>default</code>; it even synthesizes a hidden <code>MatchException</code> fallback for a subtype added via separate compilation. <strong>Omitting <code>default</code> is the correct choice</strong> &mdash; it preserves the refactoring safety net; a <code>default</code> would silently absorb future subtypes.</p>
+
+    <h4>Record patterns &mdash; deconstruction, nested</h4>
+    <pre><code><span class="kw">case</span> <span class="typ">Approved</span>(<span class="typ">String</span> txnId, <span class="typ">BigDecimal</span> amount) -&gt; settle(txnId, amount);
+
+<span class="cmt">// Nested: destructure an object graph in one pattern</span>
+<span class="kw">if</span> (obj <span class="kw">instanceof</span> <span class="typ">Line</span>(<span class="typ">Point</span>(<span class="kw">var</span> x1, <span class="kw">var</span> y1), <span class="typ">Point</span>(<span class="kw">var</span> x2, <span class="kw">var</span> y2)))
+    <span class="kw">double</span> len = <span class="typ">Math</span>.hypot(x2 - x1, y2 - y1);   <span class="cmt">// all four bound at once</span></code></pre>
+    <p>Sealed (closed set) + record patterns (destructure each shape) + exhaustiveness (nothing missed) = the complete algebraic-data-type triad, and the full replacement for the visitor pattern. Unlike a visitor, adding a variant doesn&rsquo;t force every implementor to re-implement an interface &mdash; it just lights up compile errors at the switches that care.</p>
+
+    <div class="interview-q">
+      <span class="iq-tag">&#x1F3AF; INTERVIEW QUESTIONS</span>
+      <p><strong>Q: Explain exhaustiveness checking and why it matters for refactoring.</strong> &mdash; Over a sealed type the compiler proves every subtype is covered; a switch with no <code>default</code> then compiles. Add a subtype and every such switch breaks the build, naming exactly where to update &mdash; &ldquo;forgot a case&rdquo; moves to compile time. A <code>default</code> defeats this.</p>
+      <p><strong>Q: Why must a guarded case precede its unguarded form?</strong> &mdash; Dominance: the unguarded pattern subsumes the guarded one, so reversed, the guarded case is unreachable &mdash; a compile error.</p>
+      <p><strong>Q: Switch over a sealed type with null?</strong> &mdash; NPE unless you add <code>case null</code>; exhaustiveness covers types, not null.</p>
     </div>
 
     <div class="check">
       <span class="check-tag">QUICK CHECK</span>
-      <p>In one stream pass, produce both the count of trades and the average price. Which collector composition do you reach for, and could you do it before Java 12?</p>
+      <p>You write <code>case Declined(var r, var retry)</code> first, then <code>case Declined(var r, var retry) when retry</code> below it. What does the compiler say, and what&rsquo;s the fix?</p>
     </div>
   </div>
 
   <!-- ============================================================ -->
-  <!-- STAGE 4 — JAVA 8: OPTIONAL, INTERFACES, TIME, ASYNC -->
-  <!-- ============================================================ -->
-  <div class="stage" data-section="4">
-    <span class="stage-tag">STAGE 4 <span class="time">25 MIN</span></span>
-    <h3 class="ver-head">&#x2503; JAVA 8 (2014, LTS) &mdash; OPTIONAL, INTERFACE EVOLUTION, java.time, CompletableFuture</h3>
-    <h2>The rest of the Java 8 toolkit</h2>
-
-    <h4>Optional&lt;T&gt;</h4>
-    <pre><code><span class="cmt">// The signature itself says "absence is a normal outcome"</span>
-<span class="typ">Optional</span>&lt;<span class="typ">User</span>&gt; findUser(<span class="typ">String</span> id);
-<span class="typ">String</span> name = findUser(id).map(<span class="typ">User</span>::name)
-                          .filter(n -&gt; !n.isBlank())
-                          .orElseGet(() -&gt; expensiveDefault());  <span class="cmt">// lazy fallback</span></code></pre>
-    <div class="compare-wrap"><table class="compare">
-      <thead><tr><th>Anti-pattern</th><th>Why wrong</th><th>Instead</th></tr></thead>
-      <tbody>
-        <tr><td><code>if (o.isPresent()) o.get()</code></td><td>Recreates the null check; <code>get()</code> can throw</td><td><code>map</code>/<code>ifPresent</code>/<code>orElseThrow</code></td></tr>
-        <tr><td>Optional as a field</td><td>Not Serializable; box per read; the Optional itself can be null</td><td>Nullable field, Optional-returning getter</td></tr>
-        <tr><td>Optional parameter</td><td>Caller forced to wrap; three states</td><td>Overloads or <code>@Nullable</code></td></tr>
-        <tr><td><code>orElse(compute())</code></td><td>Always evaluates, even when present</td><td><code>orElseGet(() -&gt; compute())</code></td></tr>
-      </tbody>
-    </table></div>
-    <p>The one-line philosophy: <strong>Optional is a return type</strong> &mdash; a contract that absence is normal &mdash; not a general null replacement.</p>
-
-    <h4>Default &amp; static interface methods</h4>
-    <p>Interfaces can finally carry implementations &mdash; which is <em>how</em> Streams were retrofitted onto every existing collection without breaking implementors:</p>
-    <pre><code><span class="kw">public interface</span> <span class="typ">Collection</span>&lt;E&gt; {
-    <span class="kw">default</span> <span class="typ">Stream</span>&lt;E&gt; stream() { <span class="kw">return</span> <span class="typ">StreamSupport</span>.stream(spliterator(), <span class="kw">false</span>); }
-}</code></pre>
-    <p>The trade-off to know: a class implementing two interfaces with the <em>same</em> default method must override it to resolve the conflict (the &ldquo;diamond&rdquo;), and a class&rsquo;s own method always wins over an inherited default.</p>
-
-    <h4>java.time (JSR-310)</h4>
-    <pre><code><span class="typ">LocalDate</span> expiry  = <span class="typ">LocalDate</span>.of(<span class="num-lit">2026</span>, <span class="typ">Month</span>.JUNE, <span class="num-lit">25</span>);
-<span class="typ">ZonedDateTime</span> open = expiry.atTime(<span class="num-lit">9</span>, <span class="num-lit">15</span>).atZone(<span class="typ">ZoneId</span>.of(<span class="str">"Asia/Kolkata"</span>));
-<span class="typ">Duration</span> left   = <span class="typ">Duration</span>.between(<span class="typ">Instant</span>.now(), open.toInstant());</code></pre>
-    <p>The fix over <code>Date</code>/<code>Calendar</code>: every type is <strong>immutable and thread-safe</strong>, so instances can be shared freely. <code>Instant</code> is a machine timestamp (UTC); <code>LocalDateTime</code> has no zone; <code>ZonedDateTime</code> binds a zone &mdash; knowing which to store is an interview favorite (store <code>Instant</code> for events, <code>LocalDate</code> for birthdays).</p>
-
-    <h4>CompletableFuture</h4>
-    <pre><code><span class="typ">CompletableFuture</span>.supplyAsync(() -&gt; fetchSpot(sym))
-    .thenCombine(supplyAsync(() -&gt; fetchVol(sym)), (spot, vol) -&gt; price(spot, vol))
-    .exceptionally(ex -&gt; fallbackPrice(sym))
-    .thenAccept(quoteCache::put);</code></pre>
-    <p>Composable async: <code>thenApply</code> (transform), <code>thenCompose</code> (flatMap for futures), <code>thenCombine</code> (join two), <code>exceptionally</code>/<code>handle</code> (recover). Caveat to state: the <code>*Async</code> variants without an explicit executor run on the <em>common pool</em> &mdash; the same trap as parallel streams.</p>
-
-    <div class="interview-q">
-      <span class="iq-tag">&#x1F3AF; INTERVIEW QUESTIONS</span>
-      <p><strong>Q: When should <code>Optional</code> NOT be used?</strong> &mdash; As a field, method parameter, or collection element; and never <code>get()</code> without checking. It&rsquo;s a return-type vehicle for &ldquo;no result.&rdquo;</p>
-      <p><strong>Q: <code>orElse</code> vs <code>orElseGet</code>?</strong> &mdash; <code>orElse(x)</code> always evaluates <code>x</code>, even when the value is present; <code>orElseGet(supplier)</code> only runs on empty. Use <code>orElseGet</code> when the fallback is expensive.</p>
-      <p><strong>Q: <code>thenApply</code> vs <code>thenCompose</code>?</strong> &mdash; <code>thenApply</code> is <code>map</code> (returns a value); <code>thenCompose</code> is <code>flatMap</code> (returns another future) &mdash; use it to avoid <code>CompletableFuture&lt;CompletableFuture&lt;T&gt;&gt;</code>.</p>
-    </div>
-  </div>
-
-  <!-- ============================================================ -->
-  <!-- STAGE 5 — JAVA 11: LANGUAGE & PLATFORM -->
-  <!-- ============================================================ -->
-  <div class="stage" data-section="5">
-    <span class="stage-tag">STAGE 5 <span class="time">20 MIN</span></span>
-    <h3 class="ver-head">&#x2503; JAVA 11 (2018, LTS) &mdash; LANGUAGE &amp; PLATFORM (bundling 9 &amp; 10)</h3>
-    <h2>The cleanup LTS &mdash; var, HttpClient, modules, conveniences</h2>
-
-    <h4><code>var</code> &mdash; local-variable type inference (10)</h4>
-    <pre><code><span class="kw">var</span> bySymbol = <span class="kw">new</span> <span class="typ">HashMap</span>&lt;<span class="typ">String</span>, <span class="typ">List</span>&lt;<span class="typ">Trade</span>&gt;&gt;();   <span class="cmt">// inferred at COMPILE time</span>
-<span class="kw">for</span> (<span class="kw">var</span> e : bySymbol.entrySet()) { ... }
-(<span class="typ">@Nonnull</span> <span class="kw">var</span> a, <span class="typ">@Nonnull</span> <span class="kw">var</span> b) -&gt; a.merge(b)             <span class="cmt">// var in lambda params (11)</span></code></pre>
-    <p>It is <strong>inference, not dynamic typing</strong> &mdash; the variable has a fixed static type and the bytecode is identical. Locals only: never fields, parameters, or return types. The judgment rule: <code>var</code> should aid readability, not hide the type from a reviewer (<code>var result = service.process()</code> is worse than the explicit type).</p>
-
-    <h4>Standard <code>HttpClient</code> (11)</h4>
-    <pre><code><span class="typ">HttpClient</span> client = <span class="typ">HttpClient</span>.newBuilder().version(<span class="typ">Version</span>.HTTP_2).build();
-<span class="typ">HttpRequest</span> req = <span class="typ">HttpRequest</span>.newBuilder(<span class="typ">URI</span>.create(url))
-                             .timeout(<span class="typ">Duration</span>.ofSeconds(<span class="num-lit">2</span>)).build();
-<span class="typ">HttpResponse</span>&lt;<span class="typ">String</span>&gt; r = client.send(req, <span class="typ">BodyHandlers</span>.ofString());   <span class="cmt">// sync</span>
-client.sendAsync(req, <span class="typ">BodyHandlers</span>.ofString())                       <span class="cmt">// async, composes with CF</span>
-      .thenApply(<span class="typ">HttpResponse</span>::body).thenAccept(cache::update);</code></pre>
-    <p>HTTP/2, WebSocket, and async built in &mdash; removed the mandatory Apache HttpClient dependency from most services.</p>
-
-    <h4>Module system (JPMS, 9) &amp; single-file execution (11)</h4>
-    <pre><code><span class="kw">module</span> com.trading.engine {
-    <span class="kw">requires</span> com.trading.marketdata;
-    <span class="kw">exports</span> com.trading.engine.api;   <span class="cmt">// everything else invisible to consumers</span>
-}
-<span class="cmt">// 11: run a single source file with no javac step</span>
-$ java TradeReport.java</code></pre>
-    <p>Brief by design &mdash; most applications stay on the classpath. The lasting impact is that the <em>JDK itself</em> is modularized, which later enabled jlink custom runtimes and the lockdown of <code>sun.misc.*</code> internals.</p>
-
-    <h4>String, File &amp; collection conveniences (9&ndash;11)</h4>
-    <pre><code><span class="typ">List</span>&lt;<span class="typ">String</span>&gt; syms = <span class="typ">List</span>.of(<span class="str">"NIFTY"</span>, <span class="str">"BANKNIFTY"</span>);   <span class="cmt">// (9) immutable, null-rejecting</span>
-<span class="str">"  x  "</span>.strip();  <span class="str">""</span>.isBlank();  <span class="str">"a\nb"</span>.lines();  <span class="str">"-"</span>.repeat(<span class="num-lit">40</span>);  <span class="cmt">// (11)</span>
-<span class="typ">String</span> cfg = <span class="typ">Files</span>.readString(<span class="typ">Path</span>.of(<span class="str">"app.conf"</span>));            <span class="cmt">// (11) whole file</span></code></pre>
-
-    <div class="interview-q">
-      <span class="iq-tag">&#x1F3AF; INTERVIEW QUESTIONS</span>
-      <p><strong>Q: Is <code>var</code> dynamic typing?</strong> &mdash; No. Compile-time inference; fixed static type; identical bytecode. Locals only.</p>
-      <p><strong>Q: We&rsquo;re on Java 8 &mdash; what does moving to 11 buy us, and what breaks?</strong> &mdash; Buys: free production JFR, the standard HttpClient, <code>var</code>, collection factories, the stream/Optional gap-fillers (Stage 6). Breaks: JAXB/JAX-WS/CORBA removed (re-add as Maven deps); reflection into JDK internals starts warning.</p>
-    </div>
-  </div>
-
-  <!-- ============================================================ -->
-  <!-- STAGE 6 — JAVA 11: FUNCTIONAL GAP-FILLERS -->
+  <!-- STAGE 6 — JAVA 21: VIRTUAL THREADS & PLATFORM -->
   <!-- ============================================================ -->
   <div class="stage" data-section="6">
-    <span class="stage-tag">STAGE 6 <span class="time">20 MIN</span></span>
-    <h3 class="ver-head">&#x2503; JAVA 11 (2018, LTS) &mdash; STREAM, OPTIONAL &amp; COLLECTOR GAP-FILLERS (9&ndash;11)</h3>
-    <h2>The functional API grows up</h2>
+    <span class="stage-tag">STAGE 6 <span class="time">25 MIN</span></span>
+    <h3 class="ver-head">&#x2503; JAVA 21 (2023, LTS) &mdash; VIRTUAL THREADS, STRUCTURED CONCURRENCY &amp; PLATFORM</h3>
+    <h2>The concurrency revolution</h2>
 
-    <p>Java 8 shipped the functional model with real gaps &mdash; you couldn&rsquo;t conditionally stop a stream, <code>Stream.iterate</code> was infinite-only, and bridging an Optional into a stream was ugly. The 9&ndash;11 releases (delivered to most fleets <em>as</em> Java 11) filled them.</p>
+    <h4>Virtual threads (standard) &mdash; the headline</h4>
+    <pre><code><span class="kw">try</span> (<span class="kw">var</span> exec = <span class="typ">Executors</span>.newVirtualThreadPerTaskExecutor()) {
+    <span class="kw">for</span> (<span class="typ">Order</span> o : orders) exec.submit(() -&gt; enrich(o));  <span class="cmt">// 100k blocking calls? Fine.</span>
+}
+<span class="typ">Thread</span>.ofVirtual().start(() -&gt; doWork());</code></pre>
+    <p>A platform thread wraps an OS thread: ~1 MB stack, kernel-scheduled, expensive &mdash; capping you at a few thousand. So high-concurrency I/O went <em>asynchronous</em> (callbacks, reactive), trading readable blocking code for throughput. Virtual threads remove that trade by making blocking cheap.</p>
+    <p><strong>The M:N scheduling model:</strong> a virtual thread is a Java object holding a continuation plus a heap stack &mdash; not an OS thread. Many are multiplexed onto a small pool of <strong>carrier threads</strong> (platform threads):</p>
+    <ul>
+      <li><strong>Mount:</strong> to run, a virtual thread mounts onto a carrier and executes as normal Java.</li>
+      <li><strong>Unmount:</strong> on an instrumented blocking call (socket read, sleep, most <code>j.u.c</code> waits), the runtime captures its continuation, copies its stack to the heap, and unmounts it &mdash; freeing the carrier to run another virtual thread immediately.</li>
+      <li><strong>Resume:</strong> when I/O completes, it&rsquo;s rescheduled onto any free carrier and continues from the park point.</li>
+    </ul>
+    <p>Code is written in plain blocking style, but the carrier never blocks &mdash; so a handful of OS threads serve hundreds of thousands of concurrent operations. <strong>Thread-per-request is sane again.</strong></p>
+    <div class="key-rule">
+      <p><strong>Pinning &mdash; the one failure mode to know cold.</strong> A virtual thread that can&rsquo;t unmount while blocked is <em>pinned</em> to its carrier, which sits idle &mdash; reintroducing the exact starvation virtual threads were meant to remove. Causes: (1) blocking inside a <code>synchronized</code> block/method (the JDK can&rsquo;t unmount across a monitor); (2) blocking in a native (JNI) call. <strong>Fix:</strong> switch hot blocking sections from <code>synchronized</code> to <code>ReentrantLock</code> (its park is unmount-aware). <strong>Detect:</strong> <code>-Djdk.tracePinnedThreads=full</code>. Also note: virtual threads don&rsquo;t speed up CPU-bound work (still core-limited), and you never pool them &mdash; create one per task and let it die.</p>
+    </div>
 
-    <h4>takeWhile / dropWhile &amp; bounded iterate (9)</h4>
-    <pre><code><span class="cmt">// Ordered, conditional truncation — stops at the FIRST failing element</span>
-prices.stream().takeWhile(p -&gt; p &lt; limit);
-prices.stream().dropWhile(p -&gt; p &lt; limit);   <span class="cmt">// skip until first passing</span>
+    <h4>Structured concurrency (preview)</h4>
+    <p>Virtual threads make spawning cheap; structured concurrency makes it <em>safe</em>. With a bare executor, if you fork two subtasks and the first fails, the second runs on orphaned. Structured concurrency gives concurrent tasks block lifecycle:</p>
+    <pre><code><span class="kw">try</span> (<span class="kw">var</span> scope = <span class="kw">new</span> <span class="typ">StructuredTaskScope.ShutdownOnFailure</span>()) {
+    <span class="kw">var</span> user  = scope.fork(() -&gt; fetchUser(id));     <span class="cmt">// each fork → its own virtual thread</span>
+    <span class="kw">var</span> order = scope.fork(() -&gt; fetchOrder(id));
+    scope.join();                                   <span class="cmt">// wait for ALL</span>
+    scope.throwIfFailed();                           <span class="cmt">// propagate the first failure</span>
+    <span class="kw">return new</span> <span class="typ">Response</span>(user.get(), order.get());
+}  <span class="cmt">// scope close: no subtask can outlive this block</span></code></pre>
+    <ul>
+      <li><strong>ShutdownOnFailure</strong> &mdash; &ldquo;I need ALL&rdquo;: first failure cancels the siblings.</li>
+      <li><strong>ShutdownOnSuccess</strong> &mdash; &ldquo;I need ANY&rdquo;: first success cancels the rest (hedged requests).</li>
+      <li>Cancellation propagates <em>down</em>, exceptions <em>up</em>, and a thread dump shows the real parent&ndash;child tree.</li>
+    </ul>
 
-<span class="cmt">// 3-arg iterate: a for-loop as a stream, finally bounded</span>
-<span class="typ">Stream</span>.iterate(<span class="num-lit">1</span>, i -&gt; i &lt;= <span class="num-lit">100</span>, i -&gt; i * <span class="num-lit">2</span>).forEach(<span class="typ">System</span>.out::println);
+    <h4>Scoped values (preview) &mdash; the ThreadLocal replacement</h4>
+    <pre><code><span class="kw">static final</span> <span class="typ">ScopedValue</span>&lt;<span class="typ">String</span>&gt; REQUEST_ID = <span class="typ">ScopedValue</span>.newInstance();
+<span class="typ">ScopedValue</span>.where(REQUEST_ID, <span class="str">"req-8861"</span>).run(() -&gt; handle());
+<span class="cmt">// Inside handle() and everything it calls: REQUEST_ID.get()</span></code></pre>
+    <p><code>ThreadLocal</code> has three flaws virtual threads make fatal: mutable anywhere downstream, unbounded lifetime (leaks; a forgotten <code>remove()</code> in a pooled thread is a classic bug), and a million mutable maps is a memory disaster. Scoped values flip all three: <strong>immutable</strong> (rebind only in a nested scope), <strong>lifetime = the dynamic extent</strong> of the <code>run</code>/<code>call</code> (auto-torn-down), and <strong>inherited by forked subtasks</strong> in a <code>StructuredTaskScope</code> &mdash; so request context flows across the fan-out. The two features are co-designed.</p>
 
-<span class="cmt">// Together: the pagination pattern — lazy pages until an empty one comes back</span>
-<span class="typ">Stream</span>.iterate(fetchPage(<span class="num-lit">0</span>), pg -&gt; fetchPage(pg.number() + <span class="num-lit">1</span>))
-      .takeWhile(pg -&gt; !pg.items().isEmpty())
-      .flatMap(pg -&gt; pg.items().stream());</code></pre>
+    <h4>Sequenced collections (standard) &amp; generational ZGC</h4>
+    <pre><code><span class="cmt">// Unified first/last/reversed across List, Deque, LinkedHashSet, LinkedHashMap</span>
+history.addFirst(latest);  history.removeLast();  <span class="kw">var</span> newest = history.getFirst();
+<span class="kw">for</span> (<span class="kw">var</span> e : auditLog.reversed().entrySet()) { ... }   <span class="cmt">// reversed() is a zero-copy VIEW</span></code></pre>
+    <p><code>reversed()</code> returns a live view (O(1), writes through), so descending iteration of a LinkedHashMap is allocation-free. One sharp edge: <code>addFirst</code> on a <code>SortedSet</code> throws <code>UnsupportedOperationException</code> &mdash; its order comes from its comparator. <strong>Generational ZGC</strong> splits ZGC&rsquo;s heap into young/old generations, exploiting the weak generational hypothesis (Day 3) for lower CPU and better allocation throughput while keeping the sub-ms pauses from Day 4 &mdash; now the recommended ZGC default.</p>
 
-    <h4>Optional grows up (9&ndash;11)</h4>
-    <pre><code>repo.findById(id)
-    .or(() -&gt; cache.find(id))                <span class="cmt">// (9) lazy alternative source</span>
-    .ifPresentOrElse(this::audit,            <span class="cmt">// (9) both branches</span>
-                     () -&gt; log.warn(<span class="str">"missing"</span>));
-
-ids.stream().map(repo::findById)
-   .flatMap(<span class="typ">Optional</span>::stream)                <span class="cmt">// (9) the bridge — Java 8's monstrosity, gone</span>
-   .toList();
-
-<span class="kw">if</span> (result.isEmpty()) { ... }                <span class="cmt">// (11) the readable negative</span></code></pre>
-    <p>Before the <code>stream()</code> bridge, turning an <code>Optional</code> into a 0-or-1 stream required <code>opt.map(Stream::of).orElseGet(Stream::empty)</code>. Now <code>flatMap(Optional::stream)</code> over a stream of Optionals keeps the present values and drops the empties in one step.</p>
-
-    <h4>New downstream collectors &amp; small gems (9&ndash;11)</h4>
-    <pre><code><span class="cmt">// filtering (9) as downstream — keeps EMPTY groups, unlike pre-filtering</span>
-trades.stream().collect(groupingBy(<span class="typ">Trade</span>::symbol,
-       filtering(t -&gt; t.qty() &gt; <span class="num-lit">10_000</span>, toList())));
-
-<span class="cmt">// flatMapping (9) — flatten inside a group</span>
-orders.stream().collect(groupingBy(<span class="typ">Order</span>::customer,
-       flatMapping(o -&gt; o.lines().stream(), toList())));
-
-stream.filter(<span class="typ">Predicate</span>.not(<span class="typ">String</span>::isBlank));    <span class="cmt">// (11) negate a method ref</span>
-<span class="typ">Files</span>.lines(path).filter(l -&gt; l.contains(<span class="str">"ERROR"</span>)); <span class="cmt">// lazy file processing</span></code></pre>
-    <p>The <code>filtering</code> vs pre-filter distinction is a classic probe: <code>.filter(...).collect(groupingBy(...))</code> drops a key entirely if nothing passes; <code>groupingBy(..., filtering(...))</code> keeps the key with an empty list. Different report shapes.</p>
+    <h4>Coming next: Gatherers (Java 22+ preview)</h4>
+    <p>Collectors customize a stream&rsquo;s <em>terminal</em> step; <code>Stream.gather(...)</code> finally customizes the <em>intermediate</em> step &mdash; <code>windowFixed</code> (batching), <code>windowSliding</code> (moving averages), <code>scan</code> (running totals). Java 21 is the current LTS, so know it exists and the gap it fills.</p>
 
     <div class="interview-q">
       <span class="iq-tag">&#x1F3AF; INTERVIEW QUESTIONS</span>
-      <p><strong>Q: How did Optional change after Java 8?</strong> &mdash; 9 added <code>or()</code>, <code>ifPresentOrElse()</code>, and <code>stream()</code>; 10 added no-arg <code>orElseThrow()</code>; 11 added <code>isEmpty()</code>. A candidate who only knows <code>isPresent/get</code> learned Optional in 2014 and stopped.</p>
-      <p><strong>Q: <code>takeWhile</code> vs <code>filter</code>?</strong> &mdash; <code>filter</code> tests every element; <code>takeWhile</code> stops at the first failure (order-sensitive). On <code>[1,2,5,1]</code> with <code>&lt; 3</code>: filter &rarr; <code>[1,2,1]</code>, takeWhile &rarr; <code>[1,2]</code>.</p>
+      <p><strong>Q: Walk me through what happens when a virtual thread blocks on a socket read.</strong> &mdash; The instrumented call captures its continuation, copies its stack to the heap, unmounts it from the carrier (which runs another virtual thread); on completion it&rsquo;s rescheduled onto a free carrier and resumes. The OS thread never blocked.</p>
+      <p><strong>Q: What is pinning &mdash; cause, detection, fix?</strong> &mdash; A virtual thread that can&rsquo;t unmount while blocked, holding its carrier idle. Caused by blocking in <code>synchronized</code> or JNI. Detect with <code>-Djdk.tracePinnedThreads=full</code>; fix by switching to <code>ReentrantLock</code>.</p>
+      <p><strong>Q: Virtual threads vs Project Reactor?</strong> &mdash; Virtual threads for blocking I/O you want simple and debuggable; Reactor still wins for backpressure, streaming, and complex async composition. Virtual threads remove the &ldquo;go reactive just to scale blocking calls&rdquo; pressure.</p>
+      <p><strong>Q: Why can&rsquo;t <code>ThreadLocal</code> work well with virtual threads, and what replaces it?</strong> &mdash; A million mutable, unbounded-lifetime ThreadLocals is a memory/leak hazard. Scoped values: immutable, scope-bound lifetime, inherited by subtasks.</p>
+    </div>
+
+    <div class="check">
+      <span class="check-tag">QUICK CHECK</span>
+      <p>You move a service to virtual threads and throughput barely improves; a profiler shows carriers mostly idle. One <code>synchronized</code> method guards a call to a slow external API. Explain what&rsquo;s happening and the fix.</p>
     </div>
   </div>
 
@@ -378,68 +380,75 @@ stream.filter(<span class="typ">Predicate</span>.not(<span class="typ">String</s
   <!-- ============================================================ -->
   <div class="stage" data-section="7">
     <span class="stage-tag">STAGE 7 <span class="time">15 MIN</span></span>
-    <h2>The challenge &mdash; a Java 8 internals incident</h2>
+    <h2>The challenge &mdash; model a domain with Java 17 + 21</h2>
 
-    <p>A real on-call scenario built from today&rsquo;s Java 8 internals. Answer all three parts (50+ characters each), then reveal the model answers.</p>
+    <p>Apply records, sealed classes, and pattern switch together. Answer all three parts (50+ characters each), then reveal the model answers.</p>
 
     <div class="challenge">
-      <span class="challenge-tag">SCENARIO &middot; READ CAREFULLY BEFORE ANSWERING</span>
-      <h3>The 504s under load</h3>
-      <p><strong>System:</strong> a Spring Boot service. A controller handler runs a CPU-light aggregation using <code>list.parallelStream().map(...).collect(...)</code> over a few hundred items per request.</p>
-      <p><strong>Symptom:</strong> under production load the service randomly returns <strong>504 Gateway Timeout</strong>. CPU is not pegged. It works perfectly in load tests that hit one endpoint at a time. The same code with a sequential stream never times out.</p>
+      <span class="challenge-tag">SCENARIO &middot; READ CAREFULLY</span>
+      <h3>The order state hierarchy</h3>
+      <p>Model a trading order&rsquo;s lifecycle. An order is in <em>exactly one</em> of these states, each carrying different data:</p>
+      <ul>
+        <li><code>Submitted</code> &mdash; no extra data</li>
+        <li><code>Validated</code> &mdash; no extra data</li>
+        <li><code>Filled(BigDecimal fillPrice)</code></li>
+        <li><code>Rejected(String reason)</code></li>
+        <li><code>Cancelled</code> &mdash; no extra data</li>
+      </ul>
+      <p>Downstream code must produce a status message for every state &mdash; and forgetting one should be <em>impossible</em>.</p>
     </div>
 
     <div class="challenge-form" id="challenge-1-8">
       <span class="challenge-tag">YOUR ANSWERS &middot; MINIMUM 50 CHARS EACH TO UNLOCK MODEL ANSWER</span>
 
       <div class="textarea-row">
-        <label class="textarea-label" for="ta-1-8-pi1">
-          Q1 &mdash; What is the root cause, and the exact failure mode? Why does it only show up under concurrent load and not in single-endpoint tests?
+        <label class="textarea-label" for="ta-1-8-os1">
+          Q1 &mdash; Write the type design (Java 17 constructs). Which models the closed set of states, which models each state&rsquo;s data, and where does validation live?
         </label>
-        <textarea class="answer-textarea" id="ta-1-8-pi1" placeholder="Where do parallelStream() threads come from? What is shared across the whole JVM?"></textarea>
-        <div class="char-count" id="cc-1-8-pi1">0 / 50 characters</div>
+        <textarea class="answer-textarea" id="ta-1-8-os1" placeholder="Think: what gives the compiler the complete list of states? What makes each state immutable?"></textarea>
+        <div class="char-count" id="cc-1-8-os1">0 / 50 characters</div>
         <div style="margin-top:12px">
-          <button class="btn-reveal" id="reveal-1-8-pi1" onclick="revealModelAnswer('1-8','pi1')" disabled>Reveal model answer</button>
+          <button class="btn-reveal" id="reveal-1-8-os1" onclick="revealModelAnswer('1-8','os1')" disabled>Reveal model answer</button>
         </div>
-        <div class="model-answer" id="ma-1-8-pi1">
+        <div class="model-answer" id="ma-1-8-os1">
           <span class="model-answer-tag">MODEL ANSWER</span>
-          <p><strong>Root cause: common ForkJoinPool starvation.</strong> <code>parallelStream()</code> submits its tasks to <code>ForkJoinPool.commonPool()</code>, shared across the whole JVM and sized cores&minus;1 (often 3&ndash;7 threads). Each in-flight request consumes pool threads for its pipeline. Under concurrent load, many requests compete for that tiny shared pool; requests queue waiting for a thread, latency climbs past the gateway timeout, and you get 504s &mdash; while CPU isn&rsquo;t pegged because threads are <em>waiting</em>, not computing. Single-endpoint tests never contend, so it doesn&rsquo;t reproduce there. (Any blocking I/O in the map would make it far worse, since blocked threads hold pool slots without doing CPU work.)</p>
+          <p><code>sealed interface OrderState permits Submitted, Validated, Filled, Rejected, Cancelled</code> &mdash; <strong>sealed</strong> because the set is closed and the compiler should know it. Data-carrying states are <strong>records</strong>: <code>record Filled(BigDecimal fillPrice) implements OrderState {}</code>, <code>record Rejected(String reason) implements OrderState {}</code> &mdash; records because each is an immutable value with a <em>different shape</em> (which rules out a plain enum). No-data states can be empty records (<code>record Submitted() implements OrderState {}</code>). Validation lives in compact constructors: <code>Filled</code> asserts <code>fillPrice</code> is non-null and positive; <code>Rejected</code> asserts <code>reason</code> is non-blank. The whole thing is an algebraic data type: a sum type (sealed) of product types (records).</p>
         </div>
       </div>
 
       <div class="textarea-row" style="margin-top:28px">
-        <label class="textarea-label" for="ta-1-8-pi2">
-          Q2 &mdash; Fix #1: keep parallelism but isolate it. How, exactly? What are the caveats?
+        <label class="textarea-label" for="ta-1-8-os2">
+          Q2 &mdash; Write the method that turns an <code>OrderState</code> into a status message so &ldquo;forgetting a state&rdquo; is a compile error. Which Java 21 features do the work?
         </label>
-        <textarea class="answer-textarea" id="ta-1-8-pi2" placeholder="How do you make a parallel stream run on a pool you control instead of the common pool?"></textarea>
-        <div class="char-count" id="cc-1-8-pi2">0 / 50 characters</div>
+        <textarea class="answer-textarea" id="ta-1-8-os2" placeholder="What kind of switch? What patterns pull out fillPrice and reason? Why no default branch?"></textarea>
+        <div class="char-count" id="cc-1-8-os2">0 / 50 characters</div>
         <div style="margin-top:12px">
-          <button class="btn-reveal" id="reveal-1-8-pi2" onclick="revealModelAnswer('1-8','pi2')" disabled>Reveal model answer</button>
+          <button class="btn-reveal" id="reveal-1-8-os2" onclick="revealModelAnswer('1-8','os2')" disabled>Reveal model answer</button>
         </div>
-        <div class="model-answer" id="ma-1-8-pi2">
+        <div class="model-answer" id="ma-1-8-os2">
           <span class="model-answer-tag">MODEL ANSWER</span>
-          <p>Submit the pipeline from inside a <strong>dedicated <code>ForkJoinPool</code></strong>: <code>var pool = new ForkJoinPool(8); pool.submit(() -&gt; list.parallelStream().map(...).collect(...)).get();</code> A parallel stream run from within a custom pool uses <em>that</em> pool&rsquo;s threads, not the common pool &mdash; so this request can no longer starve unrelated work or be starved by it. Caveats: it relies on documented-by-behavior (not formally specified); you must size and lifecycle-manage the pool (a managed singleton, never one-per-request); and you&rsquo;ve only <em>contained</em> contention &mdash; an undersized dedicated pool just starves within itself. Size for actual concurrency &times; per-request parallelism.</p>
+          <p>A <strong>switch expression with record patterns and no default branch</strong> (Java 21): <code>return switch (state) { case Submitted s -&gt; "Order submitted"; case Validated v -&gt; "Passed risk checks"; case Filled(var price) -&gt; "Filled at " + price; case Rejected(var reason) -&gt; "Rejected: " + reason; case Cancelled c -&gt; "Cancelled by user"; };</code> Three features cooperate: <strong>sealed</strong> (Java 17) gives the compiler the complete subtype list; <strong>switch as an expression</strong> requires exhaustiveness; <strong>record patterns</strong> (<code>Filled(var price)</code>, Java 21) deconstruct the data in place. Omitting <code>default</code> is the crucial choice &mdash; it keeps the exhaustiveness check alive.</p>
         </div>
       </div>
 
       <div class="textarea-row" style="margin-top:28px">
-        <label class="textarea-label" for="ta-1-8-pi3">
-          Q3 &mdash; Fix #2: remove parallelization entirely. Why is this often the <em>better</em> fix here, and when would parallel actually be justified?
+        <label class="textarea-label" for="ta-1-8-os3">
+          Q3 &mdash; A new state <code>PartiallyFilled(long filledQty, long remainingQty)</code> is added to the sealed interface. What happens across the codebase, and why is that what you <em>want</em>?
         </label>
-        <textarea class="answer-textarea" id="ta-1-8-pi3" placeholder="Recall the 'parallel only if ALL' checklist. Does a few-hundred-item, CPU-light aggregation qualify?"></textarea>
-        <div class="char-count" id="cc-1-8-pi3">0 / 50 characters</div>
+        <textarea class="answer-textarea" id="ta-1-8-os3" placeholder="Think about what the compiler does to every existing switch over OrderState."></textarea>
+        <div class="char-count" id="cc-1-8-os3">0 / 50 characters</div>
         <div style="margin-top:12px">
-          <button class="btn-reveal" id="reveal-1-8-pi3" onclick="revealModelAnswer('1-8','pi3')" disabled>Reveal model answer</button>
+          <button class="btn-reveal" id="reveal-1-8-os3" onclick="revealModelAnswer('1-8','os3')" disabled>Reveal model answer</button>
         </div>
-        <div class="model-answer" id="ma-1-8-pi3">
+        <div class="model-answer" id="ma-1-8-os3">
           <span class="model-answer-tag">MODEL ANSWER</span>
-          <p>Use a <strong>sequential stream</strong>: <code>list.stream().map(...).collect(...)</code>. The workload fails the checklist: only a few hundred elements (N too small), CPU-light per element (Q too small), so fork/join orchestration overhead likely exceeded any speedup <em>even before</em> the contention. And in a web handler the <em>server</em> already provides parallelism by running many requests at once; parallelizing <em>within</em> each request just multiplies pressure on shared threads. Sequential makes each request&rsquo;s latency predictable and independent &mdash; usually right for request-scoped work. Parallel streams are justified for <em>batch/CPU-bound</em> work: large N (100k+), expensive per element, well-splitting source, stateless ops, cheap merge, in a context you control (a background job) &mdash; ideally on a dedicated pool.</p>
+          <p>Every exhaustive switch over <code>OrderState</code> without a <code>default</code> <strong>stops compiling</strong> &mdash; the compiler reports that <code>PartiallyFilled</code> is uncovered. That&rsquo;s exactly what you want: it hands you a to-do list of every consumer that must be updated (settlement, risk, audit, notification), turning a silent &ldquo;forgot a case&rdquo; runtime bug into compile errors you can&rsquo;t ignore &mdash; <strong>exhaustiveness as a refactoring safety net</strong>, the headline benefit of algebraic data types. With <code>if/else instanceof</code> chains or a swallowing <code>default</code>, the new state would slip to production undetected. This is why you omit <code>default</code> on closed hierarchies.</p>
         </div>
       </div>
 
       <div class="unlock-banner" id="unlock-1-8" style="margin-top:24px">
-        <strong style="color:var(--green)">&#x2705; Day 8 complete!</strong> Day 9 continues the version walk &mdash;
-        <span style="color:var(--ink-dim)">Java 17 (records in full depth, sealed classes, pattern matching, text blocks) and Java 21 (virtual threads, structured concurrency, scoped values).</span>
+        <strong style="color:var(--green)">&#x2705; Day 8 complete!</strong> Day 9 closes Week 1 &mdash;
+        <span style="color:var(--ink-dim)">the Week 1 Synthesis: a full production-diagnosis scenario combining everything from Days 1&ndash;8.</span>
       </div>
     </div>
 
@@ -455,25 +464,25 @@ stream.filter(<span class="typ">Predicate</span>.not(<span class="typ">String</s
         <div class="takeaways">
           <div class="takeaways-label">Key Takeaways</div>
           <ul>
-            <li><strong>Java 8</strong> is lambdas (invokedynamic, not anonymous classes), the lazy one-pass Stream pipeline over spliterators, the 5-function Collector contract, Optional as a return-type contract, default methods (which made Streams possible), java.time, and CompletableFuture.</li>
-            <li><strong>Parallel streams share the common pool</strong> &mdash; never in a request handler; CPU-bound, well-splitting, big-N batch work only.</li>
-            <li><strong>Java 11</strong> (bundling 9&ndash;10) is the cleanup LTS: <code>var</code>, the standard HttpClient, modules, collection factories, and the functional gap-fillers (takeWhile, bounded iterate, Optional.or/stream, filtering/flatMapping).</li>
-            <li><strong>Judgment:</strong> Optional is a return type only; <code>var</code> serves readability; <code>orElseGet</code> over <code>orElse</code> for expensive fallbacks.</li>
+            <li><strong>Java 17</strong> is the data-modeling LTS: switch expressions, text blocks, <strong>records</strong> (transparent, shallowly-immutable, deserialize through the canonical constructor), pattern <code>instanceof</code>, and sealed classes &mdash; together, algebraic data types.</li>
+            <li><strong>Records:</strong> values not entities; defensive-copy mutable components; not for JPA.</li>
+            <li><strong>Java 21</strong> completes pattern matching (exhaustive switch + record patterns) and revolutionizes concurrency (virtual threads, structured concurrency, scoped values).</li>
+            <li><strong>Virtual threads</strong> make blocking code scale via M:N mount/unmount &mdash; beware <em>pinning</em> from <code>synchronized</code>; structured concurrency + scoped values are built for that world.</li>
           </ul>
         </div>
 
         <div class="reflection-prompts">
           <div class="reflection-prompt">
             <span class="prompt-num">01</span>
-            <p class="prompt-text">Run <code>javap -c</code> on a class with one lambda and one anonymous class doing the same thing. Find the <code>invokedynamic</code> instruction. How many <code>.class</code> files did each approach produce?</p>
+            <p class="prompt-text">Find an if/else-<code>instanceof</code> chain or a visitor pattern you know. Sketch its sealed + records + pattern-switch replacement. What breaks at compile time the next time someone adds a variant?</p>
           </div>
           <div class="reflection-prompt">
             <span class="prompt-num">02</span>
-            <p class="prompt-text">Find one <code>parallelStream()</code> in a codebase you know. Walk it through the five-point checklist out loud. Is it in a request path? Does it survive?</p>
+            <p class="prompt-text">Explain in under 60 seconds why a record is safer than a Lombok <code>@Data</code> class for an API request payload (hint: deserialization path, mutability, equals).</p>
           </div>
           <div class="reflection-prompt">
             <span class="prompt-num">03</span>
-            <p class="prompt-text">Place each on its LTS: lambdas, <code>var</code>, the standard HttpClient, <code>List.of()</code>, <code>takeWhile</code>, <code>flatMap(Optional::stream)</code>.</p>
+            <p class="prompt-text">Where do you fan out to multiple services and wait for all results? What happens today when one fails? How would virtual threads + <code>StructuredTaskScope</code> change it?</p>
           </div>
         </div>
 
@@ -493,7 +502,7 @@ stream.filter(<span class="typ">Predicate</span>.not(<span class="typ">String</s
   </div><!-- end stage 7 -->
 
   <footer>
-    DAY 8 OF 158 &middot; JAVA 8 &amp; JAVA 11 &middot; PHASE 1 / 6
+    DAY 8 OF 158 &middot; JAVA 17 &amp; JAVA 21 &middot; PHASE 1 / 6
   </footer>
 
 </div>

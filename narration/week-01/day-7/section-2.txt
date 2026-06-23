@@ -1,0 +1,13 @@
+Stage 2: sealed classes. Before Java 17, a hierarchy had two settings: completely open, or completely final. Sealed adds the middle ground — open to exactly the types I name, closed to everyone else.
+
+You declare a sealed interface PaymentResult, permits Approved, Declined, Pending. Each permitted subtype must declare itself final, sealed, or non-sealed. Records are implicitly final, which is exactly why records and sealed interfaces pair so beautifully.
+
+Here's the headline for your interview: sealed plus records equals algebraic data types. A PaymentResult is exactly one of three shapes, and the compiler knows the complete list. That knowledge is what makes exhaustive switch possible — no default branch needed. And when someone adds a fourth result type next quarter, every switch over PaymentResult in the entire codebase fails to compile until it handles the new case. The compiler becomes your refactoring safety net. That's not a convenience — that's a class of production bugs moved to compile time.
+
+This also kills the visitor pattern for closed hierarchies. The old way to dispatch over a fixed set of types was double dispatch — an accept method on every class, a visitor interface that grows forever. Sealed types plus pattern matching replace all of that with one switch expression. If an interviewer asks how modern Java changed your design patterns, that's your example.
+
+The rules to remember: permitted subtypes must live in the same module, or same package in the unnamed module. If everything is nested in one file, you can omit the permits clause and the compiler infers it.
+
+And the comparison question that always comes up: sealed versus enum. Here's the clean answer. An enum is a fixed set of instances — every variant has the same shape. A sealed hierarchy is a fixed set of shapes — Approved carries a transaction ID, Declined carries a reason and a retry flag. Different data per variant means sealed plus records. Same data, or no data, means enum.
+
+One caution: sealed is wrong when third parties should extend your type. If you're building a library where users plug in their own implementations, sealing the interface slams the door on them. Closed domain model: seal it. Open extension point: don't.

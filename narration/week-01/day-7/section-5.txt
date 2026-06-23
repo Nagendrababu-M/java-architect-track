@@ -1,0 +1,17 @@
+Stage 5: structured concurrency, plus the thirty-second answers for the rest of modern Java.
+
+Start with the problem. With a plain ExecutorService, you fork two subtasks — fetch the user, fetch the order. The user fetch fails. What happens to the order fetch? It keeps running. Burning CPU, holding a connection, computing a result nobody will read. Unless you hand-write cancellation logic, threads outlive the code block that created them. That's the concurrency equivalent of goto — control flow that escapes its lexical structure.
+
+StructuredTaskScope, Java 21 preview, fixes this with one idea: concurrency gets block scope. You open a scope in a try-with-resources, fork your subtasks inside it, join, and return. The guarantee is absolute: no subtask outlives the block. When the scope closes, everything it forked is done or cancelled.
+
+Two policies to know. ShutdownOnFailure: the first subtask to fail cancels all the others — use it when you need ALL the results. ShutdownOnSuccess: the first to succeed cancels the rest — use it when you need ANY result. That's hedged requests, racing two replicas and taking the faster answer.
+
+And the structure pays beyond cancellation: errors propagate up like normal exceptions, and a thread dump shows the parent-child task tree instead of a flat soup of pool threads.
+
+Now the rapid-fire features — interviewers often probe whether you track the platform.
+
+String templates: interpolation through processors — STR dot, then the string with embedded expressions. The processor can validate and escape, which prevents SQL injection by construction. But here's the differentiator: the API was withdrawn after Java 22 for redesign. Knowing it was withdrawn shows you actually follow the platform rather than skimming feature lists.
+
+Project Valhalla: value classes. Objects without identity, which the JVM can flatten into arrays and stack-allocate. An array of value-class Points becomes a contiguous block of coordinates instead of a row of pointers. The tagline: codes like a class, works like an int.
+
+And the migration playbook, which is its own interview question: replace inheritance hierarchies over data with sealed interface plus records. Replace getter-chain null checks with record patterns in switch. Replace the visitor pattern with exhaustive switch. Three refactors, one theme: let the compiler enforce what used to be convention.

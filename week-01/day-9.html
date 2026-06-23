@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Week 1 · Day 9 — Modern Java by Version: Java 17 &amp; Java 21 (Deep Dive)</title>
+<title>Week 1 · Day 9 — Week 1 Synthesis: Production Diagnosis</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,800&family=JetBrains+Mono:wght@400;500;700&family=Inter+Tight:wght@400;500;600&display=swap" rel="stylesheet">
@@ -14,8 +14,8 @@
 <style>
   body {
     background-image:
-      radial-gradient(ellipse 800px 600px at 20% 0%, rgba(122,184,232,0.07), transparent 60%),
-      radial-gradient(ellipse 600px 400px at 90% 100%, rgba(122,184,232,0.04), transparent 60%);
+      radial-gradient(ellipse 800px 600px at 20% 0%, rgba(110,211,168,0.08), transparent 60%),
+      radial-gradient(ellipse 600px 400px at 90% 100%, rgba(255,122,61,0.05), transparent 60%);
   }
   .interview-q {
     margin: 20px 0;
@@ -36,14 +36,35 @@
   }
   .interview-q p { margin: 0 0 10px; color: var(--ink-dim); line-height: 1.7; }
   .interview-q p:last-child { margin-bottom: 0; }
-  .ver-head {
-    color: var(--accent);
+  .day-ref {
+    display: inline-block;
     font-family: 'JetBrains Mono', monospace;
-    font-size: 16px;
+    font-size: 10px;
+    font-weight: 700;
     letter-spacing: 1px;
-    margin-top: 8px;
-    padding-bottom: 8px;
-    border-bottom: 1px solid var(--line);
+    color: var(--accent);
+    background: rgba(255,122,61,0.10);
+    border: 1px solid rgba(255,122,61,0.3);
+    border-radius: 4px;
+    padding: 1px 6px;
+    margin-right: 4px;
+  }
+  .incident {
+    margin: 22px 0;
+    padding: 20px 24px;
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--red);
+    border-radius: 0 8px 8px 0;
+    background: rgba(224,108,108,0.04);
+  }
+  .incident .inc-tag {
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: var(--red);
+    margin-bottom: 8px;
   }
 </style>
 </head>
@@ -61,394 +82,235 @@
       <span>Week 1 / Day 9</span>
     </div>
     <h1>
-      Modern Java by Version &mdash; Java 17 &amp; Java 21
-      <span class="sub">Every feature under its release version, in depth: Java 17&rsquo;s data-modeling toolkit (records, sealed, pattern matching) and Java 21&rsquo;s concurrency revolution.</span>
+      Week 1 Synthesis &mdash; Production Diagnosis
+      <span class="sub">No new concepts. Everything from Days 1&ndash;8, combined into the one skill that separates Senior from Staff: diagnosing a real production incident end to end.</span>
     </h1>
-    <div class="scope"><strong>SCOPE</strong> &middot; 165 min &middot; 7 stages &mdash; organized strictly by version, continuing from Day 8 (Java 8 &amp; 11).</div>
+    <div class="scope"><strong>SCOPE</strong> &middot; 170 min &middot; 6 stages &mdash; the capstone of Week 1. Four worked diagnoses, then an integrated incident you solve yourself.</div>
   <div id="play-full-lesson-mount"></div>
   </header>
 
   <div class="recap">
-    <span class="recap-tag">CONTINUING FROM DAY 8</span>
-    <p>Day 8 covered <strong>Java 8</strong> (the functional core and its internals) and <strong>Java 11</strong> (the cleanup LTS). Today completes the timeline with <strong>Java 17</strong> &mdash; the data-modeling LTS that introduced records, sealed classes, and pattern matching (bundling everything from 12&ndash;16) &mdash; and <strong>Java 21</strong>, the current LTS, whose virtual threads and structured concurrency change how you architect concurrent systems. Same rule as Day 8: every feature lives under its release version, explained in depth with code.</p>
+    <span class="recap-tag">WHAT THIS DAY IS</span>
+    <p>This week you learned eight things in isolation &mdash; the stack/heap split, class loading &amp; reflection, reachability &amp; generational GC, GC algorithms &amp; tuning, the memory model, profiling, and modern Java. Real incidents don&rsquo;t arrive labelled by topic. A page that says &ldquo;p99 is spiking&rdquo; could be GC, allocation, a lock, an I/O stall, a leak, or a memory-visibility bug &mdash; and the architect&rsquo;s job is to <em>triangulate</em> across all eight domains to find which. Today is that integration: how the pieces combine into a single diagnostic discipline. Synthesis is exactly what an interviewer probes to tell a strong senior from a staff-level engineer.</p>
   </div>
 
-  <!-- ============================================================ -->
-  <!-- STAGE 1 — JAVA 17: SWITCH EXPRESSIONS & TEXT BLOCKS -->
-  <!-- ============================================================ -->
+  <!-- STAGE 1 — THE DIAGNOSTIC MAP -->
   <div class="stage" data-section="1">
-    <span class="stage-tag">STAGE 1 <span class="time">20 MIN</span></span>
-    <h3 class="ver-head">&#x2503; JAVA 17 (2021, LTS) &mdash; SWITCH EXPRESSIONS &amp; TEXT BLOCKS</h3>
-    <h2>The ergonomics that set up records &amp; pattern matching</h2>
+    <span class="stage-tag">STAGE 1 <span class="time">25 MIN</span></span>
+    <h2>The diagnostic map &mdash; symptom to Week-1 tool</h2>
 
-    <h4>Switch expressions (standard in 14)</h4>
-    <pre><code><span class="cmt">// Arrow labels: no fall-through, each case is an expression that yields a value</span>
-<span class="typ">int</span> lot = <span class="kw">switch</span> (symbol) {
-    <span class="kw">case</span> <span class="str">"NIFTY"</span>, <span class="str">"FINNIFTY"</span> -&gt; <span class="num-lit">25</span>;       <span class="cmt">// multiple labels per case</span>
-    <span class="kw">case</span> <span class="str">"BANKNIFTY"</span>          -&gt; <span class="num-lit">15</span>;
-    <span class="kw">default</span> -&gt; {
-        <span class="typ">int</span> v = lookup(symbol);
-        <span class="kw">yield</span> v;                          <span class="cmt">// yield returns a value from a block case</span>
-    }
-};</code></pre>
-    <ul>
-      <li><strong>Expression, not statement</strong> &mdash; produces a value you assign directly.</li>
-      <li><strong>No fall-through</strong> with arrow labels &mdash; the #1 historical switch bug, eliminated.</li>
-      <li><strong>Exhaustiveness</strong> &mdash; a switch expression must cover all inputs; over an enum or sealed type the compiler proves it without a <code>default</code> (the foundation Stage 5 builds on).</li>
-    </ul>
+    <p>The whole week reduces to one decision process: observe the symptom, form a hypothesis, reach for the day that owns the answer, confirm with evidence. Here is the map from symptom to the knowledge that resolves it.</p>
 
-    <h4>Text blocks (standard in 15)</h4>
-    <pre><code><span class="typ">String</span> query = <span class="str">"""
-        SELECT t.symbol, SUM(t.qty)
-        FROM trades t
-        WHERE t.executed_at &gt; :since
-        GROUP BY t.symbol
-        """</span>;</code></pre>
-    <ul>
-      <li><strong>Incidental indentation stripping</strong> &mdash; the position of the closing <code>"""</code> sets the left margin; whitespace to its left is stripped, everything to its right kept.</li>
-      <li><strong><code>\</code> at line end</strong> suppresses the newline (one logical line split for readability); <strong><code>\s</code></strong> preserves a trailing space that would otherwise be stripped.</li>
-      <li>It is still a plain <code>String</code> &mdash; same type, same methods, same constant-pool entry.</li>
-    </ul>
+    <div class="compare-wrap"><table class="compare">
+      <thead><tr><th>Symptom</th><th>Prime suspects</th><th>Tool / knowledge</th></tr></thead>
+      <tbody>
+        <tr><td>p99 latency spikes, p50 fine</td><td>GC pauses, lock contention, allocation bursts</td><td><span class="day-ref">DAY 4</span> GC logs &middot; <span class="day-ref">DAY 6</span> profiling</td></tr>
+        <tr><td>Memory grows until OOM</td><td>Leak: unbounded cache, static collection, classloader leak</td><td><span class="day-ref">DAY 2</span> statics/Metaspace &middot; <span class="day-ref">DAY 3</span> reachability &middot; <span class="day-ref">DAY 6</span> heap dump + MAT</td></tr>
+        <tr><td><code>StackOverflowError</code></td><td>Deep/infinite recursion, huge frames</td><td><span class="day-ref">DAY 1</span> stack vs heap</td></tr>
+        <tr><td>Intermittent wrong values / lost updates</td><td>Data race, visibility, unsafe publication</td><td><span class="day-ref">DAY 5</span> JMM / happens-before</td></tr>
+        <tr><td>CPU pegged, throughput low</td><td>Hot code path, redundant work</td><td><span class="day-ref">DAY 6</span> CPU flame graph</td></tr>
+        <tr><td>Cores idle but latency high</td><td>Locks, I/O waits, pool/thread starvation</td><td><span class="day-ref">DAY 6</span> thread dumps / wall-clock &middot; <span class="day-ref">DAY 7</span> common-pool trap</td></tr>
+        <tr><td>Scales badly under concurrency</td><td>Blocking on platform threads, pinning</td><td><span class="day-ref">DAY 8</span> virtual threads / pinning</td></tr>
+      </tbody>
+    </table></div>
 
-    <div class="interview-q">
-      <span class="iq-tag">&#x1F3AF; INTERVIEW QUESTIONS</span>
-      <p><strong>Q: Switch expression vs switch statement?</strong> &mdash; The expression yields a value, forbids fall-through (arrow labels), and is exhaustiveness-checked. The old statement form still exists for side-effecting branches but is where fall-through bugs live.</p>
-      <p><strong>Q: Does a text block strip all leading whitespace?</strong> &mdash; No &mdash; only the <em>incidental</em> indentation common to all lines, measured against the closing delimiter. Indentation to the right of that margin is preserved.</p>
+    <div class="key-rule insight">
+      <p><strong>The one mental model that unifies the week.</strong> Every Week-1 question ultimately reduces to: <em>where does this data live, how long does it live, and who can see it?</em> Stack vs heap (Day 1) and statics vs Metaspace (Day 2) answer <em>where</em>. Reachability and generational GC (Days 3&ndash;4) answer <em>how long</em>. The memory model (Day 5) answers <em>who can see it, and when</em>. Profiling (Day 6) is how you <em>observe</em> all of it under real load. Modern Java (Days 7&ndash;8) is how you <em>write</em> code that gets these right by construction &mdash; immutability, records, the right concurrency primitive. Hold that and no incident is &ldquo;mysterious&rdquo;; it&rsquo;s just a question you haven&rsquo;t pointed the right tool at yet.</p>
+    </div>
+
+    <div class="check">
+      <span class="check-tag">QUICK CHECK</span>
+      <p>An alert fires: p99 doubled, CPU is <em>down</em>, memory flat. Using the map, name the two prime suspects and the first tool you&rsquo;d pull &mdash; and which suspect you can immediately rule out.</p>
     </div>
   </div>
 
-  <!-- ============================================================ -->
-  <!-- STAGE 2 — JAVA 17: RECORDS (FULL DEPTH) -->
-  <!-- ============================================================ -->
+  <!-- STAGE 2 — WALKTHROUGH 1: LATENCY -->
   <div class="stage" data-section="2">
     <span class="stage-tag">STAGE 2 <span class="time">30 MIN</span></span>
-    <h3 class="ver-head">&#x2503; JAVA 17 (2021, LTS) &mdash; RECORDS (standard in 16)</h3>
-    <h2>Transparent carriers of immutable data &mdash; in full</h2>
+    <h2>Walkthrough 1 &mdash; &ldquo;We&rsquo;re missing fills at market open&rdquo;</h2>
 
-    <p>A record is a class whose state <em>is</em> its API. Declared in one line, the compiler generates the canonical constructor, the accessors, <code>equals()</code>, <code>hashCode()</code>, and <code>toString()</code>:</p>
-    <pre><code><span class="kw">public record</span> <span class="typ">Trade</span>(<span class="typ">String</span> symbol, <span class="typ">long</span> quantity, <span class="typ">BigDecimal</span> price) {}</code></pre>
-
-    <div class="key-rule insight">
-      <p><strong>A record is a promise: this type is a transparent, immutable carrier of its components.</strong></p>
-      <p>All fields are <code>private final</code>. There are no setters. The accessor for <code>symbol</code> is <code>symbol()</code>, not <code>getSymbol()</code>. <code>equals()</code>/<code>hashCode()</code> are component-wise &mdash; two records with equal components are equal. A record cannot extend a class (it implicitly extends <code>java.lang.Record</code>) and cannot be extended (implicitly final). It <em>can</em> implement interfaces.</p>
+    <div class="incident">
+      <span class="inc-tag">INCIDENT</span>
+      <p>A trading service drops orders for 2&ndash;4 seconds right at market open, every day. p50 latency is fine; p99 is catastrophic during the window. CPU and average memory look normal on the dashboard.</p>
     </div>
 
-    <h4>Compact constructors &mdash; validation &amp; normalization</h4>
-    <p>The compact constructor omits the parameter list. It runs <em>before</em> field assignment, and you normalize by reassigning the parameters:</p>
-    <pre><code><span class="kw">public record</span> <span class="typ">Trade</span>(<span class="typ">String</span> symbol, <span class="typ">long</span> quantity, <span class="typ">BigDecimal</span> price) {
-    <span class="kw">public</span> <span class="typ">Trade</span> {                                   <span class="cmt">// no parameter list</span>
-        <span class="typ">Objects</span>.requireNonNull(symbol);
-        <span class="kw">if</span> (quantity &lt;= <span class="num-lit">0</span>) <span class="kw">throw new</span> <span class="typ">IllegalArgumentException</span>(<span class="str">"quantity must be positive"</span>);
-        symbol = symbol.toUpperCase();                <span class="cmt">// reassigns the PARAMETER, not the field</span>
-    }
-}</code></pre>
+    <p><strong>Hypothesis</strong> <span class="day-ref">DAY 6</span> &mdash; p99-only spikes with normal averages scream <em>pauses</em>, not steady load. Pauses come from GC or lock contention. Average-memory-normal doesn&rsquo;t exonerate GC, because a burst of allocation at open can trigger a Full GC that the daily <em>average</em> hides.</p>
 
-    <h4>Custom accessors, static factories, extra members</h4>
-    <pre><code><span class="kw">public record</span> <span class="typ">Range</span>(<span class="kw">int</span> lo, <span class="kw">int</span> hi) {
-    <span class="kw">public</span> <span class="typ">Range</span>(<span class="kw">int</span> lo, <span class="kw">int</span> hi) {                    <span class="cmt">// canonical ctor (full form) for derived logic</span>
-        <span class="kw">this</span>.lo = <span class="typ">Math</span>.min(lo, hi);
-        <span class="kw">this</span>.hi = <span class="typ">Math</span>.max(lo, hi);
-    }
-    <span class="kw">public</span> <span class="kw">int</span> span() { <span class="kw">return</span> hi - lo; }              <span class="cmt">// extra methods are fine</span>
-    <span class="kw">public static</span> <span class="typ">Range</span> unit() { <span class="kw">return new</span> <span class="typ">Range</span>(<span class="num-lit">0</span>, <span class="num-lit">1</span>); } <span class="cmt">// static factory</span>
-}</code></pre>
+    <p><strong>Step 1 &mdash; pull the GC log</strong> <span class="day-ref">DAY 4</span>. You see, right at 09:15, a <code>Pause Full (Ergonomics)</code> of 2,800ms that freed almost nothing &mdash; or a cluster of long Young pauses. A multi-second Stop-the-World during the highest-traffic second of the day <em>is</em> the dropped-fills window.</p>
 
-    <h4>What records are NOT &mdash; three traps</h4>
-    <ul>
-      <li><strong>Not deeply immutable.</strong> If a component is a <code>List</code> or array, the reference is final but the contents are still mutable. Defensive-copy in the compact constructor: <code>items = List.copyOf(items);</code> &mdash; one line for deep immutability.</li>
-      <li><strong>Not JavaBeans.</strong> No no-arg constructor, no <code>get</code> prefix. Frameworks that reflect on bean conventions may choke (modern Jackson/Spring support records; ancient versions don&rsquo;t).</li>
-      <li><strong>Not JPA entities.</strong> Entities need mutability and identity-based equality; records have value-based equality and are final. Use records for DTOs, API payloads, value objects, and map keys &mdash; <em>not</em> for ORM entities.</li>
-    </ul>
+    <p><strong>Step 2 &mdash; why is GC firing then?</strong> <span class="day-ref">DAY 3</span> Market open is an allocation storm: a flood of order objects created at once. If Young Gen is too small, those objects are promoted to Old Gen before they can die (the weak generational hypothesis working against you), Old Gen fills, and a Full GC fires. Confirm with an <strong>allocation profile</strong> <span class="day-ref">DAY 6</span> &mdash; an allocation flame graph shows the order-parsing path churning the heap.</p>
+
+    <p><strong>Step 3 &mdash; the fix</strong> <span class="day-ref">DAY 4</span>. Three levers: (1) size Young Gen so the open&rsquo;s burst dies in Eden (<code>-XX:NewSize</code>/<code>MaxNewSize</code> from the allocation-rate calculation); (2) if the SLA is latency-critical, switch the collector &mdash; G1 at 200ms is still 200ms of missed prices, so <strong>ZGC</strong> (sub-ms pauses) is the architect&rsquo;s call for a trading engine; (3) reduce allocation at the source <span class="day-ref">DAY 7</span> &mdash; the allocation flame graph may reveal a stream pipeline boxing millions of <code>Integer</code>s where an <code>IntStream</code> belongs, or per-order regex recompilation.</p>
 
     <div class="key-rule">
-      <p><strong>The deserialization-safety angle (a senior signal).</strong> Normal Java deserialization bypasses constructors entirely &mdash; your validation never runs. <strong>Record deserialization goes through the canonical constructor</strong>, always. So your compact-constructor validation cannot be skipped, making records strictly safer than regular classes for untrusted/serialized data. Stating this in an interview separates you from candidates who only know &ldquo;records are short.&rdquo;</p>
-    </div>
-
-    <div class="interview-q">
-      <span class="iq-tag">&#x1F3AF; INTERVIEW QUESTIONS</span>
-      <p><strong>Q: When would you NOT use a record?</strong> &mdash; Mutable state, JPA entities, classes needing inheritance, or beans requiring a no-arg constructor. Records model <em>values</em>; entities model <em>identity over time</em>.</p>
-      <p><strong>Q: Are records immutable?</strong> &mdash; Shallowly. Fields are final, but a mutable component can be mutated through its reference. Defensive copies in the compact constructor make them deeply immutable.</p>
-      <p><strong>Q: How do records interact with serialization?</strong> &mdash; They deserialize through the canonical constructor, so validation always runs &mdash; unlike regular classes, where deserialization bypasses constructors.</p>
+      <p><strong>The synthesis:</strong> the dashboard (averages) lied; the GC log (Day 4) told the truth; reachability theory (Day 3) explained <em>why</em>; the allocation profiler (Day 6) located the source; and the fix spanned tuning (Day 4) and code (Day 7). No single day solved it.</p>
     </div>
 
     <div class="check">
       <span class="check-tag">QUICK CHECK</span>
-      <p>A teammate writes <code>record Config(Map&lt;String,String&gt; settings)</code> and shares it across threads, calling it &ldquo;immutable, so it&rsquo;s safe.&rdquo; What&rsquo;s the flaw and the one-line fix?</p>
+      <p>Why does &ldquo;average memory looks normal&rdquo; fail to rule out a GC problem here? Tie your answer to what an average hides versus what a GC log shows.</p>
     </div>
   </div>
 
-  <!-- ============================================================ -->
-  <!-- STAGE 3 — JAVA 17: SEALED + PATTERN INSTANCEOF + ADT -->
-  <!-- ============================================================ -->
+  <!-- STAGE 3 — WALKTHROUGH 2: LEAK -->
   <div class="stage" data-section="3">
     <span class="stage-tag">STAGE 3 <span class="time">25 MIN</span></span>
-    <h3 class="ver-head">&#x2503; JAVA 17 (2021, LTS) &mdash; SEALED CLASSES &amp; PATTERN MATCHING <code>instanceof</code></h3>
-    <h2>Closing the hierarchy &mdash; and the big idea</h2>
+    <h2>Walkthrough 2 &mdash; &ldquo;It OOMs every few days&rdquo;</h2>
 
-    <h4>Pattern matching for instanceof (standard in 16)</h4>
-    <pre><code><span class="cmt">// Test and bind in one step; flow scoping limits the binding to where it's proven</span>
-<span class="kw">if</span> (msg <span class="kw">instanceof</span> <span class="typ">TradeEvent</span> te &amp;&amp; te.qty() &gt; <span class="num-lit">0</span>) process(te);
-<span class="kw">if</span> (!(msg <span class="kw">instanceof</span> <span class="typ">TradeEvent</span> te)) <span class="kw">return</span>;   <span class="cmt">// te is in scope BELOW this line</span></code></pre>
-    <p>The binding variable uses <strong>flow scoping</strong>: it&rsquo;s in scope exactly where the compiler can prove the test passed &mdash; including after an early return. This kills the historical &ldquo;test, then cast on the next line&rdquo; pattern where the cast and the test could silently drift apart.</p>
-
-    <h4>Sealed classes (standard in 17)</h4>
-    <p>Before 17, a hierarchy was either fully open (<code>public class</code>) or fully closed (<code>final</code>). Sealed adds the middle ground &mdash; open to exactly the types you name:</p>
-    <pre><code><span class="kw">public sealed interface</span> <span class="typ">PaymentResult</span>
-        <span class="kw">permits</span> <span class="typ">Approved</span>, <span class="typ">Declined</span>, <span class="typ">Pending</span> {}
-
-<span class="kw">public record</span> <span class="typ">Approved</span>(<span class="typ">String</span> txnId, <span class="typ">BigDecimal</span> amount)  <span class="kw">implements</span> <span class="typ">PaymentResult</span> {}
-<span class="kw">public record</span> <span class="typ">Declined</span>(<span class="typ">String</span> reason, <span class="typ">boolean</span> retryable) <span class="kw">implements</span> <span class="typ">PaymentResult</span> {}
-<span class="kw">public record</span> <span class="typ">Pending</span>(<span class="typ">String</span> txnId, <span class="typ">Instant</span> checkAfter)  <span class="kw">implements</span> <span class="typ">PaymentResult</span> {}</code></pre>
-    <p>Each permitted subtype must choose one modifier: <code>final</code> (the branch ends), <code>sealed</code> (continues, controlled), or <code>non-sealed</code> (re-opens to anyone). Records are implicitly final, which is why records + sealed interfaces pair so naturally. Rules: permitted subtypes live in the same module (or package, unnamed module); if they&rsquo;re nested in the same file the <code>permits</code> clause can be inferred.</p>
-
-    <div class="key-rule insight">
-      <p><strong>The big idea: records + sealed classes + pattern matching = algebraic data types.</strong></p>
-      <p>A sealed interface with record implementations is a <em>sum type of product types</em>: a <code>PaymentResult</code> is <em>exactly one of</em> Approved, Declined, or Pending &mdash; and the compiler knows the complete list. That knowledge powers <strong>exhaustive switch</strong> (Stage 5): no <code>default</code> needed, and the day someone adds a fourth result type, every switch over <code>PaymentResult</code> stops compiling until it handles the new case. This replaces the visitor pattern and long <code>instanceof</code> chains, and turns &ldquo;forgot a case&rdquo; from a production bug into a compile error.</p>
+    <div class="incident">
+      <span class="inc-tag">INCIDENT</span>
+      <p>A service runs fine for 2&ndash;3 days, then heap usage climbs steadily until <code>OutOfMemoryError: Java heap space</code> and a crash-loop. A restart resets the clock.</p>
     </div>
 
+    <p><strong>Hypothesis</strong> <span class="day-ref">DAY 4</span> &mdash; a slow, monotonic climb to OOM with Full GCs that free less and less is the signature of a <strong>memory leak</strong>, not a sizing problem. A bigger heap only delays it. (Contrast: <code>OutOfMemoryError: Metaspace</code> would instead point at class-loading leaks <span class="day-ref">DAY 2</span> &mdash; dynamic proxies, repeated redeploys, a classloader that never unloads.)</p>
+
+    <p><strong>Step 1 &mdash; capture the evidence</strong> <span class="day-ref">DAY 6</span>. Set <code>-XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=...</code> so the next OOM writes a heap dump automatically; or take one live with <code>jcmd &lt;PID&gt; GC.heap_dump</code> while usage is high.</p>
+
+    <p><strong>Step 2 &mdash; analyze</strong> <span class="day-ref">DAY 6</span>. Open the <code>.hprof</code> in Eclipse MAT; the &ldquo;Leak Suspects&rdquo; report ranks objects by <strong>retained heap</strong>. Follow the <strong>path to GC roots</strong> <span class="day-ref">DAY 3</span> to find <em>what reference is keeping the leak alive</em> &mdash; that&rsquo;s the whole game: the GC is working correctly; something reachable shouldn&rsquo;t be.</p>
+
+    <p><strong>Step 3 &mdash; the usual culprit</strong> <span class="day-ref">DAY 2</span>. The path almost always ends at a <strong>static collection that only ever grows</strong> &mdash; an unbounded cache, a listener list nobody deregisters, a <code>Map</code> keyed by something unbounded. Statics live for the life of the classloader, so anything they hold is permanently reachable.</p>
+
+    <p><strong>Step 4 &mdash; the fix</strong> <span class="day-ref">DAY 7</span>/<span class="day-ref">DAY 8</span>. Bound the cache (Caffeine/Guava with <code>maximumSize</code> or <code>expireAfterAccess</code>); deregister listeners; or redesign so the data isn&rsquo;t held at all. Prefer immutable, clearly-scoped state &mdash; an architect&rsquo;s default that makes leaks structurally harder.</p>
+
     <div class="interview-q">
-      <span class="iq-tag">&#x1F3AF; INTERVIEW QUESTIONS</span>
-      <p><strong>Q: Sealed classes vs enums?</strong> &mdash; Enum when every variant has the same shape (or none). Sealed when variants carry <em>different</em> data: Approved has a txnId, Declined a reason. Enums = fixed set of <em>instances</em>; sealed = fixed set of <em>shapes</em>.</p>
-      <p><strong>Q: Why not just a final class, or an open hierarchy?</strong> &mdash; Final closes it to everyone; open lets anyone extend. Sealed gives compiler-verified, <em>controlled</em> polymorphism &mdash; you keep the extensibility you choose and deny the rest, which is what unlocks exhaustiveness.</p>
-      <p><strong>Q: When is sealed the wrong choice?</strong> &mdash; When third parties must extend your type (a plugin SPI, a public result type). Closed domain model: seal it. Open extension point: don&rsquo;t.</p>
+      <span class="iq-tag">&#x1F3AF; INTERVIEW SIGNAL</span>
+      <p><strong>&ldquo;How do you find a memory leak?&rdquo;</strong> &mdash; Heap dump on OOM &rarr; Eclipse MAT &rarr; sort by retained heap &rarr; path to GC roots &rarr; identify the unintended strong reference (usually a static/unbounded collection) &rarr; bound or remove it. Naming &ldquo;retained heap&rdquo; and &ldquo;path to GC roots&rdquo; is the senior tell.</p>
+    </div>
+
+    <div class="check">
+      <span class="check-tag">QUICK CHECK</span>
+      <p>Two services crash with OOM. One says <code>Java heap space</code>, the other <code>Metaspace</code>. Which Week-1 day owns each, and what fundamentally different thing is leaking in each case?</p>
     </div>
   </div>
 
-  <!-- ============================================================ -->
-  <!-- STAGE 4 — JAVA 17: STREAM/API ERGONOMICS OF THE ERA -->
-  <!-- ============================================================ -->
+  <!-- STAGE 4 — WALKTHROUGH 3: CONCURRENCY -->
   <div class="stage" data-section="4">
-    <span class="stage-tag">STAGE 4 <span class="time">15 MIN</span></span>
-    <h3 class="ver-head">&#x2503; JAVA 17 (2021, LTS) &mdash; STREAM &amp; API ERGONOMICS (12&ndash;16)</h3>
-    <h2>The smaller wins bundled into 17</h2>
+    <span class="stage-tag">STAGE 4 <span class="time">25 MIN</span></span>
+    <h2>Walkthrough 3 &mdash; &ldquo;The numbers are sometimes wrong&rdquo;</h2>
 
-    <h4>Stream.toList() (16) &mdash; and its migration trap</h4>
-    <pre><code><span class="typ">List</span>&lt;<span class="typ">String</span>&gt; a = stream.collect(<span class="typ">Collectors</span>.toList()); <span class="cmt">// happens to be a mutable ArrayList</span>
-<span class="typ">List</span>&lt;<span class="typ">String</span>&gt; b = stream.toList();                     <span class="cmt">// UNMODIFIABLE; also no collector indirection</span>
-b.add(<span class="str">"x"</span>);  <span class="cmt">// UnsupportedOperationException — mechanical migration can break mutating code</span></code></pre>
+    <div class="incident">
+      <span class="inc-tag">INCIDENT</span>
+      <p>A position-tracking counter is occasionally off by a few. Worse, one node sometimes serves a config value that another node updated minutes ago. No exceptions, no crash &mdash; just quietly wrong, only under load, never reproducible in a single-threaded test.</p>
+    </div>
 
-    <h4>mapMulti (16) &amp; teeing (12)</h4>
-    <pre><code><span class="cmt">// mapMulti: allocation-free 1→0-or-many — no per-element Stream object like flatMap</span>
-orders.stream().&lt;<span class="typ">OrderLine</span>&gt;mapMulti((o, push) -&gt; o.lines().forEach(push)).toList();
+    <p><strong>Hypothesis</strong> <span class="day-ref">DAY 5</span> &mdash; &ldquo;correct single-threaded, wrong under load, no exception&rdquo; is the fingerprint of a <strong>data race</strong>: conflicting accesses with no happens-before edge. There are two distinct sub-bugs here, and conflating them is the classic mistake.</p>
 
-<span class="cmt">// teeing: feed every element to TWO collectors, merge results — min and max in one pass</span>
-trades.stream().collect(teeing(
-    minBy(comparing(<span class="typ">Trade</span>::price)), maxBy(comparing(<span class="typ">Trade</span>::price)), <span class="typ">PriceRange</span>::<span class="kw">new</span>));</code></pre>
+    <p><strong>Bug 1 &mdash; lost updates (atomicity)</strong> <span class="day-ref">DAY 5</span>. The off-by-a-few counter is <code>count++</code> &mdash; read-modify-write, not atomic. Two threads read the same value and both write back, losing an increment. <code>volatile</code> would <em>not</em> fix this (it gives visibility, not atomicity). The fix is <code>AtomicLong.incrementAndGet()</code> (a <abbr data-abbr="CAS">CAS</abbr>) or a lock.</p>
 
-    <h4>Records as stream tuples (16) &mdash; including local records</h4>
-    <pre><code><span class="typ">List</span>&lt;<span class="typ">String</span>&gt; report(<span class="typ">List</span>&lt;<span class="typ">Trade</span>&gt; trades) {
-    <span class="kw">record</span> <span class="typ">SymbolValue</span>(<span class="typ">String</span> symbol, <span class="typ">BigDecimal</span> value) {}   <span class="cmt">// declared INSIDE the method</span>
-    <span class="kw">return</span> trades.stream()
-        .map(t -&gt; <span class="kw">new</span> <span class="typ">SymbolValue</span>(t.symbol(), t.value()))
-        .sorted(comparing(<span class="typ">SymbolValue</span>::value).reversed())
-        .map(sv -&gt; sv.symbol() + <span class="str">": "</span> + sv.value())
-        .toList();
-}</code></pre>
-    <p>Before records, one-off intermediate pipeline shapes meant <code>AbstractMap.SimpleEntry</code> or a hand-written class; local records make them free.</p>
+    <p><strong>Bug 2 &mdash; stale config (visibility)</strong> <span class="day-ref">DAY 5</span>. A plain field updated by one thread may never become visible to another &mdash; there&rsquo;s no happens-before edge publishing the write. Make the field <code>volatile</code> (visibility + ordering), or guard it with a lock. If the config is an object, publish it <strong>safely</strong> &mdash; an immutable snapshot in a <code>volatile</code>/<code>AtomicReference</code> field, swapped atomically.</p>
 
-    <h4>Helpful NullPointerExceptions (14)</h4>
-    <pre><code><span class="cmt">// Before: "NullPointerException" at a line — which of three calls was null?</span>
-order.getCustomer().getAddress().getCity();
-<span class="cmt">// Java 14+: "Cannot invoke Address.getCity() because the return value of</span>
-<span class="cmt">//           Customer.getAddress() is null"</span></code></pre>
-    <p>(Also in this era: enhanced pseudo-random generators &mdash; the <code>RandomGenerator</code> interface family in 17.)</p>
+    <p><strong>The architect-grade fix</strong> <span class="day-ref">DAY 8</span>. Model config as an immutable <strong>record</strong> and hold it in a single <code>volatile</code> reference; updates create a new record and reassign. Now every reader either sees the old snapshot or the new one, never a torn mix, and there&rsquo;s no per-field synchronization. Immutability (Day 5&rsquo;s safe-publication payoff) + records (Day 8) makes the whole class of visibility bugs disappear by construction.</p>
 
     <div class="interview-q">
-      <span class="iq-tag">&#x1F3AF; INTERVIEW QUESTIONS</span>
-      <p><strong>Q: <code>Stream.toList()</code> vs <code>collect(Collectors.toList())</code> &mdash; just style?</strong> &mdash; No. <code>toList()</code> returns an <em>unmodifiable</em> list; <code>Collectors.toList()</code> returns a mutable ArrayList (documented as no-guarantees). Mechanical migration can break code that mutates the result, and <code>toList()</code> can be faster (no accumulator indirection, sized allocation).</p>
+      <span class="iq-tag">&#x1F3AF; INTERVIEW SIGNAL</span>
+      <p><strong>&ldquo;Is this code thread-safe?&rdquo;</strong> &mdash; Separate the three guarantees out loud: is each shared access <em>atomic</em>, <em>visible</em>, and <em>ordered</em>? Name the missing happens-before edge. Propose the minimal correct primitive (atomic for counters, volatile/immutable snapshot for config, lock for compound invariants). That structured answer is the staff-level signal.</p>
+    </div>
+
+    <div class="check">
+      <span class="check-tag">QUICK CHECK</span>
+      <p>A teammate &ldquo;fixes&rdquo; the off-by-a-few counter by marking it <code>volatile</code>. Why does the bug persist, and what does <code>volatile</code> actually fix in this incident?</p>
     </div>
   </div>
 
-  <!-- ============================================================ -->
-  <!-- STAGE 5 — JAVA 21: PATTERN SWITCH + RECORD PATTERNS -->
-  <!-- ============================================================ -->
+  <!-- STAGE 5 — WALKTHROUGH 4: CPU/THROUGHPUT -->
   <div class="stage" data-section="5">
-    <span class="stage-tag">STAGE 5 <span class="time">20 MIN</span></span>
-    <h3 class="ver-head">&#x2503; JAVA 21 (2023, LTS) &mdash; PATTERN MATCHING FOR SWITCH &amp; RECORD PATTERNS</h3>
-    <h2>The data-modeling story reaches its conclusion</h2>
+    <span class="stage-tag">STAGE 5 <span class="time">25 MIN</span></span>
+    <h2>Walkthrough 4 &mdash; &ldquo;CPU is fine but throughput halved&rdquo;</h2>
 
-    <p>The Java 17 foundations (sealed types, records, pattern <code>instanceof</code>) reach their conclusion here: full pattern matching for <code>switch</code> and record deconstruction, both <strong>standard</strong> in 21.</p>
-    <pre><code><span class="kw">return switch</span> (result) {
-    <span class="kw">case</span> <span class="typ">Approved</span>(<span class="kw">var</span> id, <span class="kw">var</span> amt)             -&gt; settle(id, amt);
-    <span class="kw">case</span> <span class="typ">Declined</span>(<span class="kw">var</span> r, <span class="kw">var</span> retry) <span class="kw">when</span> retry -&gt; requeue(r);   <span class="cmt">// guarded: 'when'</span>
-    <span class="kw">case</span> <span class="typ">Declined</span>(<span class="kw">var</span> r, <span class="kw">var</span> x)               -&gt; reject(r);
-    <span class="kw">case null</span>                                  -&gt; handleNull();   <span class="cmt">// explicit null case</span>
-    <span class="kw">case</span> <span class="typ">Pending</span> p                            -&gt; defer(p);
-};  <span class="cmt">// sealed ⇒ exhaustive ⇒ no default needed</span></code></pre>
-
-    <h4>Type patterns &amp; the death of cast-after-test</h4>
-    <p>A <strong>type pattern</strong> (<code>case Approved a</code>) tests the runtime type and, on match, binds a pre-narrowed variable scoped to that branch &mdash; no cast. The long <code>if (x instanceof A) { A a = (A) x; ... }</code> chain, where a stale cast and stale test silently drift apart, collapses into a switch where the compiler guarantees they can never disagree.</p>
-
-    <h4>Guards &amp; dominance &mdash; ordering is a compile-time contract</h4>
-    <p>A <strong>guard</strong> (<code>when retry</code>) refines a pattern with a boolean. Cases run top-to-bottom and the compiler enforces <em>dominance</em>: a broader pattern above a narrower one it subsumes is a compile error, because the narrower case is unreachable. So the guarded <code>case Declined(...) when retry</code> <strong>must</strong> precede the unguarded <code>case Declined(...)</code>. This is the compiler preventing dead branches, not a style rule.</p>
-
-    <h4>Null handling &amp; how exhaustiveness is proven</h4>
-    <p><code>switch</code> still throws <code>NullPointerException</code> on a null selector <em>unless</em> you write <code>case null</code> (optionally <code>case null, default</code>) &mdash; because exhaustiveness reasons about types, and null inhabits every reference type. Over a sealed type the compiler walks the <code>permits</code> list recursively, proves total coverage, and lets you omit <code>default</code>; it even synthesizes a hidden <code>MatchException</code> fallback for a subtype added via separate compilation. <strong>Omitting <code>default</code> is the correct choice</strong> &mdash; it preserves the refactoring safety net; a <code>default</code> would silently absorb future subtypes.</p>
-
-    <h4>Record patterns &mdash; deconstruction, nested</h4>
-    <pre><code><span class="kw">case</span> <span class="typ">Approved</span>(<span class="typ">String</span> txnId, <span class="typ">BigDecimal</span> amount) -&gt; settle(txnId, amount);
-
-<span class="cmt">// Nested: destructure an object graph in one pattern</span>
-<span class="kw">if</span> (obj <span class="kw">instanceof</span> <span class="typ">Line</span>(<span class="typ">Point</span>(<span class="kw">var</span> x1, <span class="kw">var</span> y1), <span class="typ">Point</span>(<span class="kw">var</span> x2, <span class="kw">var</span> y2)))
-    <span class="kw">double</span> len = <span class="typ">Math</span>.hypot(x2 - x1, y2 - y1);   <span class="cmt">// all four bound at once</span></code></pre>
-    <p>Sealed (closed set) + record patterns (destructure each shape) + exhaustiveness (nothing missed) = the complete algebraic-data-type triad, and the full replacement for the visitor pattern. Unlike a visitor, adding a variant doesn&rsquo;t force every implementor to re-implement an interface &mdash; it just lights up compile errors at the switches that care.</p>
-
-    <div class="interview-q">
-      <span class="iq-tag">&#x1F3AF; INTERVIEW QUESTIONS</span>
-      <p><strong>Q: Explain exhaustiveness checking and why it matters for refactoring.</strong> &mdash; Over a sealed type the compiler proves every subtype is covered; a switch with no <code>default</code> then compiles. Add a subtype and every such switch breaks the build, naming exactly where to update &mdash; &ldquo;forgot a case&rdquo; moves to compile time. A <code>default</code> defeats this.</p>
-      <p><strong>Q: Why must a guarded case precede its unguarded form?</strong> &mdash; Dominance: the unguarded pattern subsumes the guarded one, so reversed, the guarded case is unreachable &mdash; a compile error.</p>
-      <p><strong>Q: Switch over a sealed type with null?</strong> &mdash; NPE unless you add <code>case null</code>; exhaustiveness covers types, not null.</p>
+    <div class="incident">
+      <span class="inc-tag">INCIDENT</span>
+      <p>After a release, a service handles half its previous load. CPU is <em>not</em> pegged. The GC log is clean. Latency under concurrency is far worse than the per-request work suggests it should be.</p>
     </div>
 
-    <div class="check">
-      <span class="check-tag">QUICK CHECK</span>
-      <p>You write <code>case Declined(var r, var retry)</code> first, then <code>case Declined(var r, var retry) when retry</code> below it. What does the compiler say, and what&rsquo;s the fix?</p>
-    </div>
-  </div>
+    <p><strong>Hypothesis</strong> <span class="day-ref">DAY 6</span> &mdash; idle CPU + clean GC + bad-under-concurrency rules out CPU-bound and GC, and points at <em>off-CPU</em> time: locks or thread/pool starvation. A CPU flame graph would look misleadingly flat; reach for <strong>thread dumps</strong> and <strong>wall-clock profiling</strong> instead.</p>
 
-  <!-- ============================================================ -->
-  <!-- STAGE 6 — JAVA 21: VIRTUAL THREADS & PLATFORM -->
-  <!-- ============================================================ -->
-  <div class="stage" data-section="6">
-    <span class="stage-tag">STAGE 6 <span class="time">25 MIN</span></span>
-    <h3 class="ver-head">&#x2503; JAVA 21 (2023, LTS) &mdash; VIRTUAL THREADS, STRUCTURED CONCURRENCY &amp; PLATFORM</h3>
-    <h2>The concurrency revolution</h2>
+    <p><strong>Path A &mdash; common-pool starvation</strong> <span class="day-ref">DAY 7</span>. Thread dumps show request threads <code>WAITING</code> on the <code>ForkJoinPool.commonPool</code>. The release added a <code>parallelStream()</code> inside the request handler; under concurrent load every request fights for the tiny shared pool, and they queue. Fix: drop the parallelism (the server already parallelizes across requests), or isolate it on a dedicated pool. This is the Day 7 common-pool trap in the wild.</p>
 
-    <h4>Virtual threads (standard) &mdash; the headline</h4>
-    <pre><code><span class="kw">try</span> (<span class="kw">var</span> exec = <span class="typ">Executors</span>.newVirtualThreadPerTaskExecutor()) {
-    <span class="kw">for</span> (<span class="typ">Order</span> o : orders) exec.submit(() -&gt; enrich(o));  <span class="cmt">// 100k blocking calls? Fine.</span>
-}
-<span class="typ">Thread</span>.ofVirtual().start(() -&gt; doWork());</code></pre>
-    <p>A platform thread wraps an OS thread: ~1 MB stack, kernel-scheduled, expensive &mdash; capping you at a few thousand. So high-concurrency I/O went <em>asynchronous</em> (callbacks, reactive), trading readable blocking code for throughput. Virtual threads remove that trade by making blocking cheap.</p>
-    <p><strong>The M:N scheduling model:</strong> a virtual thread is a Java object holding a continuation plus a heap stack &mdash; not an OS thread. Many are multiplexed onto a small pool of <strong>carrier threads</strong> (platform threads):</p>
-    <ul>
-      <li><strong>Mount:</strong> to run, a virtual thread mounts onto a carrier and executes as normal Java.</li>
-      <li><strong>Unmount:</strong> on an instrumented blocking call (socket read, sleep, most <code>j.u.c</code> waits), the runtime captures its continuation, copies its stack to the heap, and unmounts it &mdash; freeing the carrier to run another virtual thread immediately.</li>
-      <li><strong>Resume:</strong> when I/O completes, it&rsquo;s rescheduled onto any free carrier and continues from the park point.</li>
-    </ul>
-    <p>Code is written in plain blocking style, but the carrier never blocks &mdash; so a handful of OS threads serve hundreds of thousands of concurrent operations. <strong>Thread-per-request is sane again.</strong></p>
+    <p><strong>Path B &mdash; virtual-thread pinning</strong> <span class="day-ref">DAY 8</span>. The service moved to virtual threads expecting blocking I/O to scale, but throughput barely improved and carriers sit idle. <code>-Djdk.tracePinnedThreads=full</code> shows threads <strong>pinned</strong> inside a <code>synchronized</code> block wrapping a slow external call &mdash; pinned virtual threads can&rsquo;t unmount, so the carrier is wasted. Fix: replace <code>synchronized</code> with <code>ReentrantLock</code> on that path.</p>
+
+    <p><strong>Path C &mdash; the regex hot path</strong> <span class="day-ref">DAY 6</span>. If CPU <em>were</em> pegged, the flame graph would show a wide <code>Pattern.compile</code> leaf &mdash; a regex recompiled per request. Fix the call site (a <code>static final Pattern</code>), not the leaf.</p>
+
     <div class="key-rule">
-      <p><strong>Pinning &mdash; the one failure mode to know cold.</strong> A virtual thread that can&rsquo;t unmount while blocked is <em>pinned</em> to its carrier, which sits idle &mdash; reintroducing the exact starvation virtual threads were meant to remove. Causes: (1) blocking inside a <code>synchronized</code> block/method (the JDK can&rsquo;t unmount across a monitor); (2) blocking in a native (JNI) call. <strong>Fix:</strong> switch hot blocking sections from <code>synchronized</code> to <code>ReentrantLock</code> (its park is unmount-aware). <strong>Detect:</strong> <code>-Djdk.tracePinnedThreads=full</code>. Also note: virtual threads don&rsquo;t speed up CPU-bound work (still core-limited), and you never pool them &mdash; create one per task and let it die.</p>
-    </div>
-
-    <h4>Structured concurrency (preview)</h4>
-    <p>Virtual threads make spawning cheap; structured concurrency makes it <em>safe</em>. With a bare executor, if you fork two subtasks and the first fails, the second runs on orphaned. Structured concurrency gives concurrent tasks block lifecycle:</p>
-    <pre><code><span class="kw">try</span> (<span class="kw">var</span> scope = <span class="kw">new</span> <span class="typ">StructuredTaskScope.ShutdownOnFailure</span>()) {
-    <span class="kw">var</span> user  = scope.fork(() -&gt; fetchUser(id));     <span class="cmt">// each fork → its own virtual thread</span>
-    <span class="kw">var</span> order = scope.fork(() -&gt; fetchOrder(id));
-    scope.join();                                   <span class="cmt">// wait for ALL</span>
-    scope.throwIfFailed();                           <span class="cmt">// propagate the first failure</span>
-    <span class="kw">return new</span> <span class="typ">Response</span>(user.get(), order.get());
-}  <span class="cmt">// scope close: no subtask can outlive this block</span></code></pre>
-    <ul>
-      <li><strong>ShutdownOnFailure</strong> &mdash; &ldquo;I need ALL&rdquo;: first failure cancels the siblings.</li>
-      <li><strong>ShutdownOnSuccess</strong> &mdash; &ldquo;I need ANY&rdquo;: first success cancels the rest (hedged requests).</li>
-      <li>Cancellation propagates <em>down</em>, exceptions <em>up</em>, and a thread dump shows the real parent&ndash;child tree.</li>
-    </ul>
-
-    <h4>Scoped values (preview) &mdash; the ThreadLocal replacement</h4>
-    <pre><code><span class="kw">static final</span> <span class="typ">ScopedValue</span>&lt;<span class="typ">String</span>&gt; REQUEST_ID = <span class="typ">ScopedValue</span>.newInstance();
-<span class="typ">ScopedValue</span>.where(REQUEST_ID, <span class="str">"req-8861"</span>).run(() -&gt; handle());
-<span class="cmt">// Inside handle() and everything it calls: REQUEST_ID.get()</span></code></pre>
-    <p><code>ThreadLocal</code> has three flaws virtual threads make fatal: mutable anywhere downstream, unbounded lifetime (leaks; a forgotten <code>remove()</code> in a pooled thread is a classic bug), and a million mutable maps is a memory disaster. Scoped values flip all three: <strong>immutable</strong> (rebind only in a nested scope), <strong>lifetime = the dynamic extent</strong> of the <code>run</code>/<code>call</code> (auto-torn-down), and <strong>inherited by forked subtasks</strong> in a <code>StructuredTaskScope</code> &mdash; so request context flows across the fan-out. The two features are co-designed.</p>
-
-    <h4>Sequenced collections (standard) &amp; generational ZGC</h4>
-    <pre><code><span class="cmt">// Unified first/last/reversed across List, Deque, LinkedHashSet, LinkedHashMap</span>
-history.addFirst(latest);  history.removeLast();  <span class="kw">var</span> newest = history.getFirst();
-<span class="kw">for</span> (<span class="kw">var</span> e : auditLog.reversed().entrySet()) { ... }   <span class="cmt">// reversed() is a zero-copy VIEW</span></code></pre>
-    <p><code>reversed()</code> returns a live view (O(1), writes through), so descending iteration of a LinkedHashMap is allocation-free. One sharp edge: <code>addFirst</code> on a <code>SortedSet</code> throws <code>UnsupportedOperationException</code> &mdash; its order comes from its comparator. <strong>Generational ZGC</strong> splits ZGC&rsquo;s heap into young/old generations, exploiting the weak generational hypothesis (Day 3) for lower CPU and better allocation throughput while keeping the sub-ms pauses from Day 4 &mdash; now the recommended ZGC default.</p>
-
-    <h4>Coming next: Gatherers (Java 22+ preview)</h4>
-    <p>Collectors customize a stream&rsquo;s <em>terminal</em> step; <code>Stream.gather(...)</code> finally customizes the <em>intermediate</em> step &mdash; <code>windowFixed</code> (batching), <code>windowSliding</code> (moving averages), <code>scan</code> (running totals). Java 21 is the current LTS, so know it exists and the gap it fills.</p>
-
-    <div class="interview-q">
-      <span class="iq-tag">&#x1F3AF; INTERVIEW QUESTIONS</span>
-      <p><strong>Q: Walk me through what happens when a virtual thread blocks on a socket read.</strong> &mdash; The instrumented call captures its continuation, copies its stack to the heap, unmounts it from the carrier (which runs another virtual thread); on completion it&rsquo;s rescheduled onto a free carrier and resumes. The OS thread never blocked.</p>
-      <p><strong>Q: What is pinning &mdash; cause, detection, fix?</strong> &mdash; A virtual thread that can&rsquo;t unmount while blocked, holding its carrier idle. Caused by blocking in <code>synchronized</code> or JNI. Detect with <code>-Djdk.tracePinnedThreads=full</code>; fix by switching to <code>ReentrantLock</code>.</p>
-      <p><strong>Q: Virtual threads vs Project Reactor?</strong> &mdash; Virtual threads for blocking I/O you want simple and debuggable; Reactor still wins for backpressure, streaming, and complex async composition. Virtual threads remove the &ldquo;go reactive just to scale blocking calls&rdquo; pressure.</p>
-      <p><strong>Q: Why can&rsquo;t <code>ThreadLocal</code> work well with virtual threads, and what replaces it?</strong> &mdash; A million mutable, unbounded-lifetime ThreadLocals is a memory/leak hazard. Scoped values: immutable, scope-bound lifetime, inherited by subtasks.</p>
+      <p><strong>The synthesis:</strong> the <em>shape</em> of the evidence (idle CPU, clean GC) chose the tool (thread dump / wall-clock, not a CPU profile), and the root cause lived in modern-Java concurrency (Days 7&ndash;8). Picking the wrong profiler mode here &mdash; a CPU flame graph &mdash; would have shown nothing and burned a day.</p>
     </div>
 
     <div class="check">
       <span class="check-tag">QUICK CHECK</span>
-      <p>You move a service to virtual threads and throughput barely improves; a profiler shows carriers mostly idle. One <code>synchronized</code> method guards a call to a slow external API. Explain what&rsquo;s happening and the fix.</p>
+      <p>Why is a CPU flame graph the <em>wrong</em> first tool for this incident, and which two observations told you so before you ran anything?</p>
     </div>
   </div>
 
-  <!-- ============================================================ -->
-  <!-- STAGE 7 — CHALLENGE -->
-  <!-- ============================================================ -->
-  <div class="stage" data-section="7">
-    <span class="stage-tag">STAGE 7 <span class="time">15 MIN</span></span>
-    <h2>The challenge &mdash; model a domain with Java 17 + 21</h2>
+  <!-- STAGE 6 — CAPSTONE CHALLENGE -->
+  <div class="stage" data-section="6">
+    <span class="stage-tag">STAGE 6 <span class="time">40 MIN</span></span>
+    <h2>The capstone &mdash; one incident, all eight days</h2>
 
-    <p>Apply records, sealed classes, and pattern switch together. Answer all three parts (50+ characters each), then reveal the model answers.</p>
+    <p>The Week-1 final. A single messy incident that touches multiple domains at once &mdash; exactly like real life. Read it, then answer all three parts (50+ characters each) and reveal the model answers. Reason like an architect: classify, hypothesize, name the tool, name the day.</p>
 
     <div class="challenge">
-      <span class="challenge-tag">SCENARIO &middot; READ CAREFULLY</span>
-      <h3>The order state hierarchy</h3>
-      <p>Model a trading order&rsquo;s lifecycle. An order is in <em>exactly one</em> of these states, each carrying different data:</p>
+      <span class="challenge-tag">SCENARIO &middot; READ CAREFULLY BEFORE ANSWERING</span>
+      <h3>The order service that degrades over the trading day</h3>
+      <p><strong>System:</strong> a Java 17 order-matching service, G1GC, 8 GB heap, behind a 1-second gateway timeout.</p>
+      <p><strong>Symptoms, observed together:</strong></p>
       <ul>
-        <li><code>Submitted</code> &mdash; no extra data</li>
-        <li><code>Validated</code> &mdash; no extra data</li>
-        <li><code>Filled(BigDecimal fillPrice)</code></li>
-        <li><code>Rejected(String reason)</code></li>
-        <li><code>Cancelled</code> &mdash; no extra data</li>
+        <li>At <strong>market open</strong>, a burst of 2&ndash;3s unresponsiveness, then it recovers.</li>
+        <li>Over the <strong>trading day</strong>, p99 latency creeps upward and heap usage trends up; by close it&rsquo;s near OOM and gets restarted nightly.</li>
+        <li>Intermittently, a <strong>position counter reports slightly wrong totals</strong> under peak load &mdash; no exceptions.</li>
+        <li>CPU is moderate throughout; thread dumps at peak show many threads <code>WAITING</code>, a few <code>BLOCKED</code>.</li>
       </ul>
-      <p>Downstream code must produce a status message for every state &mdash; and forgetting one should be <em>impossible</em>.</p>
     </div>
 
     <div class="challenge-form" id="challenge-1-9">
       <span class="challenge-tag">YOUR ANSWERS &middot; MINIMUM 50 CHARS EACH TO UNLOCK MODEL ANSWER</span>
 
       <div class="textarea-row">
-        <label class="textarea-label" for="ta-1-9-os1">
-          Q1 &mdash; Write the type design (Java 17 constructs). Which models the closed set of states, which models each state&rsquo;s data, and where does validation live?
+        <label class="textarea-label" for="ta-1-9-s1">
+          Q1 &mdash; This is not one bug but several. Separate the symptoms into distinct problems and classify each (GC / leak / concurrency / contention). Which Week-1 day owns each?
         </label>
-        <textarea class="answer-textarea" id="ta-1-9-os1" placeholder="Think: what gives the compiler the complete list of states? What makes each state immutable?"></textarea>
-        <div class="char-count" id="cc-1-9-os1">0 / 50 characters</div>
+        <textarea class="answer-textarea" id="ta-1-9-s1" placeholder="Market-open burst vs day-long creep vs wrong counter vs WAITING threads — these are different root causes."></textarea>
+        <div class="char-count" id="cc-1-9-s1">0 / 50 characters</div>
         <div style="margin-top:12px">
-          <button class="btn-reveal" id="reveal-1-9-os1" onclick="revealModelAnswer('1-9','os1')" disabled>Reveal model answer</button>
+          <button class="btn-reveal" id="reveal-1-9-s1" onclick="revealModelAnswer('1-9','s1')" disabled>Reveal model answer</button>
         </div>
-        <div class="model-answer" id="ma-1-9-os1">
+        <div class="model-answer" id="ma-1-9-s1">
           <span class="model-answer-tag">MODEL ANSWER</span>
-          <p><code>sealed interface OrderState permits Submitted, Validated, Filled, Rejected, Cancelled</code> &mdash; <strong>sealed</strong> because the set is closed and the compiler should know it. Data-carrying states are <strong>records</strong>: <code>record Filled(BigDecimal fillPrice) implements OrderState {}</code>, <code>record Rejected(String reason) implements OrderState {}</code> &mdash; records because each is an immutable value with a <em>different shape</em> (which rules out a plain enum). No-data states can be empty records (<code>record Submitted() implements OrderState {}</code>). Validation lives in compact constructors: <code>Filled</code> asserts <code>fillPrice</code> is non-null and positive; <code>Rejected</code> asserts <code>reason</code> is non-blank. The whole thing is an algebraic data type: a sum type (sealed) of product types (records).</p>
+          <p>Four distinct problems. <strong>(1) Market-open 2&ndash;3s freeze</strong> &mdash; a GC pause driven by the open&rsquo;s allocation storm (Day 4 GC logs, Day 3 reachability, Day 6 allocation profile). <strong>(2) Day-long heap creep to OOM</strong> &mdash; a memory leak, almost certainly an unbounded cache/static collection that grows with the day&rsquo;s orders (Day 2 statics, Day 3 reachability, Day 6 heap dump + MAT). <strong>(3) Wrong counter under load</strong> &mdash; a data race / lost update on a non-atomic <code>count++</code> (Day 5 JMM). <strong>(4) Many <code>WAITING</code>/<code>BLOCKED</code> threads at peak with moderate CPU</strong> &mdash; lock contention or pool/I/O starvation, not a CPU problem (Day 6 thread dumps; possibly Day 7 common-pool or Day 8 pinning). The key insight: resist forcing one root cause &mdash; the discipline is to <em>split</em> a multi-symptom incident into independent failures first.</p>
         </div>
       </div>
 
       <div class="textarea-row" style="margin-top:28px">
-        <label class="textarea-label" for="ta-1-9-os2">
-          Q2 &mdash; Write the method that turns an <code>OrderState</code> into a status message so &ldquo;forgetting a state&rdquo; is a compile error. Which Java 21 features do the work?
+        <label class="textarea-label" for="ta-1-9-s2">
+          Q2 &mdash; Give your diagnostic plan: for each problem, the exact evidence you&rsquo;d collect and the tool you&rsquo;d use, in the order you&rsquo;d work them. Why that order?
         </label>
-        <textarea class="answer-textarea" id="ta-1-9-os2" placeholder="What kind of switch? What patterns pull out fillPrice and reason? Why no default branch?"></textarea>
-        <div class="char-count" id="cc-1-9-os2">0 / 50 characters</div>
+        <textarea class="answer-textarea" id="ta-1-9-s2" placeholder="GC log, heap dump on OOM, allocation profile, thread dumps, code review of the counter... what first?"></textarea>
+        <div class="char-count" id="cc-1-9-s2">0 / 50 characters</div>
         <div style="margin-top:12px">
-          <button class="btn-reveal" id="reveal-1-9-os2" onclick="revealModelAnswer('1-9','os2')" disabled>Reveal model answer</button>
+          <button class="btn-reveal" id="reveal-1-9-s2" onclick="revealModelAnswer('1-9','s2')" disabled>Reveal model answer</button>
         </div>
-        <div class="model-answer" id="ma-1-9-os2">
+        <div class="model-answer" id="ma-1-9-s2">
           <span class="model-answer-tag">MODEL ANSWER</span>
-          <p>A <strong>switch expression with record patterns and no default branch</strong> (Java 21): <code>return switch (state) { case Submitted s -&gt; "Order submitted"; case Validated v -&gt; "Passed risk checks"; case Filled(var price) -&gt; "Filled at " + price; case Rejected(var reason) -&gt; "Rejected: " + reason; case Cancelled c -&gt; "Cancelled by user"; };</code> Three features cooperate: <strong>sealed</strong> (Java 17) gives the compiler the complete subtype list; <strong>switch as an expression</strong> requires exhaustiveness; <strong>record patterns</strong> (<code>Filled(var price)</code>, Java 21) deconstruct the data in place. Omitting <code>default</code> is the crucial choice &mdash; it keeps the exhaustiveness check alive.</p>
+          <p>Work cheapest-and-highest-impact first. <strong>(a)</strong> Enable GC logging and <code>-XX:+HeapDumpOnOutOfMemoryError</code> immediately &mdash; zero-cost, and both the open freeze and the OOM leave evidence you want captured before the next occurrence (Day 4/6). <strong>(b)</strong> Read the GC log at 09:15 to confirm the open pause and its type/duration; correlate with an allocation flame graph to find the churn source (Day 4/6/3). <strong>(c)</strong> After the next OOM, open the heap dump in MAT, sort by retained heap, follow the path to GC roots to the leaking collection (Day 6/2/3). <strong>(d)</strong> Take three thread dumps seconds apart at peak to classify the <code>WAITING</code>/<code>BLOCKED</code> threads &mdash; common pool? a specific monitor? pinning? (Day 6/7/8). <strong>(e)</strong> Code-review the counter for a non-atomic RMW (Day 5) &mdash; cheap to spot, no runtime evidence needed. Order rationale: turn on always-on evidence first so nothing is lost, then descend the diagnostic ladder from logs to dumps to profiles.</p>
         </div>
       </div>
 
       <div class="textarea-row" style="margin-top:28px">
-        <label class="textarea-label" for="ta-1-9-os3">
-          Q3 &mdash; A new state <code>PartiallyFilled(long filledQty, long remainingQty)</code> is added to the sealed interface. What happens across the codebase, and why is that what you <em>want</em>?
+        <label class="textarea-label" for="ta-1-9-s3">
+          Q3 &mdash; Propose the fixes, and call out the one tempting &ldquo;fix&rdquo; that would make things worse or merely hide a problem.
         </label>
-        <textarea class="answer-textarea" id="ta-1-9-os3" placeholder="Think about what the compiler does to every existing switch over OrderState."></textarea>
-        <div class="char-count" id="cc-1-9-os3">0 / 50 characters</div>
+        <textarea class="answer-textarea" id="ta-1-9-s3" placeholder="Young Gen sizing / ZGC, bound the cache, AtomicLong, isolate parallelism / ReentrantLock... and the trap?"></textarea>
+        <div class="char-count" id="cc-1-9-s3">0 / 50 characters</div>
         <div style="margin-top:12px">
-          <button class="btn-reveal" id="reveal-1-9-os3" onclick="revealModelAnswer('1-9','os3')" disabled>Reveal model answer</button>
+          <button class="btn-reveal" id="reveal-1-9-s3" onclick="revealModelAnswer('1-9','s3')" disabled>Reveal model answer</button>
         </div>
-        <div class="model-answer" id="ma-1-9-os3">
+        <div class="model-answer" id="ma-1-9-s3">
           <span class="model-answer-tag">MODEL ANSWER</span>
-          <p>Every exhaustive switch over <code>OrderState</code> without a <code>default</code> <strong>stops compiling</strong> &mdash; the compiler reports that <code>PartiallyFilled</code> is uncovered. That&rsquo;s exactly what you want: it hands you a to-do list of every consumer that must be updated (settlement, risk, audit, notification), turning a silent &ldquo;forgot a case&rdquo; runtime bug into compile errors you can&rsquo;t ignore &mdash; <strong>exhaustiveness as a refactoring safety net</strong>, the headline benefit of algebraic data types. With <code>if/else instanceof</code> chains or a swallowing <code>default</code>, the new state would slip to production undetected. This is why you omit <code>default</code> on closed hierarchies.</p>
+          <p><strong>Open freeze:</strong> size Young Gen for the open&rsquo;s allocation burst, and for a latency-critical engine switch to ZGC for sub-ms pauses; reduce allocation at the source if the profile shows boxing/regex churn (Day 4/7). <strong>Leak:</strong> bound the offending cache (Caffeine <code>maximumSize</code>/<code>expireAfterAccess</code>) or remove the unintended static reference (Day 2/7). <strong>Counter:</strong> replace <code>count++</code> with <code>AtomicLong.incrementAndGet</code> (Day 5). <strong>Contention:</strong> if it&rsquo;s the common pool, drop the in-request <code>parallelStream</code> or isolate it; if it&rsquo;s pinning, swap <code>synchronized</code> for <code>ReentrantLock</code> (Day 7/8). <strong>The trap: &ldquo;just give it a bigger heap.&rdquo;</strong> A larger heap delays the OOM (hiding the leak until it returns) <em>and</em> can lengthen the market-open Full GC pause &mdash; making the freeze worse while masking the leak. Bigger heap is the intuitive move and the wrong one; it treats two different problems with a change that helps neither and hurts one.</p>
         </div>
       </div>
 
       <div class="unlock-banner" id="unlock-1-9" style="margin-top:24px">
-        <strong style="color:var(--green)">&#x2705; Day 9 complete!</strong> Week 2 begins &mdash;
-        <span style="color:var(--ink-dim)">Concurrency: threads, thread pools, ExecutorService &mdash; where the virtual-thread and common-pool lessons pay off.</span>
+        <strong style="color:var(--green)">&#x2705; Week 1 complete!</strong> You&rsquo;ve built the full JVM &amp; modern-Java foundation &mdash;
+        <span style="color:var(--ink-dim)">Week 2 begins: Concurrency Mastery &mdash; threads, executors, locks, atomics, and virtual threads in depth.</span>
       </div>
     </div>
 
@@ -462,36 +324,38 @@ history.addFirst(latest);  history.removeLast();  <span class="kw">var</span> ne
       <div class="reflection-body">
 
         <div class="takeaways">
-          <div class="takeaways-label">Key Takeaways</div>
+          <div class="takeaways-label">Week 1 &mdash; The Through-Line</div>
           <ul>
-            <li><strong>Java 17</strong> is the data-modeling LTS: switch expressions, text blocks, <strong>records</strong> (transparent, shallowly-immutable, deserialize through the canonical constructor), pattern <code>instanceof</code>, and sealed classes &mdash; together, algebraic data types.</li>
-            <li><strong>Records:</strong> values not entities; defensive-copy mutable components; not for JPA.</li>
-            <li><strong>Java 21</strong> completes pattern matching (exhaustive switch + record patterns) and revolutionizes concurrency (virtual threads, structured concurrency, scoped values).</li>
-            <li><strong>Virtual threads</strong> make blocking code scale via M:N mount/unmount &mdash; beware <em>pinning</em> from <code>synchronized</code>; structured concurrency + scoped values are built for that world.</li>
+            <li><strong>Where does data live?</strong> Stack vs heap (Day 1); static/instance/Metaspace (Day 2).</li>
+            <li><strong>How long does it live?</strong> Reachability &amp; generational GC (Day 3); GC algorithms &amp; tuning (Day 4).</li>
+            <li><strong>Who can see it, and when?</strong> The Java Memory Model &amp; happens-before (Day 5).</li>
+            <li><strong>How do you observe it under load?</strong> Profiling &mdash; JFR, async-profiler, flame graphs, dumps (Day 6).</li>
+            <li><strong>How do you write code that gets this right?</strong> Modern Java &mdash; streams/Optional (Day 7), records/sealed/virtual threads (Day 8).</li>
+            <li><strong>Diagnosis is the meta-skill:</strong> classify the symptom, hypothesize, reach for the owning day, confirm with evidence. Never guess; never &ldquo;just add heap.&rdquo;</li>
           </ul>
         </div>
 
         <div class="reflection-prompts">
           <div class="reflection-prompt">
             <span class="prompt-num">01</span>
-            <p class="prompt-text">Find an if/else-<code>instanceof</code> chain or a visitor pattern you know. Sketch its sealed + records + pattern-switch replacement. What breaks at compile time the next time someone adds a variant?</p>
+            <p class="prompt-text">Recall a real production incident you&rsquo;ve seen. Which Week-1 day owned the root cause? Was it diagnosed with evidence or guessed &mdash; and what tool would have found it fastest?</p>
           </div>
           <div class="reflection-prompt">
             <span class="prompt-num">02</span>
-            <p class="prompt-text">Explain in under 60 seconds why a record is safer than a Lombok <code>@Data</code> class for an API request payload (hint: deserialization path, mutability, equals).</p>
+            <p class="prompt-text">Of the eight days, which one is your weakest? Write the single sentence you&rsquo;d need to be able to say confidently in an interview from that day &mdash; then go re-read that lesson.</p>
           </div>
           <div class="reflection-prompt">
             <span class="prompt-num">03</span>
-            <p class="prompt-text">Where do you fan out to multiple services and wait for all results? What happens today when one fails? How would virtual threads + <code>StructuredTaskScope</code> change it?</p>
+            <p class="prompt-text">Build your own &ldquo;symptom &rarr; tool&rdquo; card from Stage 1 from memory, without looking. The gaps you can&rsquo;t fill are your study list for the weekend.</p>
           </div>
         </div>
 
         <div class="confidence-block">
-          <div class="confidence-label">How confident do you feel about today&rsquo;s material?</div>
+          <div class="confidence-label">How confident do you feel about Week 1 as a whole?</div>
           <div class="confidence-btns">
             <button class="conf-btn" data-day="1-9" data-level="1" onclick="saveConfidence('1-9', 1)">&#x1F615; Not yet &mdash; need another pass</button>
             <button class="conf-btn" data-day="1-9" data-level="2" onclick="saveConfidence('1-9', 2)">&#x1F914; Getting there &mdash; mostly clear</button>
-            <button class="conf-btn" data-day="1-9" data-level="3" onclick="saveConfidence('1-9', 3)">&#x2705; Solid &mdash; I could explain this</button>
+            <button class="conf-btn" data-day="1-9" data-level="3" onclick="saveConfidence('1-9', 3)">&#x2705; Solid &mdash; I could diagnose this live</button>
           </div>
           <div class="confidence-saved" id="conf-saved-1-9"></div>
         </div>
@@ -499,10 +363,10 @@ history.addFirst(latest);  history.removeLast();  <span class="kw">var</span> ne
       </div>
     </div>
 
-  </div><!-- end stage 7 -->
+  </div><!-- end stage 6 -->
 
   <footer>
-    DAY 9 OF 158 &middot; JAVA 17 &amp; JAVA 21 &middot; PHASE 1 / 6
+    DAY 9 OF 158 &middot; WEEK 1 SYNTHESIS &middot; PHASE 1 / 6
   </footer>
 
 </div>

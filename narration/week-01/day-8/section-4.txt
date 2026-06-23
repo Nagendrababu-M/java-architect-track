@@ -1,11 +1,19 @@
-Stage 4 covers two quality-of-life features that still carry interview-worthy details: text blocks and Sequenced Collections.
+Stage 4: parallel streams, and specifically when they hurt — because the interview question is never "how do you parallelize a stream," it's "why was your parallel stream slower."
 
-Text blocks first. Triple quotes, multi-line string, perfect for SQL and JSON. The detail everyone misses is incidental indentation stripping: the position of the closing triple-quote determines the left margin. Whitespace common to the left of it gets stripped; everything to the right is preserved. Move the closing delimiter left, and you've added indentation to every line. Two escapes worth knowing: a backslash at the end of a line suppresses the newline — one logical line split for readability — and backslash-s preserves a trailing space that would otherwise be stripped. And remember: a text block is still just a String. Same type, same methods, same constant pool.
+First, what actually happens. ParallelStream makes the spliterator trySplit the source into chunks, each chunk becomes a ForkJoin task, and results merge through the collector's combiner. And all those tasks run on ForkJoinPool dot commonPool — one pool, shared by the entire JVM, sized at cores minus one.
 
-Now Sequenced Collections, Java 21 — a fix for a twenty-year-old inconsistency. Getting the first element was spelled differently on every collection: list dot get zero, deque dot getFirst, sortedSet dot first. And LinkedHashSet — a collection whose entire purpose is maintaining order — had no way to get its last element without iterating the whole thing.
+Let that sink in, because it's the number one production incident. Every parallel stream in the process, every CompletableFuture that didn't name an executor — all sharing the same handful of threads. Someone parallelizes a stream of HTTP calls. The common pool fills with threads blocked on I/O. And suddenly, unrelated code on the other side of the service stops making progress. The speedup looked great in testing — testing didn't have anything else competing for the pool.
 
-JEP 431 retrofits three interfaces. SequencedCollection gives every ordered collection getFirst, getLast, addFirst, addLast, removeFirst, removeLast, and reversed. SequencedSet covers LinkedHashSet and SortedSet. SequencedMap gives LinkedHashMap firstEntry, lastEntry, putFirst, putLast.
+So here's the checklist. Parallel only when ALL of these hold.
 
-The headline method is reversed(). It returns a view, not a copy. Zero allocation, and mutations write through to the original. Iterating a LinkedHashMap backwards used to mean copying all the keys into a list and reversing it — now it's just map dot reversed.
+One: N times Q is large — element count times per-element cost. Ten thousand cheap elements lose to sequential; the orchestration costs more than it saves.
 
-Two interview details. First: what does addFirst do on a SortedSet? It throws UnsupportedOperationException — a sorted set's order comes from its comparator; you can't impose a position on it. The interface gives sorted collections the read methods, not positional writes. Second, the LRU trick: on a LinkedHashSet, addFirst with an element that already exists moves it to the front. So an LRU-style structure becomes: addFirst on access, removeLast to evict. Two method calls that used to require a hand-rolled data structure.
+Two: the source splits well. ArrayList and arrays split perfectly — they're index-addressable, so trySplit is arithmetic. LinkedList splits terribly — finding the midpoint means walking half the list. Stream dot iterate can't split at all, because each element depends on the previous one.
+
+Three: operations are stateless and non-blocking. CPU-bound pure functions. No I/O, no locks, no shared mutable state. The classic trap: forEach adding to an ArrayList from a parallel stream. ArrayList isn't thread-safe — you lose elements or throw. The fix isn't a synchronized list; it's letting the collector own the state — toList gives each thread its own container and merges.
+
+Four: the merge is cheap. Summing longs merges in constant time. Merging HashMaps is linear — groupingBy in parallel pays real merge costs. GroupingByConcurrent trades encounter order for a single shared ConcurrentHashMap.
+
+Five: you don't depend on encounter order. Limit and findFirst on an ordered parallel stream force cross-thread coordination — "the FIRST n elements" is expensive when work finishes out of order. FindAny and unordered release that constraint.
+
+Last piece: for I/O-bound fan-out, parallel streams are the wrong tool entirely. That's what virtual threads and StructuredTaskScope are for — remember Day 8. Parallel streams are for CPU-bound data crunching. Say that boundary clearly in an interview and you've answered the question they were actually asking.
