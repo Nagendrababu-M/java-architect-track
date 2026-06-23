@@ -1,0 +1,17 @@
+Stage 6 is your capstone challenge — find the races in a singleton. Let me set up the scenario, and you work it before revealing the model answers.
+
+Picture a PriceCache class. A static instance field, not volatile. A prices field that's a plain HashMap. An int hitCount starting at zero. A private constructor that calls load. A getInstance method that checks if instance is null and if so constructs one, then returns it. And a get method that does hitCount plus plus, then returns prices dot get of the symbol. It's called concurrently from many request-handling threads — and it passes every single-threaded test.
+
+There are three distinct race conditions here. Work through it in happens-before terms, not vibes.
+
+Race one is the singleton check. The if-null-then-construct in getInstance is unsynchronized and non-atomic. Two threads can both see null and both construct an instance — broken atomicity. And worse, a reader can see a non-null reference to a partially constructed object, because there's no happens-before edge publishing the constructor's writes — that's the double-checked-locking trap, a visibility and ordering failure.
+
+Race two is the shared HashMap. HashMap is not thread-safe. Concurrent gets and puts — including during load in the constructor — can corrupt its internal state, or historically even spin forever on a resize. That's a structural atomicity and visibility failure on the map itself.
+
+Race three is hitCount plus plus. A read-modify-write with no synchronization: lost updates, and the reads have no visibility guarantee either.
+
+For the fix: use the initialization-on-demand holder idiom for the singleton — class-init locking gives safe publication at zero per-call cost. Replace the HashMap with a ConcurrentHashMap, and make the field final so it's safely published with the instance. And replace the int counter and plus plus with an AtomicLong's incrementAndGet, or a LongAdder if write contention is high. The holder gives safe publication; ConcurrentHashMap and the atomic give per-operation atomicity and visibility.
+
+And the deepest question: how could a caller of the original code get a PriceCache whose prices map is still null? Because instance equals new PriceCache is three steps — allocate, construct, assign — and the assignment can be reordered before the constructor finishes. Thread A is mid-construction when the reference becomes visible; thread B reads instance, sees non-null, skips construction, but there's no happens-before edge to A's constructor writes, so B can see prices at its default null and throw a NullPointerException on prices dot get. Volatile, or the holder idiom, inserts the edge and closes it.
+
+That's the Java Memory Model. You now understand why "it works on my machine" lies — and you have the happens-before vocabulary that every lock, atomic, and concurrent collection in Week 2 is built on. Next up, Day 6: profiling in anger — finding why a service is actually slow.

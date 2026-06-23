@@ -106,7 +106,8 @@ const CURRICULUM = {
         },
         { day: 4, title: "GC Algorithms Deep Dive + Tuning + Profiling",   topic: "Garbage Collection", status: "current", file: "week-01/day-4.html", duration: 180,
           audio: { available: false, voice: 'en-US-Wavenet-D', sectionCount: 6, estimatedMinutes: 32 } },
-        { day: 5, title: "Java Memory Model (JMM) & happens-before",      topic: "Concurrency",        status: "locked", file: null },
+        { day: 5, title: "Java Memory Model (JMM) & happens-before",      topic: "Concurrency",        status: "current", file: "week-01/day-5.html", duration: 160,
+          audio: { available: false, voice: 'en-US-Wavenet-D', sectionCount: 6, estimatedMinutes: 30 } },
         { day: 6, title: "Profiling in Anger: JFR, async-profiler, flame graphs", topic: "JVM Memory", status: "locked", file: null },
         { day: 7, title: "Week 1 Synthesis: Production Diagnosis",        topic: "JVM Memory",         status: "locked", file: null },
         {

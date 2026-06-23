@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Week 1 · Day 5 — Java Memory Model (JMM) &amp; happens-before</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,800&family=JetBrains+Mono:wght@400;500;700&family=Inter+Tight:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/styles.css">
+<link rel="stylesheet" href="../assets/audio-player.css">
+<link rel="stylesheet" href="../assets/glossary.css">
+<link rel="stylesheet" href="../assets/abbreviations.css">
+<style>
+  body {
+    background-image:
+      radial-gradient(ellipse 800px 600px at 20% 0%, rgba(122,184,232,0.07), transparent 60%),
+      radial-gradient(ellipse 600px 400px at 90% 100%, rgba(122,184,232,0.04), transparent 60%);
+  }
+  .interview-q {
+    margin: 20px 0;
+    padding: 18px 22px;
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--yellow);
+    border-radius: 0 8px 8px 0;
+    background: rgba(230,200,90,0.04);
+  }
+  .interview-q .iq-tag {
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: var(--yellow);
+    margin-bottom: 10px;
+  }
+  .interview-q p { margin: 0 0 10px; color: var(--ink-dim); line-height: 1.7; }
+  .interview-q p:last-child { margin-bottom: 0; }
+</style>
+</head>
+<body>
+<div class="grain"></div>
+
+<div class="container">
+
+  <header class="lesson-header">
+    <a href="../index.html" class="back-link">&larr; Back to curriculum</a>
+    <div class="meta">
+      <span class="dot"></span>
+      <span class="phase">Phase 1 &middot; Advanced Java</span>
+      <span>&middot;</span>
+      <span>Week 1 / Day 5</span>
+    </div>
+    <h1>
+      Java Memory Model (<abbr data-abbr="JMM">JMM</abbr>) &amp; happens-before
+      <span class="sub">Why concurrent code is hard, what actually guarantees one thread sees another&rsquo;s writes, and how to publish objects safely.</span>
+    </h1>
+    <div class="scope"><strong>SCOPE</strong> &middot; 160 min &middot; 6 stages &mdash; the rulebook underneath every lock, atomic, and concurrent collection in Week 2.</div>
+  <div id="play-full-lesson-mount"></div>
+  </header>
+
+  <div class="recap">
+    <span class="recap-tag">RECAP FROM DAY 4</span>
+    <p>You now own the JVM memory picture: the <strong>heap is shared by every thread</strong>, and the GC manages it underneath you. Day 5 confronts the consequence of that sharing: when two threads touch the same heap data, <em>what does each one actually see?</em> The answer is not &ldquo;the latest value&rdquo; &mdash; it&rsquo;s whatever the <strong>Java Memory Model</strong> permits, which is far weaker and stranger than intuition suggests. The JMM is the contract that says which writes are guaranteed visible to which reads. Master it and concurrency stops being guesswork; ignore it and you ship bugs that only appear in production, on a different CPU, under load.</p>
+  </div>
+
+  <!-- STAGE 1 -->
+  <div class="stage" data-section="1">
+    <span class="stage-tag">STAGE 1 <span class="time">25 MIN</span></span>
+    <h2>Why concurrency is hard &mdash; reordering, caching, and the three guarantees</h2>
+
+    <p>Your source code is a sequence of statements. The CPU that runs it is not obligated to execute them in that order &mdash; only to preserve the appearance of order <em>for a single thread</em>. Three layers reorder your program, each for performance:</p>
+    <ul>
+      <li><strong>The compiler / JIT</strong> reorders independent statements and hoists reads out of loops.</li>
+      <li><strong>The CPU</strong> executes instructions out of order and speculatively.</li>
+      <li><strong>The memory subsystem</strong> &mdash; each core has its own caches and store buffers, so a write by one core may sit in <em>that core&rsquo;s</em> buffer, invisible to others for an unbounded time.</li>
+    </ul>
+    <p>Single-threaded, none of this is observable &mdash; the JVM guarantees your thread sees its own actions in program order (the &ldquo;as-if-serial&rdquo; rule). The instant a <em>second</em> thread reads the same data, all bets are off.</p>
+
+    <div class="key-rule insight">
+      <p><strong>The canonical reordering bug.</strong></p>
+      <pre><code><span class="cmt">// Thread A                       // Thread B</span>
+value = <span class="num-lit">42</span>;                        <span class="kw">while</span> (!ready) { }     <span class="cmt">// spin until ready</span>
+ready = <span class="kw">true</span>;                       <span class="typ">System</span>.out.println(value);</code></pre>
+      <p>Intuition says B prints 42. The JMM allows three other outcomes: B may <strong>never</strong> see <code>ready</code> become true (the value is stuck in A&rsquo;s cache and B&rsquo;s read is hoisted out of the loop &mdash; an infinite spin); or B may see <code>ready == true</code> but <code>value == 0</code>, because A&rsquo;s two writes were reordered, or B&rsquo;s two reads were. Nothing here establishes that A&rsquo;s write to <code>value</code> is visible before B&rsquo;s read of it. The code is <em>racy</em>.</p>
+    </div>
+
+    <h4>Three distinct guarantees &mdash; don&rsquo;t conflate them</h4>
+    <p>Most concurrency confusion comes from treating these as one thing. They are independent:</p>
+    <div class="compare-wrap"><table class="compare">
+      <thead><tr><th>Property</th><th>Question it answers</th><th>Broken example</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Atomicity</strong></td><td>Does this operation happen all-or-nothing?</td><td><code>count++</code> is read-modify-write &mdash; two threads can both read 5 and both write 6</td></tr>
+        <tr><td><strong>Visibility</strong></td><td>Will another thread ever see my write?</td><td>A non-<code>volatile</code> flag written by one thread may never be observed by another</td></tr>
+        <tr><td><strong>Ordering</strong></td><td>Do my writes appear in the order I wrote them?</td><td><code>value</code> then <code>ready</code> may be seen in the reverse order by another thread</td></tr>
+      </tbody>
+    </table></div>
+    <p>A correct concurrent program needs the right combination of all three. <code>volatile</code> gives you visibility + ordering but <em>not</em> atomicity; <code>synchronized</code> and locks give all three for the guarded region; atomics give atomicity + visibility for a single variable. Knowing which tool gives which property is the whole game.</p>
+
+    <div class="check">
+      <span class="check-tag">QUICK CHECK</span>
+      <p>In the reordering example, name the two <em>distinct</em> failures that can occur, and which guarantee (visibility or ordering) each one violates.</p>
+    </div>
+  </div>
+
+  <!-- STAGE 2 -->
+  <div class="stage" data-section="2">
+    <span class="stage-tag">STAGE 2 <span class="time">30 MIN</span></span>
+    <h2>happens-before &mdash; the contract that tames the chaos</h2>
+
+    <p>The JMM doesn&rsquo;t promise &ldquo;writes are instantly visible.&rdquo; It gives you something precise instead: a partial ordering called <strong>happens-before</strong>. The single rule that matters:</p>
+
+    <div class="key-rule insight">
+      <p><strong>If action X <em>happens-before</em> action Y, then the effects of X (all its writes) are guaranteed visible to Y, and X is guaranteed to appear ordered before Y.</strong> If there is <em>no</em> happens-before edge between two conflicting accesses (at least one a write to the same variable), you have a <strong>data race</strong> &mdash; and the result is undefined.</p>
+    </div>
+
+    <p>You never reason about caches or barriers directly. You establish happens-before edges, and the JVM inserts whatever fences the hardware needs. These are the edges the JMM gives you:</p>
+
+    <div class="compare-wrap"><table class="compare">
+      <thead><tr><th>Edge</th><th>The guarantee</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Program order</strong></td><td>Within a single thread, each action happens-before every later action in source order.</td></tr>
+        <tr><td><strong>Monitor lock</strong></td><td>Unlocking a monitor happens-before every subsequent lock of <em>the same</em> monitor. (This is what <code>synchronized</code> gives you.)</td></tr>
+        <tr><td><strong>Volatile</strong></td><td>A write to a <code>volatile</code> field happens-before every subsequent read of that same field.</td></tr>
+        <tr><td><strong>Thread start</strong></td><td><code>thread.start()</code> happens-before every action <em>inside</em> the started thread.</td></tr>
+        <tr><td><strong>Thread join</strong></td><td>Every action in a thread happens-before another thread returns from <code>thread.join()</code> on it.</td></tr>
+        <tr><td><strong>Transitivity</strong></td><td>If X happens-before Y and Y happens-before Z, then X happens-before Z.</td></tr>
+      </tbody>
+    </table></div>
+
+    <p><strong>Transitivity is the workhorse.</strong> It&rsquo;s how a lock or a volatile makes <em>ordinary</em> (non-volatile) writes visible. Revisit Stage 1 with <code>ready</code> made <code>volatile</code>:</p>
+    <pre><code><span class="cmt">// Thread A                          // Thread B</span>
+value = <span class="num-lit">42</span>;            <span class="cmt">// (1)</span>         <span class="kw">while</span> (!ready) { }     <span class="cmt">// (3) volatile read</span>
+ready = <span class="kw">true</span>;          <span class="cmt">// (2) volatile write</span>  print(value);          <span class="cmt">// (4)</span></code></pre>
+    <p>The chain: (1) happens-before (2) by program order; (2) happens-before (3) by the volatile rule (B&rsquo;s read sees the true that A wrote); (3) happens-before (4) by program order. By transitivity, <strong>(1) happens-before (4)</strong> &mdash; so B is guaranteed to see <code>value == 42</code>, even though <code>value</code> itself is an ordinary field. The volatile write &ldquo;publishes&rdquo; everything that came before it.</p>
+
+    <div class="interview-q">
+      <span class="iq-tag">&#x1F3AF; INTERVIEW QUESTIONS</span>
+      <p><strong>Q: What is a data race, precisely?</strong> &mdash; Two accesses to the same variable, at least one a write, with no happens-before edge ordering them. Not the same as a race condition (a logic-level timing bug); a data race is the JMM-level absence of ordering, and its result is undefined.</p>
+      <p><strong>Q: Does <code>synchronized</code> only provide mutual exclusion?</strong> &mdash; No &mdash; that&rsquo;s the common half-answer. It also creates a happens-before edge (unlock &rarr; subsequent lock), so it provides <em>visibility and ordering</em> for everything done inside the block, not just atomicity.</p>
+      <p><strong>Q: How does making one field volatile fix visibility of other, non-volatile fields?</strong> &mdash; Transitivity: writes before the volatile write are ordered before it; a reader that sees the volatile value is guaranteed to see those earlier writes too.</p>
+    </div>
+
+    <div class="check">
+      <span class="check-tag">QUICK CHECK</span>
+      <p>Two threads share a plain <code>int counter</code> guarded by a <code>synchronized</code> block on both increment and read. Which happens-before edge makes the reader see the latest value &mdash; and would it still hold if only the writer synchronized?</p>
+    </div>
+  </div>
+
+  <!-- STAGE 3 -->
+  <div class="stage" data-section="3">
+    <span class="stage-tag">STAGE 3 <span class="time">25 MIN</span></span>
+    <h2>volatile &mdash; visibility and ordering, never atomicity</h2>
+
+    <p><code>volatile</code> is the lightest synchronization tool. It does exactly two things, and the interview trap is believing it does a third.</p>
+
+    <h4>What volatile guarantees</h4>
+    <ul>
+      <li><strong>Visibility:</strong> every read of a volatile field sees the most recent write &mdash; the value is never served from a stale cache.</li>
+      <li><strong>Ordering:</strong> it establishes the happens-before edge from Stage 2, and acts as a barrier &mdash; reads/writes before a volatile write can&rsquo;t be reordered after it, and reads after a volatile read can&rsquo;t be moved before it.</li>
+    </ul>
+
+    <h4>What volatile does NOT guarantee: atomicity</h4>
+    <pre><code><span class="kw">volatile int</span> count = <span class="num-lit">0</span>;
+count++;   <span class="cmt">// THREE operations: read count, add 1, write count</span></code></pre>
+    <p>Two threads can both read 5, both compute 6, both write 6 &mdash; one increment lost. <code>volatile</code> made each read and write visible, but the read-modify-write as a whole is not atomic. For that you need <code>AtomicInteger.incrementAndGet()</code> (a <abbr data-abbr="CAS">CAS</abbr> loop) or a lock. <strong>Rule of thumb: <code>volatile</code> is correct only when a write does not depend on the current value</strong> &mdash; a flag, a one-shot published reference, a configuration snapshot. The moment the new value is a function of the old one, <code>volatile</code> alone is wrong.</p>
+
+    <h4>The one pattern volatile nails</h4>
+    <pre><code><span class="kw">private volatile boolean</span> shutdown = <span class="kw">false</span>;
+<span class="kw">public void</span> shutdown() { shutdown = <span class="kw">true</span>; }          <span class="cmt">// writer</span>
+<span class="kw">public void</span> run() { <span class="kw">while</span> (!shutdown) { doWork(); } }  <span class="cmt">// reader sees it promptly</span></code></pre>
+    <p>Without <code>volatile</code> the worker loop may never observe the flag and spin forever &mdash; the classic &ldquo;my thread won&rsquo;t stop&rdquo; bug.</p>
+
+    <h4>The 64-bit gotcha: non-atomic long &amp; double</h4>
+    <p>The JMM permits a 64-bit <code>long</code> or <code>double</code> write to be split into two 32-bit writes. A concurrent reader (without synchronization) can observe a <strong>torn value</strong> &mdash; the high 32 bits of one write and the low 32 bits of another, a number that was never assigned. Marking the field <code>volatile</code> makes 64-bit reads and writes atomic, closing the gap. (References and all other primitives are always atomic to read/write; only <code>long</code>/<code>double</code> have this hole.)</p>
+
+    <div class="interview-q">
+      <span class="iq-tag">&#x1F3AF; INTERVIEW QUESTIONS</span>
+      <p><strong>Q: Is <code>volatile</code> enough to make <code>count++</code> thread-safe?</strong> &mdash; No. It fixes visibility/ordering but not the read-modify-write atomicity. Use <code>AtomicInteger</code> or a lock.</p>
+      <p><strong>Q: When is <code>volatile</code> the right tool?</strong> &mdash; When the new value doesn&rsquo;t depend on the old: status flags, safe publication of an immutable object, double-checked-locking guards.</p>
+      <p><strong>Q: Why can a non-volatile <code>long</code> read return a value that was never written?</strong> &mdash; 64-bit writes may be split into two 32-bit stores; a reader can see a half-updated value (word tearing). <code>volatile</code> makes them atomic.</p>
+    </div>
+
+    <div class="check">
+      <span class="check-tag">QUICK CHECK</span>
+      <p>You have a <code>volatile long requestId</code> incremented by many threads with <code>requestId++</code>. Two bugs hide here &mdash; the <code>volatile</code> fixes one of them. Which one does it fix, and which remains?</p>
+    </div>
+  </div>
+
+  <!-- STAGE 4 -->
+  <div class="stage" data-section="4">
+    <span class="stage-tag">STAGE 4 <span class="time">25 MIN</span></span>
+    <h2>final fields &amp; safe publication</h2>
+
+    <p><strong>Publication</strong> is making an object reachable from another thread. The danger: a thread can obtain the reference before the object&rsquo;s constructor has finished writing its fields &mdash; and see a <em>partially constructed</em> object. This is the deepest JMM trap, because the object &ldquo;looks&rdquo; fine.</p>
+
+    <h4>final field semantics</h4>
+    <p>The JMM makes a special promise for <code>final</code> fields: if an object is constructed correctly, any thread that later sees the object is <strong>guaranteed to see its final fields fully initialized</strong> &mdash; without any synchronization. There&rsquo;s a &ldquo;freeze&rdquo; action at the end of the constructor that orders the final-field writes before the object reference can be published.</p>
+    <pre><code><span class="kw">public final class</span> <span class="typ">Config</span> {
+    <span class="kw">private final</span> <span class="typ">String</span> url;
+    <span class="kw">private final</span> <span class="kw">int</span> timeout;
+    <span class="kw">public</span> <span class="typ">Config</span>(<span class="typ">String</span> url, <span class="kw">int</span> timeout) { <span class="kw">this</span>.url = url; <span class="kw">this</span>.timeout = timeout; }
+    <span class="cmt">// Any thread that gets a Config reference sees url and timeout set — no sync needed.</span>
+}</code></pre>
+
+    <div class="key-rule">
+      <p><strong>The escape that breaks the guarantee.</strong> The final-field promise holds <em>only if <code>this</code> does not escape during construction.</em> If a constructor publishes the partially-built object &mdash; registering a listener, starting a thread, assigning <code>this</code> to a static field before the constructor returns &mdash; another thread can see the object before the freeze, and the guarantee is void. Never let <code>this</code> leak from a constructor.</p>
+    </div>
+
+    <h4>The four safe-publication idioms</h4>
+    <p>To hand an object to another thread safely, the publication itself must create a happens-before edge. There are exactly four standard ways:</p>
+    <div class="compare-wrap"><table class="compare">
+      <thead><tr><th>Idiom</th><th>Mechanism</th></tr></thead>
+      <tbody>
+        <tr><td>Static initializer</td><td>Class-init locking guarantees visibility: <code>static final X x = new X();</code></td></tr>
+        <tr><td><code>volatile</code> / <code>AtomicReference</code> field</td><td>The volatile-write &rarr; volatile-read edge publishes the object and its prior writes</td></tr>
+        <tr><td><code>final</code> field</td><td>The constructor freeze publishes the referenced object (if <code>this</code> didn&rsquo;t escape)</td></tr>
+        <tr><td>Lock-guarded field</td><td>Writing inside a lock and reading inside the same lock (the monitor edge)</td></tr>
+      </tbody>
+    </table></div>
+    <p>An <strong>effectively immutable</strong> object (no mutation after construction) published by <em>any</em> of these is safe to share across threads forever. A <strong>truly immutable</strong> object (all fields <code>final</code>) is safe even if published <em>unsafely</em> &mdash; the final-field guarantee carries it. This is the deep reason immutability is the architect&rsquo;s default for shared state: it removes the publication problem entirely.</p>
+
+    <div class="interview-q">
+      <span class="iq-tag">&#x1F3AF; INTERVIEW QUESTIONS</span>
+      <p><strong>Q: What is unsafe publication?</strong> &mdash; Making an object visible to other threads without a happens-before edge, so a reader can see a reference to an object whose fields aren&rsquo;t yet visible (or a constructor that hasn&rsquo;t finished).</p>
+      <p><strong>Q: Why are <code>final</code> fields special?</strong> &mdash; The constructor freeze guarantees their initialized values are visible to any thread that sees the object, with no synchronization &mdash; provided <code>this</code> didn&rsquo;t escape during construction.</p>
+      <p><strong>Q: Why is an immutable object thread-safe by default?</strong> &mdash; No mutation means no write-after-publication races, and all-final fields make even unsafe publication safe. Sharing requires zero synchronization.</p>
+    </div>
+
+    <div class="check">
+      <span class="check-tag">QUICK CHECK</span>
+      <p>A class registers itself as an event listener in its constructor (<code>bus.register(this)</code>) and sets a <code>final</code> field afterward. Why might another thread&rsquo;s callback see that final field uninitialized?</p>
+    </div>
+  </div>
+
+  <!-- STAGE 5 -->
+  <div class="stage" data-section="5">
+    <span class="stage-tag">STAGE 5 <span class="time">25 MIN</span></span>
+    <h2>Double-checked locking &mdash; the cautionary tale, and what to do instead</h2>
+
+    <p>Double-checked locking (DCL) is a lazy-singleton optimization: check the field without a lock (fast path), and only lock if it&rsquo;s null. It is famous because the &ldquo;obvious&rdquo; version is <strong>broken</strong>, and understanding <em>why</em> is the perfect JMM capstone.</p>
+
+    <h4>The broken version (pre-Java 5 idiom, still wrong without volatile)</h4>
+    <pre><code><span class="kw">private static</span> <span class="typ">Singleton</span> instance;   <span class="cmt">// NOT volatile — the bug</span>
+<span class="kw">public static</span> <span class="typ">Singleton</span> get() {
+    <span class="kw">if</span> (instance == <span class="kw">null</span>) {                     <span class="cmt">// (1) unlocked check</span>
+        <span class="kw">synchronized</span> (<span class="typ">Singleton</span>.<span class="kw">class</span>) {
+            <span class="kw">if</span> (instance == <span class="kw">null</span>)
+                instance = <span class="kw">new</span> <span class="typ">Singleton</span>();    <span class="cmt">// (2) construct + publish</span>
+        }
+    }
+    <span class="kw">return</span> instance;                            <span class="cmt">// (3)</span>
+}</code></pre>
+    <p>Line (2) is not atomic. <code>instance = new Singleton()</code> is really: allocate memory, run the constructor, then assign the reference. The JMM permits the JIT/CPU to <strong>reorder</strong> the assignment <em>before</em> the constructor finishes. Now thread B hits line (1), sees a non-null <code>instance</code>, skips the lock, and returns a reference to an object whose constructor hasn&rsquo;t run &mdash; fields still at defaults. There&rsquo;s no happens-before edge between the constructor&rsquo;s writes and B&rsquo;s unlocked read. A latent, load-dependent, &ldquo;works-on-my-machine&rdquo; crash.</p>
+
+    <h4>The fix: one keyword</h4>
+    <pre><code><span class="kw">private static volatile</span> <span class="typ">Singleton</span> instance;   <span class="cmt">// volatile closes the hole</span></code></pre>
+    <p>The <code>volatile</code> write of <code>instance</code> happens-before any subsequent read of it (Stage 2), and the volatile barrier forbids the reorder &mdash; the constructor&rsquo;s writes are ordered before the reference is published. DCL has worked correctly since Java 5 <em>only</em> with <code>volatile</code>. If an interviewer shows you DCL, the first thing you check is that keyword.</p>
+
+    <h4>Better: skip DCL entirely</h4>
+    <p>DCL is rarely worth its subtlety. Two cleaner idioms get lazy, thread-safe singletons for free:</p>
+    <pre><code><span class="cmt">// 1. Initialization-on-demand holder — lazy AND lock-free</span>
+<span class="kw">private static class</span> <span class="typ">Holder</span> { <span class="kw">static final</span> <span class="typ">Singleton</span> INSTANCE = <span class="kw">new</span> <span class="typ">Singleton</span>(); }
+<span class="kw">public static</span> <span class="typ">Singleton</span> get() { <span class="kw">return</span> <span class="typ">Holder</span>.INSTANCE; }
+<span class="cmt">// The JVM loads Holder only on first get(); class-init locking guarantees safe publication.</span>
+
+<span class="cmt">// 2. Enum singleton — Joshua Bloch's recommendation; serialization-safe too</span>
+<span class="kw">public enum</span> <span class="typ">Singleton</span> { INSTANCE; <span class="kw">public void</span> work() { } }</code></pre>
+    <p>The holder idiom leans on a JMM guarantee you got for free in Stage 4: class initialization is locked by the JVM, so <code>static final</code> fields are safely published with zero explicit synchronization and zero per-call cost.</p>
+
+    <div class="interview-q">
+      <span class="iq-tag">&#x1F3AF; INTERVIEW QUESTIONS</span>
+      <p><strong>Q: Why was double-checked locking broken before Java 5?</strong> &mdash; The reference could be published before the constructor finished (reordering), with no happens-before edge to the unlocked reader &mdash; so a thread could see a non-null but partially-constructed object. The pre-Java-5 memory model couldn&rsquo;t even express the fix.</p>
+      <p><strong>Q: What exactly does <code>volatile</code> fix in DCL?</strong> &mdash; It forbids the publish-before-construct reorder and creates the write&rarr;read happens-before edge, so a reader that sees non-null also sees the fully-constructed object.</p>
+      <p><strong>Q: Best way to write a lazy singleton today?</strong> &mdash; The initialization-on-demand holder idiom (lazy, lock-free, simple) or an enum (also serialization- and reflection-safe). DCL only if you must lazily init an <em>instance</em> field where a holder class doesn&rsquo;t fit.</p>
+    </div>
+  </div>
+
+  <!-- STAGE 6 -->
+  <div class="stage" data-section="6">
+    <span class="stage-tag">STAGE 6 <span class="time">30 MIN</span></span>
+    <h2>The challenge &mdash; find the races in a Singleton</h2>
+
+    <p>The capstone. Read the code, then answer all three parts (50+ characters each) and reveal the model answers. These are open-ended JMM diagnoses &mdash; reason in terms of happens-before, not vibes.</p>
+
+    <div class="challenge">
+      <span class="challenge-tag">SCENARIO &middot; READ CAREFULLY BEFORE ANSWERING</span>
+      <h3>A cache singleton that &ldquo;works in testing&rdquo;</h3>
+      <pre><code><span class="kw">public class</span> <span class="typ">PriceCache</span> {
+    <span class="kw">private static</span> <span class="typ">PriceCache</span> instance;            <span class="cmt">// A</span>
+    <span class="kw">private</span> <span class="typ">Map</span>&lt;<span class="typ">String</span>,<span class="typ">Double</span>&gt; prices = <span class="kw">new</span> <span class="typ">HashMap</span>&lt;&gt;();
+    <span class="kw">private int</span> hitCount = <span class="num-lit">0</span>;
+
+    <span class="kw">private</span> <span class="typ">PriceCache</span>() { load(); }
+
+    <span class="kw">public static</span> <span class="typ">PriceCache</span> getInstance() {        <span class="cmt">// B</span>
+        <span class="kw">if</span> (instance == <span class="kw">null</span>) instance = <span class="kw">new</span> <span class="typ">PriceCache</span>();
+        <span class="kw">return</span> instance;
+    }
+
+    <span class="kw">public</span> <span class="typ">Double</span> get(<span class="typ">String</span> sym) {                 <span class="cmt">// C</span>
+        hitCount++;
+        <span class="kw">return</span> prices.get(sym);
+    }
+}</code></pre>
+      <p>Called concurrently from many request-handling threads. It passes every single-threaded test.</p>
+    </div>
+
+    <div class="challenge-form" id="challenge-1-5">
+      <span class="challenge-tag">YOUR ANSWERS &middot; MINIMUM 50 CHARS EACH TO UNLOCK MODEL ANSWER</span>
+
+      <div class="textarea-row">
+        <label class="textarea-label" for="ta-1-5-r1">
+          Q1 &mdash; Identify the three distinct race conditions (lines A&ndash;C). For each, name which guarantee it violates &mdash; atomicity, visibility, or ordering.
+        </label>
+        <textarea class="answer-textarea" id="ta-1-5-r1" placeholder="Look at the unsynchronized getInstance(), the shared HashMap, and hitCount++..."></textarea>
+        <div class="char-count" id="cc-1-5-r1">0 / 50 characters</div>
+        <div style="margin-top:12px">
+          <button class="btn-reveal" id="reveal-1-5-r1" onclick="revealModelAnswer('1-5','r1')" disabled>Reveal model answer</button>
+        </div>
+        <div class="model-answer" id="ma-1-5-r1">
+          <span class="model-answer-tag">MODEL ANSWER</span>
+          <p><strong>Race 1 &mdash; the singleton check (B).</strong> <code>if (instance == null) instance = new PriceCache()</code> is unsynchronized and non-atomic: two threads can both see null and both construct an instance (broken atomicity), and a reader can see a non-null reference to a partially-constructed object because there&rsquo;s no happens-before edge publishing the constructor&rsquo;s writes (visibility + ordering &mdash; the DCL trap). <strong>Race 2 &mdash; the shared <code>HashMap</code> (C).</strong> <code>HashMap</code> is not thread-safe; concurrent <code>get</code>/<code>put</code> during <code>load()</code> can corrupt internal state or (historically) spin forever on resize &mdash; a visibility/atomicity failure on the map&rsquo;s structure. <strong>Race 3 &mdash; <code>hitCount++</code> (C).</strong> Read-modify-write with no synchronization: lost updates (broken atomicity), and even the reads have no visibility guarantee.</p>
+        </div>
+      </div>
+
+      <div class="textarea-row" style="margin-top:28px">
+        <label class="textarea-label" for="ta-1-5-r2">
+          Q2 &mdash; Rewrite the class to be correct. Justify each choice in JMM terms (which idiom gives safe publication, which gives atomicity).
+        </label>
+        <textarea class="answer-textarea" id="ta-1-5-r2" placeholder="Think: holder idiom or enum for the singleton; ConcurrentHashMap; AtomicInteger or LongAdder for the counter..."></textarea>
+        <div class="char-count" id="cc-1-5-r2">0 / 50 characters</div>
+        <div style="margin-top:12px">
+          <button class="btn-reveal" id="reveal-1-5-r2" onclick="revealModelAnswer('1-5','r2')" disabled>Reveal model answer</button>
+        </div>
+        <div class="model-answer" id="ma-1-5-r2">
+          <span class="model-answer-tag">MODEL ANSWER</span>
+          <p><strong>Singleton:</strong> use the initialization-on-demand holder idiom &mdash; <code>private static class Holder { static final PriceCache INSTANCE = new PriceCache(); }</code> and <code>return Holder.INSTANCE</code>. Class-init locking guarantees safe publication of a <code>static final</code> field with no per-call cost (Stage 4/5). <strong>Map:</strong> replace <code>HashMap</code> with <code>ConcurrentHashMap</code> &mdash; thread-safe reads/writes with internal happens-before edges, no external locking. Make <code>prices</code> <code>final</code> so it&rsquo;s safely published with the instance. <strong>Counter:</strong> replace <code>int hitCount</code> + <code>hitCount++</code> with an <code>AtomicLong</code> (<code>incrementAndGet</code>, a CAS) or, for high write contention, a <code>LongAdder</code> &mdash; both give atomic increment plus visibility. Net: the holder gives safe publication, ConcurrentHashMap and the atomic give per-operation atomicity + visibility.</p>
+        </div>
+      </div>
+
+      <div class="textarea-row" style="margin-top:28px">
+        <label class="textarea-label" for="ta-1-5-r3">
+          Q3 &mdash; Explain, in happens-before terms, exactly how a caller of the original code could receive a <code>PriceCache</code> whose <code>prices</code> map is still null.
+        </label>
+        <textarea class="answer-textarea" id="ta-1-5-r3" placeholder="Trace the reordering of allocate / construct / assign, and the missing edge to the reader..."></textarea>
+        <div class="char-count" id="cc-1-5-r3">0 / 50 characters</div>
+        <div style="margin-top:12px">
+          <button class="btn-reveal" id="reveal-1-5-r3" onclick="revealModelAnswer('1-5','r3')" disabled>Reveal model answer</button>
+        </div>
+        <div class="model-answer" id="ma-1-5-r3">
+          <span class="model-answer-tag">MODEL ANSWER</span>
+          <p><code>instance = new PriceCache()</code> compiles to three steps: allocate memory, run the constructor (which sets <code>prices</code> and calls <code>load()</code>), and assign the reference to <code>instance</code>. The JMM permits the assignment to be reordered <em>before</em> the constructor completes &mdash; the non-volatile field has no barrier. Thread A is mid-construction when the reference becomes visible; Thread B reads <code>instance</code> in <code>getInstance()</code>, sees it non-null, and skips construction &mdash; but there is <strong>no happens-before edge</strong> between A&rsquo;s constructor writes and B&rsquo;s read, so B may observe <code>prices</code> at its default value (null) and NPE on <code>prices.get(sym)</code>. Making <code>instance</code> <code>volatile</code> (or using the holder idiom) inserts the edge: the constructor&rsquo;s writes are ordered before the publish, and any thread that sees the reference is guaranteed to see a fully-built object.</p>
+        </div>
+      </div>
+
+      <div class="unlock-banner" id="unlock-1-5" style="margin-top:24px">
+        <strong style="color:var(--green)">&#x2705; Day 5 complete!</strong> Day 6 is next &mdash;
+        <span style="color:var(--ink-dim)">Profiling in Anger: JFR, async-profiler &amp; flame graphs &mdash; finding <em>why</em> a service is slow.</span>
+      </div>
+    </div>
+
+    <!-- REFLECTION -->
+    <div class="reflection">
+      <div class="reflection-header" onclick="toggleReflection(this)">
+        <span class="reflection-icon">&#x1FA9E;</span>
+        <span class="reflection-title">Reflection &amp; Self-Assessment</span>
+        <span class="reflection-chevron">&#x25BE;</span>
+      </div>
+      <div class="reflection-body">
+
+        <div class="takeaways">
+          <div class="takeaways-label">Key Takeaways</div>
+          <ul>
+            <li><strong>Concurrency has three independent guarantees</strong> &mdash; atomicity, visibility, ordering. Always know which one a tool gives you.</li>
+            <li><strong>happens-before is the whole model.</strong> No edge between conflicting accesses = data race = undefined. The edges: program order, monitor, volatile, thread start/join, transitivity.</li>
+            <li><strong><code>volatile</code> = visibility + ordering, never atomicity.</strong> Correct only when the new value doesn&rsquo;t depend on the old; also makes 64-bit <code>long</code>/<code>double</code> atomic.</li>
+            <li><strong>Safe publication</strong> needs a happens-before edge: static initializer, volatile/AtomicReference, final field, or lock. Immutable objects sidestep the problem entirely.</li>
+            <li><strong>DCL needs <code>volatile</code></strong>; better still, use the holder idiom or an enum.</li>
+          </ul>
+        </div>
+
+        <div class="reflection-prompts">
+          <div class="reflection-prompt">
+            <span class="prompt-num">01</span>
+            <p class="prompt-text">Find a singleton or lazily-initialized field in a codebase you know. Is its publication safe? Trace the happens-before edge that makes it safe &mdash; or prove there isn&rsquo;t one.</p>
+          </div>
+          <div class="reflection-prompt">
+            <span class="prompt-num">02</span>
+            <p class="prompt-text">Explain to an imaginary teammate, in under 60 seconds, why <code>synchronized</code> provides more than mutual exclusion &mdash; and what would break if it only provided exclusion.</p>
+          </div>
+          <div class="reflection-prompt">
+            <span class="prompt-num">03</span>
+            <p class="prompt-text">Where in your system do you share mutable state across threads? For each spot, name the tool providing visibility. Any spot you can&rsquo;t name one is a latent bug.</p>
+          </div>
+        </div>
+
+        <div class="confidence-block">
+          <div class="confidence-label">How confident do you feel about today&rsquo;s material?</div>
+          <div class="confidence-btns">
+            <button class="conf-btn" data-day="1-5" data-level="1" onclick="saveConfidence('1-5', 1)">&#x1F615; Not yet &mdash; need another pass</button>
+            <button class="conf-btn" data-day="1-5" data-level="2" onclick="saveConfidence('1-5', 2)">&#x1F914; Getting there &mdash; mostly clear</button>
+            <button class="conf-btn" data-day="1-5" data-level="3" onclick="saveConfidence('1-5', 3)">&#x2705; Solid &mdash; I could explain this</button>
+          </div>
+          <div class="confidence-saved" id="conf-saved-1-5"></div>
+        </div>
+
+      </div>
+    </div>
+
+  </div><!-- end stage 6 -->
+
+  <footer>
+    DAY 5 OF 158 &middot; JAVA MEMORY MODEL &middot; PHASE 1 / 6
+  </footer>
+
+</div>
+
+<script src="../data/curriculum.js"></script>
+<script src="../assets/app.js"></script>
+<script src="../assets/audio-player.js"></script>
+<script src="../data/glossary.js"></script>
+<script src="../assets/glossary.js"></script>
+<script src="../data/abbreviations.js"></script>
+<script src="../assets/abbreviations.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    initOpenEndedChallenge('1-5');
+    initReflection('1-5');
+    initLessonNav();
+  });
+</script>
+</body>
+</html>

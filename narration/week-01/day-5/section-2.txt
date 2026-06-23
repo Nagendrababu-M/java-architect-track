@@ -1,0 +1,25 @@
+Stage 2: happens-before — the contract that tames the chaos. This is the heart of the Java Memory Model, so slow down here.
+
+The memory model does not promise that writes are instantly visible. It gives you something far more precise: a partial ordering called happens-before. The single rule that matters is this. If action X happens-before action Y, then all of X's writes are guaranteed visible to Y, and X is guaranteed to appear ordered before Y. And the flip side: if there is no happens-before edge between two conflicting accesses — two accesses to the same variable where at least one is a write — you have a data race, and the result is undefined.
+
+Here's the beautiful part. You never reason about caches or memory barriers directly. You establish happens-before edges, and the JVM inserts whatever fences the hardware needs underneath. So your job is just to know the edges the model gives you.
+
+Program order: within a single thread, each action happens-before every later action in source order.
+
+Monitor lock: unlocking a monitor happens-before every subsequent lock of the same monitor. This is what synchronized gives you.
+
+Volatile: a write to a volatile field happens-before every subsequent read of that same field.
+
+Thread start: calling thread dot start happens-before every action inside the started thread.
+
+Thread join: every action in a thread happens-before another thread returns from join on it.
+
+And transitivity: if X happens-before Y, and Y happens-before Z, then X happens-before Z.
+
+Transitivity is the workhorse. It's how a lock or a volatile makes ordinary, non-volatile writes visible. Go back to yesterday's broken example, but make ready volatile. Thread A writes value equals 42, then writes ready equals true — a volatile write. Thread B reads ready in its loop — a volatile read — then prints value.
+
+Trace the chain. Write value happens-before write ready, by program order. Write ready happens-before B's read of ready, by the volatile rule. B's read happens-before the print, by program order. By transitivity, the write of value happens-before the print. So B is guaranteed to see value as 42 — even though value itself is an ordinary field. The volatile write published everything that came before it.
+
+That's the key mental model: a volatile write, or a lock release, acts as a publish point for all the ordinary writes that preceded it.
+
+One interview trap to bank right now. If someone asks "does synchronized only provide mutual exclusion?" — the answer is no. That's the half-answer juniors give. Synchronized also creates a happens-before edge, unlock to subsequent lock, so it provides visibility and ordering for everything done inside the block, not just atomicity. Stating that distinction marks you as someone who actually understands the model.

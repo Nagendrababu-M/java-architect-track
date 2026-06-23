@@ -1,0 +1,19 @@
+Welcome to Day 5. Yesterday you learned the heap is shared by every thread. Today we face the consequence: when two threads touch the same data, what does each one actually see? The answer is not "the latest value" — and that surprises almost everyone.
+
+Here's why concurrency is hard. Your source code is a sequence of statements, but the machine running it is not obligated to execute them in that order. It only has to preserve the appearance of order for a single thread. Three layers reorder your program, each chasing performance.
+
+First, the compiler and JIT reorder independent statements and hoist reads out of loops. Second, the CPU executes instructions out of order and speculatively. Third — and this is the big one — each CPU core has its own caches and store buffers. A write by one core can sit in that core's buffer, invisible to every other core, for an unbounded amount of time.
+
+Single-threaded, you never notice any of this. The JVM guarantees your thread sees its own actions in program order. But the instant a second thread reads the same data, all bets are off.
+
+Let me show you the canonical bug. Thread A sets value to 42, then sets a ready flag to true. Thread B spins in a loop waiting for ready, then prints value. Intuition says B prints 42. The memory model allows three other outcomes. B might never see ready turn true — the value is stuck in A's cache, and B's read got hoisted out of the loop, so it spins forever. Or B sees ready as true but value as zero, because A's two writes were reordered, or B's two reads were. Nothing in this code establishes that A's write to value is visible before B reads it. The code is racy.
+
+Now, the single most important framing of this entire topic: there are three distinct guarantees, and most confusion comes from treating them as one thing.
+
+Atomicity asks: does this operation happen all-or-nothing? Count plus plus is not atomic — it's read, add, write — so two threads can both read five and both write six.
+
+Visibility asks: will another thread ever see my write? A plain flag written by one thread may never be observed by another.
+
+Ordering asks: do my writes appear in the order I wrote them? Value then ready may be seen in reverse by another thread.
+
+These are independent. A correct concurrent program needs the right combination of all three. Volatile gives visibility and ordering but not atomicity. Synchronized gives all three for the guarded region. Atomics give atomicity and visibility for one variable. Knowing which tool gives which property is the whole game — and it's the rest of today's session.

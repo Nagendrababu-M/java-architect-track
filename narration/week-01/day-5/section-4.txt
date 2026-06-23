@@ -1,0 +1,19 @@
+Stage 4: final fields and safe publication. This is the deepest trap in the whole memory model, because the bug it causes makes an object that looks completely fine.
+
+First, the vocabulary. Publication is making an object reachable from another thread. The danger is that a thread can obtain the reference before the object's constructor has finished writing its fields — and see a partially constructed object. The fields aren't set yet, but the reference is already out there.
+
+Now, final fields get a special promise from the memory model. If an object is constructed correctly, any thread that later sees that object is guaranteed to see its final fields fully initialized — with no synchronization at all. There's a freeze action at the end of the constructor that orders the final-field writes before the object reference can be published. So a class with final url and final timeout fields, set in the constructor, can be shared across threads freely — every reader sees the values.
+
+But — and this is the critical caveat — that promise holds only if "this" does not escape during construction. If a constructor publishes the half-built object — registering a listener, starting a thread, assigning this to a static field before the constructor returns — another thread can grab the object before the freeze, and the guarantee is void. The rule: never let "this" leak from a constructor.
+
+So how do you hand an object to another thread safely? The publication itself must create a happens-before edge. There are exactly four standard ways, and knowing this list is a strong senior signal.
+
+One: a static initializer. Static final X equals new X. Class-initialization locking guarantees visibility.
+
+Two: a volatile field, or an AtomicReference. The volatile-write to volatile-read edge publishes the object and everything written before it.
+
+Three: a final field. The constructor freeze publishes the referenced object — as long as this didn't escape.
+
+Four: a lock-guarded field. Write it inside a lock and read it inside the same lock, using the monitor edge.
+
+Here's the payoff that ties it together. An effectively immutable object — one you never mutate after construction — published by any of those four ways is safe to share forever. And a truly immutable object, with all fields final, is safe even if you publish it unsafely, because the final-field guarantee carries it. That is the deep reason immutability is the architect's default for shared state: it removes the publication problem entirely. No publication race if there's nothing to race on.

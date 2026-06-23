@@ -1,0 +1,13 @@
+Stage 3: volatile — visibility and ordering, never atomicity. Volatile is the lightest synchronization tool in Java, and the interview trap is believing it does a third thing it doesn't.
+
+What volatile actually guarantees is exactly two things. Visibility: every read of a volatile field sees the most recent write — the value is never served from a stale cache. And ordering: it establishes the happens-before edge we just covered, and acts as a barrier, so reads and writes before a volatile write can't be reordered after it, and reads after a volatile read can't move before it.
+
+What volatile does not guarantee is atomicity. Picture a volatile int count, and the statement count plus plus. That's three operations: read count, add one, write count. Two threads can both read five, both compute six, both write six — and one increment is silently lost. Volatile made each individual read and write visible, but the read-modify-write as a whole is not atomic. For that you need an AtomicInteger's incrementAndGet, which is a compare-and-swap loop, or a lock.
+
+So here's the rule of thumb to memorize: volatile is correct only when a write does not depend on the current value. A status flag, a one-shot published reference, a configuration snapshot — those are fine. The moment the new value is a function of the old one, volatile alone is wrong.
+
+The one pattern volatile nails perfectly is a shutdown flag. A private volatile boolean shutdown, set to true by one thread, read in a worker's while-not-shutdown loop. Without volatile, that worker loop may never observe the flag and spins forever — the classic "my thread won't stop" bug. With volatile, the worker sees it promptly.
+
+Now a gotcha most developers never learn: non-atomic long and double. The memory model permits a sixty-four-bit long or double write to be split into two thirty-two-bit writes. So a concurrent reader, without synchronization, can observe a torn value — the high thirty-two bits from one write and the low thirty-two bits from another, a number that was never actually assigned. Marking the field volatile makes sixty-four-bit reads and writes atomic and closes that hole. Note this only affects long and double; references and all smaller primitives are always atomic to read and write.
+
+So when an interviewer asks "is volatile enough to make count plus plus thread-safe," the answer is a clean no — it fixes visibility and ordering but not the read-modify-write atomicity, so use AtomicInteger or a lock.

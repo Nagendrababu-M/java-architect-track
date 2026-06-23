@@ -1,0 +1,17 @@
+Stage 5: double-checked locking — the cautionary tale, and what to do instead. This is the perfect capstone for the memory model, because the obvious version is broken, and understanding exactly why pulls together everything from today.
+
+Double-checked locking is a lazy-singleton optimization. You check the field without a lock — the fast path — and only acquire the lock if it's null. Then you check again inside the lock. The intent is to avoid locking on every call after the first.
+
+Here's the broken version: a static field instance, not volatile. getInstance checks if instance is null without locking; if so, it synchronizes, checks again, and assigns instance equals new Singleton.
+
+The bug is in that assignment. Instance equals new Singleton is not atomic. It's really three steps: allocate memory, run the constructor, then assign the reference. The memory model permits the JIT or CPU to reorder the assignment before the constructor finishes. Now thread B hits the first unlocked check, sees a non-null instance, skips the lock entirely, and returns a reference to an object whose constructor hasn't run yet — fields still at their defaults. There's no happens-before edge between the constructor's writes and B's unlocked read. The result is a latent, load-dependent, works-on-my-machine crash.
+
+The fix is one keyword: make instance volatile. The volatile write of instance happens-before any subsequent read of it, and the volatile barrier forbids the reorder — so the constructor's writes are ordered before the reference is published. Double-checked locking has worked correctly since Java 5, but only with volatile. So when an interviewer shows you DCL, the very first thing you check is that keyword. If it's missing, the code is broken.
+
+But honestly — double-checked locking is rarely worth its subtlety. Two cleaner idioms give you a lazy, thread-safe singleton for free.
+
+First, the initialization-on-demand holder idiom. Put the instance in a private static nested Holder class, as a static final field. getInstance just returns Holder dot INSTANCE. The JVM doesn't load the Holder class until the first call to getInstance — so it's lazy — and class-initialization locking guarantees safe publication. Lazy and lock-free, no volatile gymnastics.
+
+Second, the enum singleton — Joshua Bloch's recommendation. A single-element enum is thread-safe by construction, and it's serialization- and reflection-safe too, which the other approaches are not.
+
+The holder idiom leans on a guarantee you already met in Stage 4: class initialization is locked by the JVM, so static final fields are safely published with zero explicit synchronization and zero per-call cost. That's the elegant answer to give in an interview.
