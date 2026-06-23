@@ -1,0 +1,11 @@
+Stage 3: ReentrantLock and Condition — explicit locks with superpowers. ReentrantLock does everything synchronized does — it's reentrant, same memory semantics — but as an explicit object, which unlocks capabilities the keyword can't express. The cost: you must release it yourself.
+
+The shape is: lock dot lock, then a try block with the critical section, then a finally block that calls lock dot unlock. And that try-finally is non-negotiable. synchronized auto-releases on any exit, including exceptions. An explicit lock does not. If the critical section throws and you didn't unlock in finally, the lock is held forever and every other thread blocks. That's the number one ReentrantLock bug — always unlock in finally.
+
+So why prefer ReentrantLock over synchronized? Four superpowers. tryLock: acquire only if the lock is free, otherwise do something else — never block. tryLock with a timeout: give up after a bound — this is the primary deadlock-avoidance tool, which we'll use in Stage 5. lockInterruptibly: a blocked acquirer can be interrupted or cancelled, which synchronized can never be. And fairness plus multiple Condition objects.
+
+On fairness: new ReentrantLock with true is fair — the longest-waiting thread acquires next, FIFO, preventing starvation. The default is unfair — a thread may barge ahead of the queue. Unfair is the default because it has much higher throughput: barging avoids costly thread hand-offs. Use fair only when starvation is a real, observed problem; you pay for it in throughput.
+
+And Condition objects — named wait-sets. A single monitor has exactly one wait-set, so notifyAll wakes everyone, including threads waiting on an unrelated condition. Condition objects give one lock multiple, separate wait-sets. A bounded buffer creates a notFull condition and a notEmpty condition: put awaits notFull and signals notEmpty; take awaits notEmpty and signals notFull. Targeted wake-ups — you wake only the relevant waiters, far less wasteful contention than notifyAll waking the whole crowd.
+
+The interview summary: prefer ReentrantLock when you need tryLock or timed acquisition for deadlock avoidance, interruptible locking, fairness, or multiple condition wait-sets. Otherwise synchronized is simpler and auto-releases — prefer it by default.

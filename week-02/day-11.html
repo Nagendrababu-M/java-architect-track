@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Week 2 · Day 11 — Synchronization Primitives: synchronized, Lock, ReentrantLock</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,800&family=JetBrains+Mono:wght@400;500;700&family=Inter+Tight:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/styles.css">
+<link rel="stylesheet" href="../assets/audio-player.css">
+<link rel="stylesheet" href="../assets/glossary.css">
+<link rel="stylesheet" href="../assets/abbreviations.css">
+<style>
+  body {
+    background-image:
+      radial-gradient(ellipse 800px 600px at 20% 0%, rgba(150,122,232,0.07), transparent 60%),
+      radial-gradient(ellipse 600px 400px at 90% 100%, rgba(150,122,232,0.04), transparent 60%);
+  }
+  .interview-q {
+    margin: 20px 0;
+    padding: 18px 22px;
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--yellow);
+    border-radius: 0 8px 8px 0;
+    background: rgba(230,200,90,0.04);
+  }
+  .interview-q .iq-tag {
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: var(--yellow);
+    margin-bottom: 10px;
+  }
+  .interview-q p { margin: 0 0 10px; color: var(--ink-dim); line-height: 1.7; }
+  .interview-q p:last-child { margin-bottom: 0; }
+</style>
+</head>
+<body>
+<div class="grain"></div>
+
+<div class="container">
+
+  <header class="lesson-header">
+    <a href="../index.html" class="back-link">&larr; Back to curriculum</a>
+    <div class="meta">
+      <span class="dot"></span>
+      <span class="phase">Phase 1 &middot; Concurrency</span>
+      <span>&middot;</span>
+      <span>Week 2 / Day 11</span>
+    </div>
+    <h1>
+      Synchronization Primitives: synchronized, Lock &amp; ReentrantLock
+      <span class="sub">How to make shared mutable state safe &mdash; from the intrinsic monitor to explicit locks, conditions, and deadlock-free design.</span>
+    </h1>
+    <div class="scope"><strong>SCOPE</strong> &middot; 170 min &middot; 6 stages &mdash; the tools that turn Day 5&rsquo;s memory-model rules into working mutual exclusion.</div>
+  <div id="play-full-lesson-mount"></div>
+  </header>
+
+  <div class="recap">
+    <span class="recap-tag">RECAP FROM DAYS 5 &amp; 10</span>
+    <p>Day 5 gave you the <em>rules</em>: shared mutable state needs a happens-before edge or you have a data race. Day 10 gave you the <em>execution machinery</em>: threads and pools running work concurrently. Today connects them &mdash; the <strong>synchronization primitives</strong> that actually create those happens-before edges and enforce mutual exclusion. The architect&rsquo;s theme: correctness is the floor, not the goal. Any lock makes code correct; the skill is making it correct <em>and</em> scalable &mdash; because <strong>lock contention silently destroys throughput</strong>, and the difference between a coarse lock and a well-chosen one is often 10&times; under load.</p>
+  </div>
+
+  <!-- STAGE 1 -->
+  <div class="stage" data-section="1">
+    <span class="stage-tag">STAGE 1 <span class="time">30 MIN</span></span>
+    <h2><code>synchronized</code> &amp; the intrinsic monitor</h2>
+
+    <p>Every Java object has an invisible lock attached to it &mdash; its <strong>intrinsic lock</strong> or <strong>monitor</strong>. <code>synchronized</code> acquires it on entry and releases it on exit (normally <em>or</em> via exception):</p>
+    <pre><code><span class="kw">synchronized</span> (lockObject) { ... }        <span class="cmt">// explicit monitor</span>
+<span class="kw">synchronized</span> <span class="kw">void</span> m() { ... }             <span class="cmt">// locks 'this'</span>
+<span class="kw">static synchronized</span> <span class="kw">void</span> s() { ... }      <span class="cmt">// locks the Class object</span></code></pre>
+    <p>Under the hood the compiler emits <code>monitorenter</code> / <code>monitorexit</code> bytecodes; the lock state lives in the object header&rsquo;s mark word. (Historically the JVM optimized with biased and lightweight locking; biased locking was removed in JDK 15+, so don&rsquo;t cite it as current.)</p>
+
+    <div class="key-rule insight">
+      <p><strong><code>synchronized</code> provides three things, not one.</strong> Most people name only the first.</p>
+      <ul>
+        <li><strong>Mutual exclusion</strong> &mdash; one thread in the block at a time per monitor.</li>
+        <li><strong>Visibility</strong> &mdash; on release, all writes are flushed; on acquire, the next thread sees them.</li>
+        <li><strong>Ordering</strong> &mdash; the unlock happens-before the next lock of the same monitor (Day 5). That edge is what makes ordinary fields written inside the block visible to the next thread.</li>
+      </ul>
+      <p>So a thread that only <em>reads</em> a shared field must <em>also</em> synchronize (on the same monitor) to be guaranteed the latest value &mdash; exclusion on the writer alone isn&rsquo;t enough; visibility needs the matching acquire.</p>
+    </div>
+
+    <h4>Reentrancy</h4>
+    <p>Intrinsic locks are <strong>reentrant</strong>: a thread that holds a monitor can re-acquire it without deadlocking itself (the JVM tracks a hold count, decremented on each exit). This is why a <code>synchronized</code> method can call another <code>synchronized</code> method on the same object. Without reentrancy, that would self-deadlock instantly.</p>
+
+    <h4>Choosing the lock object</h4>
+    <p>Don&rsquo;t lock on something a caller can also lock (e.g. <code>synchronized(this)</code> on a public class, or a <code>String</code> literal / boxed <code>Integer</code> that may be interned and shared). Prefer a <strong>private final lock object</strong>: <code>private final Object lock = new Object();</code> &mdash; it can&rsquo;t be locked by anyone else, so you can reason about who contends for it.</p>
+
+    <div class="interview-q">
+      <span class="iq-tag">&#x1F3AF; INTERVIEW QUESTIONS</span>
+      <p><strong>Q: Does <code>synchronized</code> only give mutual exclusion?</strong> &mdash; No. It also gives visibility and ordering via the unlock&rarr;lock happens-before edge. A reader that doesn&rsquo;t synchronize can see a stale value even if the writer does.</p>
+      <p><strong>Q: What does &ldquo;reentrant&rdquo; mean?</strong> &mdash; A thread can acquire a lock it already holds (hold count increments); it releases only when the count returns to zero. Without it, recursive or nested synchronized calls would deadlock.</p>
+      <p><strong>Q: Why not <code>synchronized(this)</code> in a library class?</strong> &mdash; Callers can lock your instance too, causing surprise contention or deadlock. Use a private final lock object you fully control.</p>
+    </div>
+
+    <div class="check">
+      <span class="check-tag">QUICK CHECK</span>
+      <p>Thread A increments a counter inside <code>synchronized</code>; Thread B reads it with a plain (unsynchronized) getter. Is B guaranteed to see A&rsquo;s latest value? Why or why not &mdash; in happens-before terms?</p>
+    </div>
+  </div>
+
+  <!-- STAGE 2 -->
+  <div class="stage" data-section="2">
+    <span class="stage-tag">STAGE 2 <span class="time">25 MIN</span></span>
+    <h2><code>wait</code> / <code>notify</code> &mdash; coordinating threads on a monitor</h2>
+
+    <p>Mutual exclusion stops threads from colliding; <strong>condition signalling</strong> lets them coordinate &mdash; &ldquo;wait until the queue is non-empty.&rdquo; The monitor provides <code>wait()</code>, <code>notify()</code>, and <code>notifyAll()</code>, and they may only be called while <em>holding</em> that monitor.</p>
+    <pre><code><span class="kw">synchronized</span> (lock) {
+    <span class="kw">while</span> (queue.isEmpty()) {      <span class="cmt">// MUST be a while, never an if</span>
+        lock.wait();              <span class="cmt">// releases the lock, parks, re-acquires on wake</span>
+    }
+    <span class="kw">return</span> queue.remove();
+}
+<span class="cmt">// producer:</span>
+<span class="kw">synchronized</span> (lock) { queue.add(item); lock.notifyAll(); }</code></pre>
+
+    <div class="key-rule">
+      <p><strong>The three rules everyone gets wrong:</strong></p>
+      <ol>
+        <li><strong>Always wait in a <code>while</code> loop, never an <code>if</code>.</strong> On wake-up you must re-check the condition: another thread may have raced in and changed it, and <strong>spurious wakeups</strong> are permitted by the spec &mdash; <code>wait</code> can return without any <code>notify</code>.</li>
+        <li><strong><code>wait()</code> atomically releases the lock and parks</strong>, then re-acquires it before returning. That release is what lets the producer get in.</li>
+        <li><strong>Prefer <code>notifyAll()</code> over <code>notify()</code></strong> unless you can prove all waiters are interchangeable. <code>notify()</code> wakes one arbitrary waiter; if it&rsquo;s waiting on a different condition, your needed waiter sleeps forever (a lost-wakeup / missed-signal bug).</li>
+      </ol>
+    </div>
+
+    <p>This low-level pattern is the foundation of every blocking queue and bounded buffer &mdash; but you rarely write it by hand anymore. You reach for <code>java.util.concurrent</code> (Day 13&rsquo;s <code>BlockingQueue</code>) or the <code>Condition</code> objects in the next stage, which make the intent explicit and the bugs harder.</p>
+
+    <div class="interview-q">
+      <span class="iq-tag">&#x1F3AF; INTERVIEW QUESTIONS</span>
+      <p><strong>Q: Why must <code>wait()</code> be in a loop?</strong> &mdash; To re-check the condition after waking: the state may have changed before you re-acquired the lock, and spurious wakeups are allowed by the JVM spec.</p>
+      <p><strong>Q: <code>notify()</code> vs <code>notifyAll()</code>?</strong> &mdash; <code>notify</code> wakes one arbitrary waiter (risk: it&rsquo;s the wrong one, and the right one starves). <code>notifyAll</code> wakes all; they re-check and the right ones proceed. Default to <code>notifyAll</code> unless waiters are provably uniform.</p>
+    </div>
+
+    <div class="check">
+      <span class="check-tag">QUICK CHECK</span>
+      <p>A teammate replaces the <code>while</code> guard around <code>wait()</code> with an <code>if</code>, &ldquo;because it&rsquo;s only woken when ready.&rdquo; Name the two distinct ways this now breaks.</p>
+    </div>
+  </div>
+
+  <!-- STAGE 3 -->
+  <div class="stage" data-section="3">
+    <span class="stage-tag">STAGE 3 <span class="time">30 MIN</span></span>
+    <h2><code>ReentrantLock</code> &amp; <code>Condition</code> &mdash; explicit locks with superpowers</h2>
+
+    <p><code>ReentrantLock</code> does everything <code>synchronized</code> does (it&rsquo;s reentrant, same memory semantics) but as an explicit object &mdash; which unlocks capabilities the keyword can&rsquo;t express. The cost: you must release it yourself.</p>
+    <pre><code><span class="kw">private final</span> <span class="typ">ReentrantLock</span> lock = <span class="kw">new</span> <span class="typ">ReentrantLock</span>();
+lock.lock();
+<span class="kw">try</span> {
+    ... <span class="cmt">// critical section</span>
+} <span class="kw">finally</span> {
+    lock.unlock();   <span class="cmt">// ALWAYS in finally — or an exception leaks the lock forever</span>
+}</code></pre>
+
+    <div class="key-rule">
+      <p><strong>The try/finally rule is non-negotiable.</strong> <code>synchronized</code> auto-releases on any exit, including exceptions. An explicit lock does not &mdash; if the critical section throws and you didn&rsquo;t unlock in <code>finally</code>, the lock is held forever and every other thread blocks. This is the #1 <code>ReentrantLock</code> bug.</p>
+    </div>
+
+    <h4>Why prefer <code>ReentrantLock</code> over <code>synchronized</code> &mdash; the four superpowers</h4>
+    <div class="compare-wrap"><table class="compare">
+      <thead><tr><th>Capability</th><th>What it enables</th></tr></thead>
+      <tbody>
+        <tr><td><code>tryLock()</code></td><td>Acquire only if free, else do something else &mdash; never block</td></tr>
+        <tr><td><code>tryLock(timeout)</code></td><td>Give up after a bound &mdash; the primary <strong>deadlock-avoidance</strong> tool (Stage 5)</td></tr>
+        <tr><td><code>lockInterruptibly()</code></td><td>A blocked acquirer can be interrupted/cancelled (<code>synchronized</code> can&rsquo;t)</td></tr>
+        <tr><td>fairness + multiple <code>Condition</code>s</td><td>Optional FIFO ordering; separate wait-sets per condition</td></tr>
+      </tbody>
+    </table></div>
+
+    <h4>Fair vs unfair locks</h4>
+    <p><code>new ReentrantLock(true)</code> is <strong>fair</strong>: the longest-waiting thread acquires next (FIFO), preventing starvation. The default is <strong>unfair</strong>: a thread may &ldquo;barge&rdquo; ahead of the queue. Unfair is the default because it has <em>much higher throughput</em> &mdash; barging avoids costly thread hand-offs. Use fair only when starvation is a real, observed problem; you pay for it in throughput.</p>
+
+    <h4><code>Condition</code> &mdash; named wait-sets</h4>
+    <pre><code><span class="kw">final</span> <span class="typ">Condition</span> notFull  = lock.newCondition();
+<span class="kw">final</span> <span class="typ">Condition</span> notEmpty = lock.newCondition();
+<span class="cmt">// put(): while(full) notFull.await();  ... notEmpty.signal();</span>
+<span class="cmt">// take(): while(empty) notEmpty.await(); ... notFull.signal();</span></code></pre>
+    <p>A single monitor has one wait-set, so <code>notifyAll</code> wakes <em>everyone</em>, including threads waiting on an unrelated condition. <code>Condition</code> objects give a lock <strong>multiple, separate wait-sets</strong>, so a bounded buffer can signal &ldquo;not full&rdquo; producers and &ldquo;not empty&rdquo; consumers independently &mdash; targeted wake-ups, far less wasteful contention.</p>
+
+    <div class="interview-q">
+      <span class="iq-tag">&#x1F3AF; INTERVIEW QUESTIONS</span>
+      <p><strong>Q: When prefer <code>ReentrantLock</code> over <code>synchronized</code>?</strong> &mdash; When you need <code>tryLock</code>/timed acquisition (deadlock avoidance), interruptible locking, fairness, or multiple condition wait-sets. Otherwise <code>synchronized</code> is simpler and auto-releases &mdash; prefer it by default.</p>
+      <p><strong>Q: Fair vs unfair &mdash; default and why?</strong> &mdash; Default is unfair, for throughput (barging avoids hand-off overhead). Fair guarantees FIFO and prevents starvation but is slower. Use fair only when starvation is observed.</p>
+      <p><strong>Q: Why are <code>Condition</code> objects better than one monitor&rsquo;s wait-set?</strong> &mdash; Multiple wait-sets on one lock let you wake only the relevant waiters (producers vs consumers) instead of <code>notifyAll</code> waking everyone.</p>
+    </div>
+
+    <div class="check">
+      <span class="check-tag">QUICK CHECK</span>
+      <p>Two services must update each other&rsquo;s accounts (transfer A&rarr;B and B&rarr;A) and occasionally deadlock. Which single <code>ReentrantLock</code> method, used how, lets a thread back off instead of hanging?</p>
+    </div>
+  </div>
+
+  <!-- STAGE 4 -->
+  <div class="stage" data-section="4">
+    <span class="stage-tag">STAGE 4 <span class="time">25 MIN</span></span>
+    <h2><code>ReadWriteLock</code> &amp; <code>StampedLock</code> &mdash; scaling read-heavy state</h2>
+
+    <p>A plain lock serializes <em>everything</em>, even reads that don&rsquo;t conflict. For read-heavy data (a config, a cache, a routing table read thousands of times per write), that&rsquo;s wasteful: concurrent reads are safe.</p>
+
+    <h4><code>ReentrantReadWriteLock</code></h4>
+    <pre><code><span class="kw">private final</span> <span class="typ">ReentrantReadWriteLock</span> rw = <span class="kw">new</span> <span class="typ">ReentrantReadWriteLock</span>();
+<span class="cmt">// reads: rw.readLock().lock()  — many readers concurrently</span>
+<span class="cmt">// writes: rw.writeLock().lock() — exclusive, blocks all readers and writers</span></code></pre>
+    <ul>
+      <li><strong>Multiple readers</strong> may hold the read lock simultaneously; a <strong>writer</strong> is exclusive.</li>
+      <li><strong>Downgrade is allowed</strong> (acquire write, then read, then release write) &mdash; safe. <strong>Upgrade is NOT</strong> (hold read, try to acquire write) &mdash; it deadlocks, because the writer waits for readers to release, including itself.</li>
+      <li><strong>Write starvation:</strong> under a constant stream of readers, a writer may never get in. Use the fair constructor if writes must make progress.</li>
+    </ul>
+    <p>Net win only when reads <em>greatly</em> outnumber writes <em>and</em> the critical section is long enough that the read-write bookkeeping pays off. For short sections, a plain lock can actually be faster.</p>
+
+    <h4><code>StampedLock</code> (Java 8) &mdash; optimistic reads</h4>
+    <pre><code><span class="kw">long</span> stamp = sl.tryOptimisticRead();   <span class="cmt">// no lock taken — just a version stamp</span>
+<span class="kw">int</span> x = this.x, y = this.y;          <span class="cmt">// read fields</span>
+<span class="kw">if</span> (!sl.validate(stamp)) {            <span class="cmt">// a writer intervened?</span>
+    stamp = sl.readLock();            <span class="cmt">// fall back to a real read lock</span>
+    <span class="kw">try</span> { x = this.x; y = this.y; } <span class="kw">finally</span> { sl.unlockRead(stamp); }
+}</code></pre>
+    <p><code>StampedLock</code> adds an <strong>optimistic read</strong>: you read without acquiring anything, then <em>validate</em> that no write happened; only on a (rare) conflict do you fall back to a real read lock. For overwhelmingly read-heavy data this beats <code>ReadWriteLock</code> by avoiding even read-lock contention. The catch: it is <strong>not reentrant</strong> and not directly tied to <code>Condition</code>s, so it&rsquo;s a specialized tool, not a drop-in.</p>
+
+    <div class="interview-q">
+      <span class="iq-tag">&#x1F3AF; INTERVIEW QUESTIONS</span>
+      <p><strong>Q: Why can&rsquo;t you upgrade a read lock to a write lock?</strong> &mdash; The write lock waits for all readers to release; if you hold the read lock while requesting write, you wait for yourself &mdash; deadlock. Downgrade (write&rarr;read) is fine.</p>
+      <p><strong>Q: When does <code>ReadWriteLock</code> NOT help?</strong> &mdash; Short critical sections (its bookkeeping costs more than it saves) or write-heavy workloads (writers are exclusive anyway). It pays off only for read-dominated, longer sections.</p>
+      <p><strong>Q: What does <code>StampedLock</code> add?</strong> &mdash; Optimistic reads: read without locking, then validate; fall back only on a real conflict. Best for very read-heavy data &mdash; but it&rsquo;s non-reentrant.</p>
+    </div>
+
+    <div class="check">
+      <span class="check-tag">QUICK CHECK</span>
+      <p>A routing table is read ~50,000×/sec and updated ~once/minute, in a very short critical section. Would you reach for <code>ReadWriteLock</code>, <code>StampedLock</code>, or a plain lock &mdash; and what&rsquo;s the deciding factor?</p>
+    </div>
+  </div>
+
+  <!-- STAGE 5 -->
+  <div class="stage" data-section="5">
+    <span class="stage-tag">STAGE 5 <span class="time">25 MIN</span></span>
+    <h2>Deadlock, contention &amp; lock granularity</h2>
+
+    <h4>Deadlock &mdash; the four conditions</h4>
+    <p>A deadlock needs <em>all four</em> Coffman conditions to hold simultaneously; break any one and deadlock is impossible:</p>
+    <ol>
+      <li><strong>Mutual exclusion</strong> &mdash; the resource can&rsquo;t be shared.</li>
+      <li><strong>Hold and wait</strong> &mdash; a thread holds one lock while requesting another.</li>
+      <li><strong>No preemption</strong> &mdash; locks can&rsquo;t be forcibly taken away.</li>
+      <li><strong>Circular wait</strong> &mdash; a cycle: A holds L1 wants L2, B holds L2 wants L1.</li>
+    </ol>
+
+    <div class="key-rule insight">
+      <p><strong>The two practical fixes</strong> (each breaks a condition): (1) <strong>Global lock ordering</strong> &mdash; always acquire multiple locks in the same total order (e.g. by account id), which makes a circular wait impossible. (2) <strong>Timed <code>tryLock</code></strong> &mdash; if you can&rsquo;t get the second lock within a timeout, release the first and retry, breaking &ldquo;hold and wait.&rdquo; Lock ordering is the cleaner design; timed tryLock is the robust fallback when ordering isn&rsquo;t feasible.</p>
+    </div>
+
+    <p>Related hazards: <strong>livelock</strong> (threads keep responding to each other and make no progress &mdash; two people stepping aside in a hallway), and <strong>starvation</strong> (a thread never gets the lock &mdash; the fairness problem from Stage 3).</p>
+
+    <h4>Diagnosing deadlock &amp; contention</h4>
+    <p>Tie back to Day 6: a <strong>thread dump</strong> auto-detects deadlocks (&ldquo;Found one Java-level deadlock&rdquo;) with the exact cycle. <strong>Contention</strong> (not deadlock) shows up as many threads <code>BLOCKED</code> on the same monitor, or a hot lock in a lock profile &mdash; the system runs, but slowly, because threads queue for one lock.</p>
+
+    <h4>Granularity &mdash; the throughput lever</h4>
+    <p>One coarse lock around a whole data structure is correct but serial &mdash; throughput is capped at one thread. <strong>Finer-grained locking</strong> scales: lock per-bucket or per-entry (<strong>lock striping</strong>, how the old <code>ConcurrentHashMap</code> worked &mdash; 16 segment locks instead of one), so independent operations proceed in parallel. The architect&rsquo;s instinct: hold locks for the <em>shortest</em> time over the <em>smallest</em> scope, and prefer the lock-free <code>java.util.concurrent</code> collections (Days 12&ndash;13) over hand-rolled locking whenever they fit.</p>
+
+    <div class="interview-q">
+      <span class="iq-tag">&#x1F3AF; INTERVIEW QUESTIONS</span>
+      <p><strong>Q: How do you prevent deadlock?</strong> &mdash; Break a Coffman condition: impose a global lock-acquisition order (kills circular wait), or use timed <code>tryLock</code> with back-off (kills hold-and-wait). Also: hold fewer locks, for less time.</p>
+      <p><strong>Q: How do you tell deadlock from contention?</strong> &mdash; Deadlock: threads stuck forever, no progress; a thread dump names the cycle. Contention: progress continues but slowly; many <code>BLOCKED</code> threads on one hot monitor.</p>
+      <p><strong>Q: Why do finer-grained locks scale better?</strong> &mdash; They let independent operations run in parallel instead of serializing on one lock; lock striping (per-bucket locks) is the classic example.</p>
+    </div>
+
+    <div class="check">
+      <span class="check-tag">QUICK CHECK</span>
+      <p>Two transfer threads deadlock: one does <code>lock(A); lock(B)</code>, the other <code>lock(B); lock(A)</code>. Which Coffman condition does a consistent lock ordering eliminate, and how would you order the locks here?</p>
+    </div>
+  </div>
+
+  <!-- STAGE 6 -->
+  <div class="stage" data-section="6">
+    <span class="stage-tag">STAGE 6 <span class="time">35 MIN</span></span>
+    <h2>The challenge &mdash; from a coarse lock to a scalable design</h2>
+
+    <p>The capstone. Read the class, then answer all three parts (50+ characters each) and reveal the model answers. Reason about correctness <em>and</em> throughput.</p>
+
+    <div class="challenge">
+      <span class="challenge-tag">SCENARIO &middot; READ CAREFULLY BEFORE ANSWERING</span>
+      <h3>The contended quote cache</h3>
+      <pre><code><span class="kw">public class</span> <span class="typ">QuoteCache</span> {
+    <span class="kw">private final</span> <span class="typ">Map</span>&lt;<span class="typ">String</span>,<span class="typ">Quote</span>&gt; map = <span class="kw">new</span> <span class="typ">HashMap</span>&lt;&gt;();
+
+    <span class="kw">public synchronized</span> <span class="typ">Quote</span> get(<span class="typ">String</span> sym) { <span class="kw">return</span> map.get(sym); }
+    <span class="kw">public synchronized</span> <span class="kw">void</span> put(<span class="typ">String</span> sym, <span class="typ">Quote</span> q) { map.put(sym, q); }
+    <span class="kw">public synchronized int</span> size() { <span class="kw">return</span> map.size(); }
+}</code></pre>
+      <p>Reads (<code>get</code>) outnumber writes (<code>put</code>) ~10,000 : 1. Under market load, profiling shows threads piling up <code>BLOCKED</code> on this object&rsquo;s monitor, and throughput is capped far below CPU capacity.</p>
+    </div>
+
+    <div class="challenge-form" id="challenge-2-11">
+      <span class="challenge-tag">YOUR ANSWERS &middot; MINIMUM 50 CHARS EACH TO UNLOCK MODEL ANSWER</span>
+
+      <div class="textarea-row">
+        <label class="textarea-label" for="ta-2-11-l1">
+          Q1 &mdash; Why is throughput capped despite reads not conflicting? Explain in terms of what the single monitor forces, and tie it to the BLOCKED threads in the profile.
+        </label>
+        <textarea class="answer-textarea" id="ta-2-11-l1" placeholder="What does one synchronized monitor do to concurrent reads that don't actually conflict?"></textarea>
+        <div class="char-count" id="cc-2-11-l1">0 / 50 characters</div>
+        <div style="margin-top:12px">
+          <button class="btn-reveal" id="reveal-2-11-l1" onclick="revealModelAnswer('2-11','l1')" disabled>Reveal model answer</button>
+        </div>
+        <div class="model-answer" id="ma-2-11-l1">
+          <span class="model-answer-tag">MODEL ANSWER</span>
+          <p>Every method is <code>synchronized</code> on the same monitor (the <code>QuoteCache</code> instance), so the lock <strong>serializes all access</strong> &mdash; including the 10,000 reads that don&rsquo;t conflict with each other at all. Only one thread can be inside <em>any</em> method at a time, so concurrent <code>get</code>s queue behind one another even though reading a <code>HashMap</code> concurrently would be safe <em>if</em> nobody were writing. That queueing is exactly the <code>BLOCKED</code> pile-up in the profile: threads waiting to acquire the one monitor. Throughput is capped at &ldquo;one read at a time,&rdquo; far below what the cores could do &mdash; classic lock contention from coarse granularity, not a CPU or GC problem.</p>
+        </div>
+      </div>
+
+      <div class="textarea-row" style="margin-top:28px">
+        <label class="textarea-label" for="ta-2-11-l2">
+          Q2 &mdash; Refactor it. Give your first choice and your reasoning, including the correctness rule you must respect for the read path.
+        </label>
+        <textarea class="answer-textarea" id="ta-2-11-l2" placeholder="Read-heavy → ReadWriteLock or StampedLock? Or is there an even simpler j.u.c answer? What about size()?"></textarea>
+        <div class="char-count" id="cc-2-11-l2">0 / 50 characters</div>
+        <div style="margin-top:12px">
+          <button class="btn-reveal" id="reveal-2-11-l2" onclick="revealModelAnswer('2-11','l2')" disabled>Reveal model answer</button>
+        </div>
+        <div class="model-answer" id="ma-2-11-l2">
+          <span class="model-answer-tag">MODEL ANSWER</span>
+          <p><strong>Best first choice: replace the whole thing with <code>ConcurrentHashMap</code></strong> and drop every <code>synchronized</code> &mdash; it gives lock-free reads, fine-grained (striped) write locking, and a correct concurrent <code>size()</code>, with zero hand-rolled locking (Days 12&ndash;13). That&rsquo;s the architect&rsquo;s answer: prefer the proven concurrent collection over rolling your own. <strong>If you must keep a plain map</strong> (e.g. custom eviction logic), use a <code>ReentrantReadWriteLock</code>: <code>get</code>/<code>size</code> under <code>readLock</code> (many concurrent readers), <code>put</code> under <code>writeLock</code> (exclusive) &mdash; correctness rule: <em>every</em> access, including reads, must go through the lock, or readers lose the visibility guarantee. With reads at 10,000:1 and a read-heavy access pattern, a <code>StampedLock</code> with optimistic reads would scale even better, at the cost of more complex, non-reentrant code. Order of preference: ConcurrentHashMap &gt; StampedLock &gt; ReadWriteLock &gt; the original.</p>
+        </div>
+      </div>
+
+      <div class="textarea-row" style="margin-top:28px">
+        <label class="textarea-label" for="ta-2-11-l3">
+          Q3 &mdash; A junior proposes &ldquo;just make <code>get</code> non-synchronized for speed, keep <code>put</code> synchronized.&rdquo; Why is that wrong, and what guarantee from Day 5 does it violate?
+        </label>
+        <textarea class="answer-textarea" id="ta-2-11-l3" placeholder="If only the writer synchronizes, what does the unsynchronized reader lose? Think happens-before."></textarea>
+        <div class="char-count" id="cc-2-11-l3">0 / 50 characters</div>
+        <div style="margin-top:12px">
+          <button class="btn-reveal" id="reveal-2-11-l3" onclick="revealModelAnswer('2-11','l3')" disabled>Reveal model answer</button>
+        </div>
+        <div class="model-answer" id="ma-2-11-l3">
+          <span class="model-answer-tag">MODEL ANSWER</span>
+          <p>It breaks <strong>visibility</strong>. The happens-before edge that publishes a writer&rsquo;s changes exists only between an <em>unlock</em> and a subsequent <em>lock of the same monitor</em> (Day 5). If the reader never acquires the lock, there is no edge from the writer&rsquo;s <code>put</code> to the reader&rsquo;s <code>get</code> &mdash; so the reader may see a stale value, a partially-updated <code>HashMap</code> (which can also corrupt/loop on resize), or no entry at all. Synchronizing only the writer is a classic half-fix: mutual exclusion among writers without visibility for readers. Both sides must synchronize on the same lock &mdash; or, better, use a structure (<code>ConcurrentHashMap</code>) whose reads carry their own happens-before guarantees.</p>
+        </div>
+      </div>
+
+      <div class="unlock-banner" id="unlock-2-11" style="margin-top:24px">
+        <strong style="color:var(--green)">&#x2705; Day 11 complete!</strong> Day 12 is next &mdash;
+        <span style="color:var(--ink-dim)">Atomics, Compare-and-Swap &amp; lock-free patterns &mdash; thread-safety <em>without</em> locks.</span>
+      </div>
+    </div>
+
+    <!-- REFLECTION -->
+    <div class="reflection">
+      <div class="reflection-header" onclick="toggleReflection(this)">
+        <span class="reflection-icon">&#x1FA9E;</span>
+        <span class="reflection-title">Reflection &amp; Self-Assessment</span>
+        <span class="reflection-chevron">&#x25BE;</span>
+      </div>
+      <div class="reflection-body">
+
+        <div class="takeaways">
+          <div class="takeaways-label">Key Takeaways</div>
+          <ul>
+            <li><strong><code>synchronized</code> gives three things</strong> &mdash; exclusion, visibility, ordering &mdash; via the unlock&rarr;lock happens-before edge. Readers must synchronize too. It&rsquo;s reentrant; lock on a private final object.</li>
+            <li><strong><code>wait</code> in a <code>while</code> loop</strong> (spurious wakeups); prefer <code>notifyAll</code>. You rarely hand-roll this &mdash; use j.u.c.</li>
+            <li><strong><code>ReentrantLock</code></strong> adds <code>tryLock</code>/timeout, interruptible lock, fairness, and multiple <code>Condition</code> wait-sets &mdash; but you must <code>unlock</code> in <code>finally</code>. Default is unfair (throughput).</li>
+            <li><strong>Read-heavy?</strong> <code>ReadWriteLock</code> (no upgrade!) or <code>StampedLock</code> (optimistic reads, non-reentrant). Often <code>ConcurrentHashMap</code> beats both.</li>
+            <li><strong>Deadlock</strong> needs all four Coffman conditions; break one with lock ordering or timed <code>tryLock</code>. Finer granularity scales; coarse locks silently cap throughput.</li>
+          </ul>
+        </div>
+
+        <div class="reflection-prompts">
+          <div class="reflection-prompt">
+            <span class="prompt-num">01</span>
+            <p class="prompt-text">Find a <code>synchronized</code> class in a codebase you know. Are reads and writes both under the lock? Is it read-heavy enough that a read-write or concurrent collection would scale it? What&rsquo;s the contention today?</p>
+          </div>
+          <div class="reflection-prompt">
+            <span class="prompt-num">02</span>
+            <p class="prompt-text">Where do you acquire two locks at once? Is there a consistent global order? If not, sketch the deadlock scenario and the ordering (or timed tryLock) that fixes it.</p>
+          </div>
+          <div class="reflection-prompt">
+            <span class="prompt-num">03</span>
+            <p class="prompt-text">Explain to a teammate, in under 60 seconds, why synchronizing only the writer of a shared field is a bug &mdash; in happens-before terms.</p>
+          </div>
+        </div>
+
+        <div class="confidence-block">
+          <div class="confidence-label">How confident do you feel about today&rsquo;s material?</div>
+          <div class="confidence-btns">
+            <button class="conf-btn" data-day="2-11" data-level="1" onclick="saveConfidence('2-11', 1)">&#x1F615; Not yet &mdash; need another pass</button>
+            <button class="conf-btn" data-day="2-11" data-level="2" onclick="saveConfidence('2-11', 2)">&#x1F914; Getting there &mdash; mostly clear</button>
+            <button class="conf-btn" data-day="2-11" data-level="3" onclick="saveConfidence('2-11', 3)">&#x2705; Solid &mdash; I could explain this</button>
+          </div>
+          <div class="confidence-saved" id="conf-saved-2-11"></div>
+        </div>
+
+      </div>
+    </div>
+
+  </div><!-- end stage 6 -->
+
+  <footer>
+    DAY 11 OF 158 &middot; SYNCHRONIZATION &middot; PHASE 1 / 6
+  </footer>
+
+</div>
+
+<script src="../data/curriculum.js"></script>
+<script src="../assets/app.js"></script>
+<script src="../assets/audio-player.js"></script>
+<script src="../data/glossary.js"></script>
+<script src="../assets/glossary.js"></script>
+<script src="../data/abbreviations.js"></script>
+<script src="../assets/abbreviations.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    initOpenEndedChallenge('2-11');
+    initReflection('2-11');
+    initLessonNav();
+  });
+</script>
+</body>
+</html>

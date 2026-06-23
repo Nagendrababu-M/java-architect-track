@@ -1,0 +1,13 @@
+Stage 5: deadlock, contention, and lock granularity.
+
+A deadlock needs all four Coffman conditions to hold at once — break any one and deadlock becomes impossible. One: mutual exclusion — the resource can't be shared. Two: hold and wait — a thread holds one lock while requesting another. Three: no preemption — locks can't be forcibly taken away. Four: circular wait — a cycle, where A holds lock one and wants lock two, while B holds lock two and wants lock one.
+
+Two practical fixes, each breaking a condition. First, global lock ordering: always acquire multiple locks in the same total order — say, by account id, lowest first. If everyone acquires in the same order, a circular wait is impossible. Second, timed tryLock: if you can't get the second lock within a timeout, release the first and retry — that breaks hold-and-wait. Lock ordering is the cleaner design; timed tryLock is the robust fallback when ordering isn't feasible.
+
+Two related hazards. Livelock: threads keep responding to each other and make no progress — like two people stepping aside in a hallway, repeatedly, in the same direction. And starvation: a thread never gets the lock — the fairness problem from Stage 3.
+
+Diagnosing these ties back to Day 6. A thread dump auto-detects deadlocks — it prints "Found one Java-level deadlock" with the exact cycle and the locks and threads involved. Contention, which is not deadlock, shows up differently: many threads BLOCKED on the same monitor, or a hot lock in a lock profile. The system still runs — but slowly, because threads queue for one lock.
+
+Finally, granularity — the throughput lever. One coarse lock around a whole data structure is correct but serial: throughput is capped at one thread. Finer-grained locking scales — lock per-bucket or per-entry. That's lock striping, how the old ConcurrentHashMap worked: sixteen segment locks instead of one, so independent operations proceed in parallel. The architect's instinct: hold locks for the shortest time over the smallest scope, and prefer the lock-free java.util.concurrent collections, Days 12 and 13, over hand-rolled locking whenever they fit.
+
+Interview-ready: prevent deadlock by breaking a Coffman condition — global lock ordering kills circular wait, timed tryLock kills hold-and-wait. Tell deadlock from contention: deadlock is stuck forever and a thread dump names the cycle; contention still makes progress, slowly, with many BLOCKED threads on one hot monitor.
