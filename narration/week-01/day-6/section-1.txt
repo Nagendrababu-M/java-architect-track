@@ -1,0 +1,17 @@
+Welcome to Day 6. You can read a GC log and reason about the memory model. But when someone says "the service is slow," the GC is only one suspect. Today is the diagnostic discipline: figuring out where the time actually goes, using profiling. Metrics tell you a service is slow; profiling tells you which line of code is to blame.
+
+Here's the mindset. "The service is slow" is not a diagnosis — it's a symptom. The first job is to classify the bottleneck, because each class has a different tool and a different fix. There are five, and confusing them is why teams burn days optimizing the wrong thing.
+
+CPU-bound: cores pegged at a hundred percent, high CPU time per request. You find it with a CPU profiler and a flame graph.
+
+Lock-bound, or contention: this one's sneaky — the cores are idle but latency is high, and threads are BLOCKED. You find it with a lock profiler, thread dumps, or off-CPU profiling.
+
+I/O-bound: threads WAITING on sockets or the database, low CPU. Wall-clock profiling and thread dumps and trace spans find it.
+
+GC-bound: latency spikes correlated with pauses. GC logs and JFR's GC events.
+
+And allocation-bound: high GC frequency, high churn. An allocation profiler finds the call sites churning the heap.
+
+The cardinal rule: suspect before you measure, but never conclude before you measure. Form a hypothesis from the symptom — idle CPU plus high latency points at locks or I/O, not CPU — then pick the tool that can confirm or kill it. The bottleneck is almost never where experienced engineers first guess, which is exactly why the profile exists. Optimizing on intuition is the cardinal sin of performance work.
+
+And work the diagnostic ladder from cheap-and-broad to expensive-and-precise. Start at metrics — dashboards, p99, CPU percent, GC time — which tell you that there's a problem and roughly which resource. Then JFR or a continuous profile, always-on and low overhead, the first thing you pull when an alert fires. Then a targeted profiler, async-profiler in the right mode, to zoom into the suspected dimension. And finally thread or heap dumps, point-in-time snapshots for deadlocks, blocked threads, and leaks. You don't start at the bottom — you start at metrics, form a hypothesis, and descend only as far as you need.

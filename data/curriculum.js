@@ -108,7 +108,8 @@ const CURRICULUM = {
           audio: { available: false, voice: 'en-US-Wavenet-D', sectionCount: 6, estimatedMinutes: 32 } },
         { day: 5, title: "Java Memory Model (JMM) & happens-before",      topic: "Concurrency",        status: "current", file: "week-01/day-5.html", duration: 160,
           audio: { available: false, voice: 'en-US-Wavenet-D', sectionCount: 6, estimatedMinutes: 30 } },
-        { day: 6, title: "Profiling in Anger: JFR, async-profiler, flame graphs", topic: "JVM Memory", status: "locked", file: null },
+        { day: 6, title: "Profiling in Anger: JFR, async-profiler, flame graphs", topic: "JVM Memory", status: "current", file: "week-01/day-6.html", duration: 160,
+          audio: { available: false, voice: 'en-US-Wavenet-D', sectionCount: 6, estimatedMinutes: 30 } },
         { day: 7, title: "Week 1 Synthesis: Production Diagnosis",        topic: "JVM Memory",         status: "locked", file: null },
         {
           day: 8, title: "Modern Java by Version: Java 8 & Java 11 (Deep Dive)",

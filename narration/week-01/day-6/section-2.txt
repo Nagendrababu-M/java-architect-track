@@ -1,0 +1,11 @@
+Stage 2: the built-in toolbox. Before you reach for a fancy profiler, know the tools shipped inside every JDK. They're free, production-safe, and often enough on their own.
+
+Start with jcmd, the swiss-army knife. jcmd dash l lists running JVMs and their PIDs. jcmd PID help shows every diagnostic command the JVM supports. jcmd PID Thread.print gives a thread dump. jcmd PID GC.heap_info shows live heap occupancy. jcmd PID VM.flags shows the effective flags. And jcmd PID JFR.start kicks off a recording. One tool, a huge surface.
+
+Now thread dumps, which are your fastest path for lock and I/O problems. A thread dump is a snapshot of every thread's stack and state. The key is reading the states. RUNNABLE means actually executing, or in native or I/O — many RUNNABLE threads in the same method is a CPU hot spot. BLOCKED means waiting to acquire a monitor someone else holds — many BLOCKED on one lock is contention. WAITING or TIMED_WAITING means parked, often on I/O, a pool, or a condition — many here with idle CPU means you're I/O-bound or pool-starved.
+
+Here's the technique that separates pros: take three dumps a few seconds apart. Threads stuck in the same frame across all three are your real problem; threads that move are fine. And the JVM auto-detects deadlocks in a thread dump — it literally prints "Found one Java-level deadlock" with the exact lock cycle. That's the fastest deadlock diagnosis there is.
+
+Then heap dumps, for leaks and memory bloat. jcmd PID GC.heap_dump writes the full heap to a file, though it pauses the JVM briefly, so use care in production. Better, set minus XX plus HeapDumpOnOutOfMemoryError so you automatically capture the heap on the OOM that matters most. Open the dot hprof file in Eclipse MAT, the Memory Analyzer Tool. Its Leak Suspects report ranks the objects holding the most retained heap — the memory that would be freed if that object were collected. Then follow the path to GC roots to find what is keeping the leak alive. As we saw on Day 4, the usual answer is an unbounded cache or a static collection.
+
+One distinction interviewers love: shallow heap versus retained heap. Shallow is the object's own size; retained is everything that becomes unreachable, and therefore freeable, if that object is collected. Leak hunting is always about retained size.
