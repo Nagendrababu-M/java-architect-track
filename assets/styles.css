@@ -168,21 +168,21 @@
 /* Dark theme phase color overrides â€” muted so they don't burn on dark bg */
 @media (prefers-color-scheme: dark) {
   :root {
-    --phase-1:      #1A56BB;   --phase-1-dark: #1A3D7A;
-    --phase-2:      #2A7A3F;   --phase-2-dark: #1A4D28;
-    --phase-3:      #CC5500;   --phase-3-dark: #8F3800;
-    --phase-4:      #008799;   --phase-4-dark: #005566;
-    --phase-5:      #5E4490;   --phase-5-dark: #3A2268;
-    --phase-6:      #C0312E;   --phase-6-dark: #7D1A18;
+    --phase-1:      #1A56BB;   --phase-1-dark: #1E4D9A;
+    --phase-2:      #2A7A3F;   --phase-2-dark: #1E5C30;
+    --phase-3:      #CC5500;   --phase-3-dark: #A34200;
+    --phase-4:      #008799;   --phase-4-dark: #006680;
+    --phase-5:      #5E4490;   --phase-5-dark: #45277A;
+    --phase-6:      #C0312E;   --phase-6-dark: #8F2020;
   }
 }
 [data-theme="dark"] {
-  --phase-1:      #1A56BB;   --phase-1-dark: #1A3D7A;
-  --phase-2:      #2A7A3F;   --phase-2-dark: #1A4D28;
-  --phase-3:      #CC5500;   --phase-3-dark: #8F3800;
-  --phase-4:      #008799;   --phase-4-dark: #005566;
-  --phase-5:      #5E4490;   --phase-5-dark: #3A2268;
-  --phase-6:      #C0312E;   --phase-6-dark: #7D1A18;
+  --phase-1:      #1A56BB;   --phase-1-dark: #1E4D9A;
+  --phase-2:      #2A7A3F;   --phase-2-dark: #1E5C30;
+  --phase-3:      #CC5500;   --phase-3-dark: #A34200;
+  --phase-4:      #008799;   --phase-4-dark: #006680;
+  --phase-5:      #5E4490;   --phase-5-dark: #45277A;
+  --phase-6:      #C0312E;   --phase-6-dark: #8F2020;
 }
 
 /* Manual dark toggle */
@@ -565,17 +565,17 @@ ol li::before {
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: #fff;
+  color: var(--phase-color, var(--accent));
   text-decoration: none;
   padding: 5px 12px 5px 8px;
-  border: none;
+  border: 1px solid var(--phase-color, var(--accent));
   border-radius: var(--radius-md);
-  background: var(--phase-color, var(--accent));
-  box-shadow: var(--shadow-1);
-  transition: filter 0.15s, box-shadow 0.15s;
+  background: color-mix(in srgb, var(--phase-color, var(--accent)) 10%, var(--bg));
+  box-shadow: none;
+  transition: background 0.15s, filter 0.15s;
 }
 .back-link .material-symbols-rounded { font-size: 16px; }
-.back-link:hover { filter: brightness(1.1); box-shadow: var(--shadow-2); }
+.back-link:hover { background: color-mix(in srgb, var(--phase-color, var(--accent)) 18%, var(--bg)); }
 
 .meta {
   display: flex;
@@ -611,9 +611,9 @@ ol li::before {
   gap: 6px;
   padding: 5px 12px;
   background: var(--bg-code);
-  border: none;
+  border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  box-shadow: var(--shadow-1);
+  box-shadow: none;
   font-family: 'JetBrains Mono', monospace;
   font-size: 11px;
   font-weight: 500;
@@ -648,16 +648,18 @@ ol li::before {
   font-weight: 700;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: #fff;
-  background: var(--phase-color, var(--accent));
+  color: var(--phase-color, var(--accent));
+  background: color-mix(in srgb, var(--phase-color, var(--accent)) 8%, var(--bg));
+  border: 1px solid var(--phase-color, var(--accent));
   margin-bottom: 20px;
   padding: 5px 10px;
   border-radius: var(--radius-sm);
 }
 .stage-tag .time {
-  color: rgba(255,255,255,0.72);
+  color: var(--phase-color, var(--accent));
+  opacity: 0.65;
   font-size: 9px;
-  border-left: 1px solid rgba(255,255,255,0.3);
+  border-left: 1px solid color-mix(in srgb, var(--phase-color, var(--accent)) 40%, transparent);
   padding-left: 8px;
   margin-left: 2px;
 }
@@ -1050,26 +1052,25 @@ ol li::before {
 .btn-check {
   background: var(--phase-color, var(--accent));
   color: #fff;
-  box-shadow: var(--shadow-1);
+  box-shadow: none;
 }
 .btn-check:hover {
-  filter: brightness(1.1);
-  box-shadow: var(--shadow-2);
-  transform: translateY(-1px);
+  filter: brightness(1.08);
+  box-shadow: none;
 }
-.btn-check:active { transform: translateY(0); }
-.btn-check:disabled { opacity: 0.4; cursor: default; transform: none; box-shadow: none; }
+.btn-check:active { filter: brightness(0.96); }
+.btn-check:disabled { opacity: 0.4; cursor: default; filter: none; box-shadow: none; }
 
 .btn-reveal, .btn-show-answers {
-  background: var(--bg-code);
+  background: color-mix(in srgb, var(--phase-color, var(--accent)) 8%, var(--bg));
   color: var(--phase-color, var(--accent));
-  border: none;
-  box-shadow: var(--shadow-1);
+  border: 1.5px solid var(--phase-color, var(--accent));
+  box-shadow: none;
 }
 .btn-reveal:hover, .btn-show-answers:hover {
   background: var(--phase-color, var(--accent));
   color: #fff;
-  box-shadow: var(--shadow-2);
+  box-shadow: none;
 }
 .btn-reveal:disabled, .btn-show-answers:disabled {
   opacity: 0.35;
