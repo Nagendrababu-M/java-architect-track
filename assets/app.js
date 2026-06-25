@@ -494,11 +494,11 @@ function openWeek(header) {
     { duration: 380, easing: 'ease-out', fill: 'forwards' }
   );
   anim.onfinish = () => {
-    anim.cancel();
     body.style.maxHeight = 'none';
     body.style.paddingTop = '18px';
     body.style.paddingBottom = '18px';
     body.style.opacity = '1';
+    anim.cancel();
     delete header.dataset.animating;
   };
 }

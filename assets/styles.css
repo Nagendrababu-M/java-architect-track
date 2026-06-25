@@ -1126,6 +1126,11 @@ ol li::before {
   flex-direction: column;
   align-items: flex-end;
   gap: 10px;
+  pointer-events: none;
+}
+#settings-fab-wrap .settings-fab,
+#settings-fab-wrap .settings-popup.open {
+  pointer-events: auto;
 }
 .settings-fab {
   width: 48px;
@@ -1757,6 +1762,7 @@ footer {
 .week-days.open {
   padding: 18px;
   opacity: 1;
+  overflow: visible;
 }
 
 /* Day card */
@@ -2037,6 +2043,10 @@ footer {
 .float-nav.visible {
   transform: translateX(-50%) translateY(0);
   opacity: 1;
+  pointer-events: none;
+}
+.float-nav.visible .float-btn,
+.float-nav.visible .float-scroll-top {
   pointer-events: auto;
 }
 .float-btn {
