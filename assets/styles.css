@@ -2348,23 +2348,26 @@ footer {
   .float-scroll-top { padding: 6px 9px; }
   .nav-title      { font-size: 12px; }
 
-  /* Float nav */
+  /* Float nav — icon-only pill on mobile */
   .float-nav {
-    bottom: 10px;
-    left: 8px; right: 8px;
-    width: calc(100% - 16px);
-    max-width: none;
-    transform: translateX(0) translateY(80px);
+    bottom: 14px;
+    left: 50%;
+    right: auto;
+    width: auto;
+    max-width: calc(100vw - 32px);
+    transform: translateX(-50%) translateY(80px);
     justify-content: center;
-    flex-wrap: wrap;
-    border-radius: 14px;
-    padding: 8px 10px;
-    gap: 4px;
+    flex-wrap: nowrap;
+    border-radius: 40px;
+    padding: 5px 8px;
+    gap: 0;
   }
-  .float-nav.visible { transform: translateX(0) translateY(0); }
-  .float-btn         { font-size: 12px; padding: 6px 10px; }
-  .float-scroll-top  { font-size: 12px; padding: 6px 8px; }
-  .float-divider     { display: none; }
+  .float-nav.visible { transform: translateX(-50%) translateY(0); }
+  .float-btn         { padding: 7px 10px; font-size: 0; gap: 0; }
+  .float-btn .material-symbols-rounded { font-size: 18px; }
+  .float-scroll-top  { padding: 7px 9px; font-size: 0; gap: 0; }
+  .float-scroll-top .material-symbols-rounded { font-size: 18px; }
+  .float-divider     { display: block; margin: 0 2px; }
 }
 
 /* â”€â”€ Small mobile (â‰¤400px) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
