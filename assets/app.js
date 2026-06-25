@@ -816,24 +816,24 @@ function initLessonNav() {
     nav.innerHTML = `
       ${prev
         ? `<a class="lesson-nav-btn${prevHref ? '' : ' disabled'}" href="${prevHref || '#'}">
-             <span class="nav-direction">← Previous</span>
+             <span class="nav-direction"><span class="material-symbols-rounded">arrow_back</span>Previous</span>
              <span class="nav-title">Day ${prev.day} · ${prev.title}</span>
            </a>`
         : `<div class="lesson-nav-btn disabled">
-             <span class="nav-direction">← Previous</span>
+             <span class="nav-direction"><span class="material-symbols-rounded">arrow_back</span>Previous</span>
              <span class="nav-title">Start of curriculum</span>
            </div>`}
       <a class="lesson-nav-btn center" href="../index.html">
-        <span class="nav-curriculum-icon">🗺</span>
+        <span class="material-symbols-rounded nav-curriculum-icon">map</span>
         <span class="nav-direction">Curriculum</span>
       </a>
       ${next
         ? `<a class="lesson-nav-btn${nextHref ? '' : ' disabled'}" href="${nextHref || '#'}" style="align-items:flex-end;text-align:right">
-             <span class="nav-direction">Next →</span>
+             <span class="nav-direction">Next<span class="material-symbols-rounded">arrow_forward</span></span>
              <span class="nav-title">Day ${next.day} · ${next.title}</span>
            </a>`
         : `<div class="lesson-nav-btn disabled" style="align-items:flex-end">
-             <span class="nav-direction">Next →</span>
+             <span class="nav-direction">Next<span class="material-symbols-rounded">arrow_forward</span></span>
              <span class="nav-title">End of curriculum</span>
            </div>`}`;
     footer.parentNode.insertBefore(nav, footer);
@@ -844,15 +844,15 @@ function initLessonNav() {
   floatNav.className = 'float-nav';
   floatNav.id = 'float-nav';
   floatNav.innerHTML = `
-    <button class="float-scroll-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑ Top</button>
+    <button class="float-scroll-top" onclick="window.scrollTo({top:0,behavior:'smooth'})"><span class="material-symbols-rounded">vertical_align_top</span>Top</button>
     <div class="float-divider"></div>
     ${prev
-      ? `<a class="float-btn${prevHref ? '' : ' disabled'}" href="${prevHref || '#'}">← Day ${prev.day}</a>`
-      : `<span class="float-btn disabled">← Start</span>`}
-    <a class="float-btn accent" href="../index.html">🗺 Curriculum</a>
+      ? `<a class="float-btn${prevHref ? '' : ' disabled'}" href="${prevHref || '#'}"><span class="material-symbols-rounded">arrow_back</span>Day ${prev.day}</a>`
+      : `<span class="float-btn disabled"><span class="material-symbols-rounded">arrow_back</span>Start</span>`}
+    <a class="float-btn accent" href="../index.html"><span class="material-symbols-rounded">map</span>Curriculum</a>
     ${next
-      ? `<a class="float-btn${nextHref ? '' : ' disabled'}" href="${nextHref || '#'}">Day ${next.day} →</a>`
-      : `<span class="float-btn disabled">End →</span>`}`;
+      ? `<a class="float-btn${nextHref ? '' : ' disabled'}" href="${nextHref || '#'}">Day ${next.day}<span class="material-symbols-rounded">arrow_forward</span></a>`
+      : `<span class="float-btn disabled">End<span class="material-symbols-rounded">arrow_forward</span></span>`}`;
   document.body.appendChild(floatNav);
 
   // Show/hide on scroll
