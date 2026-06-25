@@ -292,27 +292,23 @@ asprof -e wall -d <span class="num-lit">30</span> -f wall.html &lt;PID&gt;</code
 
       <div class="diagram-svg">
         <svg viewBox="0 0 760 250" xmlns="http://www.w3.org/2000/svg" width="100%" preserveAspectRatio="xMidYMid meet" role="img" aria-label="CPU flame graph">
-          <defs>
-            <filter id="regionShadowD6a" x="-10%" y="-10%" width="120%" height="130%">
-              <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="rgba(0,0,0,0.6)"/>
-            </filter>
-          </defs>
+          
           <!-- level 0 -->
-          <rect x="20" y="210" width="720" height="26" rx="2" fill="#2A1800" filter="url(#regionShadowD6a)"/>
+          <rect x="20" y="210" width="720" height="26" rx="2" fill="#2A1800" stroke="#FF6D00" stroke-opacity="0.5"/>
           <text x="380" y="227" class="flame-frame" fill="#c9a07a" text-anchor="middle">TradeController.validate()  —  98%</text>
           <!-- level 1 -->
-          <rect x="20" y="182" width="690" height="26" rx="2" fill="#2A1800" filter="url(#regionShadowD6a)"/>
+          <rect x="20" y="182" width="690" height="26" rx="2" fill="#2A1800" stroke="#FF6D00" stroke-opacity="0.5"/>
           <text x="365" y="199" class="flame-frame" fill="#c9a07a" text-anchor="middle">RuleEngine.checkAll()  —  94%</text>
           <!-- level 2 -->
-          <rect x="20" y="154" width="120" height="26" rx="2" fill="#0A2010" filter="url(#regionShadowD6a)"/>
+          <rect x="20" y="154" width="120" height="26" rx="2" fill="#0A2010" stroke="#34A853" stroke-opacity="0.5"/>
           <text x="80" y="171" class="flame-frame" fill="#8fcaa6" text-anchor="middle">rangeCheck 12%</text>
-          <rect x="144" y="154" width="566" height="26" rx="2" fill="#2A1800" filter="url(#regionShadowD6a)"/>
+          <rect x="144" y="154" width="566" height="26" rx="2" fill="#2A1800" stroke="#FF6D00" stroke-opacity="0.5"/>
           <text x="427" y="171" class="flame-frame" fill="#ffae85" text-anchor="middle">RuleEngine.matchSymbol()  —  80%</text>
           <!-- level 3 -->
-          <rect x="144" y="126" width="540" height="26" rx="2" fill="#2A1800" filter="url(#regionShadowD6a)"/>
+          <rect x="144" y="126" width="540" height="26" rx="2" fill="#2A1800" stroke="#FF6D00" stroke-opacity="0.5"/>
           <text x="414" y="143" class="flame-frame" fill="#ffae85" text-anchor="middle">Pattern.compile()  —  76%</text>
           <!-- level 4 -->
-          <rect x="144" y="98" width="540" height="26" rx="2" fill="#2A1800" filter="url(#regionShadowD6a)"/>
+          <rect x="144" y="98" width="540" height="26" rx="2" fill="#2A1800" stroke="#FF6D00" stroke-opacity="0.5"/>
           <text x="414" y="115" class="flame-frame" fill="#ffc7a8" text-anchor="middle">Pattern.&lt;init&gt; / compile internals  —  76%</text>
           <text x="380" y="60" fill="#FF6D00" font-family="JetBrains Mono, monospace" font-size="12" font-weight="700" text-anchor="middle" letter-spacing="2">CPU FLAME GRAPH — width = CPU time</text>
           <text x="380" y="78" fill="#5e6473" font-family="Inter Tight, sans-serif" font-size="11" text-anchor="middle" font-style="italic">matchSymbol() calls Pattern.compile() on every invocation</text>
@@ -446,3 +442,5 @@ asprof -e wall -d <span class="num-lit">30</span> -f wall.html &lt;PID&gt;</code
 </script>
 </body>
 </html>
+
+

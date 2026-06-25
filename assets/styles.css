@@ -1051,7 +1051,7 @@ ol li::before {
   background: var(--bg-code);
   color: var(--phase-color, var(--accent));
   border: none;
-  box-shadow: inset 0 2px 5px rgba(0,0,0,0.35), inset 0 -1px 0 rgba(255,255,255,0.05);
+  box-shadow: var(--shadow-1);
 }
 .btn-reveal:hover, .btn-show-answers:hover {
   background: var(--phase-color, var(--accent));
