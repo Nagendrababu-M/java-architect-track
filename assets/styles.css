@@ -894,8 +894,8 @@ ol li::before {
 .select-answer {
   appearance: none;
   background: var(--bg-code);
-  border: none;
-  box-shadow: inset 0 2px 5px rgba(0,0,0,0.35), inset 0 -1px 0 rgba(255,255,255,0.05);
+  border: 1px solid var(--border);
+  box-shadow: none;
   border-radius: var(--radius-sm);
   color: var(--ink);
   font-family: 'JetBrains Mono', monospace;
@@ -1038,11 +1038,11 @@ ol li::before {
 .btn-check {
   background: var(--phase-color, var(--accent));
   color: #fff;
-  box-shadow: inset 0 2px 5px rgba(0,0,0,0.30), inset 0 -1px 0 rgba(255,255,255,0.12);
+  box-shadow: var(--shadow-1);
 }
 .btn-check:hover {
   filter: brightness(1.1);
-  box-shadow: inset 0 3px 7px rgba(0,0,0,0.35), inset 0 -1px 0 rgba(255,255,255,0.12);
+  box-shadow: var(--shadow-2);
   transform: translateY(-1px);
 }
 .btn-check:active { transform: translateY(0); }
@@ -1057,7 +1057,7 @@ ol li::before {
 .btn-reveal:hover, .btn-show-answers:hover {
   background: var(--phase-color, var(--accent));
   color: #fff;
-  box-shadow: inset 0 2px 5px rgba(0,0,0,0.30), inset 0 -1px 0 rgba(255,255,255,0.12);
+  box-shadow: var(--shadow-2);
 }
 
 /* Score display */

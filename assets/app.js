@@ -855,16 +855,14 @@ function initLessonNav() {
       : `<span class="float-btn disabled">End<span class="material-symbols-rounded">arrow_forward</span></span>`}`;
   document.body.appendChild(floatNav);
 
-  // Show/hide on scroll
-  let ticking = false;
+  // Show immediately on scroll down, collapse after scroll stops for 1s
+  let scrollTimer = null;
   window.addEventListener('scroll', () => {
-    if (ticking) return;
-    ticking = true;
-    requestAnimationFrame(() => {
-      const visible = window.scrollY > 280;
-      floatNav.classList.toggle('visible', visible);
-      ticking = false;
-    });
+    if (window.scrollY > 280) floatNav.classList.add('visible');
+    clearTimeout(scrollTimer);
+    scrollTimer = setTimeout(() => {
+      floatNav.classList.remove('visible');
+    }, 1000);
   }, { passive: true });
 }
 
@@ -1026,26 +1024,30 @@ function scrollToPhase(phase) {
     chip.classList.toggle('active', i + 1 === phase);
   });
 
-  // Close others, open matching
+  // Step 1: close all open sections
   document.querySelectorAll('#by-day-panel .week-section').forEach(section => {
     const header = section.querySelector('.week-header');
-    if (!header) return;
-    if (parseInt(section.dataset.phase) === phase) {
-      if (!header.classList.contains('open')) openWeek(header);
-    } else {
-      if (header.classList.contains('open')) closeWeek(header);
-    }
+    if (header && header.classList.contains('open')) closeWeek(header);
   });
 
-  // After collapse animation settles, scroll to exact offsetTop
   const first = document.querySelector(`#by-day-panel .week-section[data-phase="${phase}"]`);
   if (first) {
+    // Step 2: wait for collapse animations to finish, then measure + scroll
     setTimeout(() => {
-      const top = first.getBoundingClientRect().top + window.scrollY - 16;
+      const top = first.getBoundingClientRect().top + window.scrollY - 24;
       window.scrollTo({ top, behavior: 'smooth' });
-      // resume auto-scroll after scroll animation settles (~800ms)
-      setTimeout(() => { _scrollPaused = false; }, 800);
-    }, 460);
+
+      // Step 3: after scroll lands, expand matching sections
+      setTimeout(() => {
+        document.querySelectorAll('#by-day-panel .week-section').forEach(section => {
+          const header = section.querySelector('.week-header');
+          if (header && parseInt(section.dataset.phase) === phase && !header.classList.contains('open')) {
+            openWeek(header);
+          }
+        });
+        setTimeout(() => { _scrollPaused = false; }, 400);
+      }, 500);
+    }, 450);
   } else {
     setTimeout(() => { _scrollPaused = false; }, 500);
   }
