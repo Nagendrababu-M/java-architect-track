@@ -12,38 +12,37 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 26px;
-  height: 26px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
-  border: 1px solid var(--accent);
-  background: var(--bg-code);
-  color: var(--accent);
-  font-size: 11px;
+  border: 1px solid rgba(255,255,255,0.5);
+  background: rgba(255,255,255,0.15);
+  color: #fff;
+  font-size: 10px;
   cursor: pointer;
-  margin-left: 10px;
+  margin-left: 8px;
   vertical-align: middle;
   flex-shrink: 0;
-  transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease, transform 0.15s ease;
+  transition: background 0.15s ease, transform 0.15s ease;
   position: relative;
   outline: none;
 }
 .section-play-btn:hover:not(:disabled) {
-  background: var(--accent);
-  color: #0f1115;
-  transform: scale(1.08);
+  background: rgba(255,255,255,0.35);
+  transform: scale(1.1);
 }
 .section-play-btn:focus-visible {
-  box-shadow: 0 0 0 3px rgba(255,122,61,0.3);
+  box-shadow: 0 0 0 2px rgba(255,255,255,0.5);
 }
 .section-play-btn.is-playing {
-  background: var(--accent);
-  color: #0f1115;
-  border-color: var(--accent);
+  background: #fff;
+  color: var(--phase-color, var(--accent));
+  border-color: #fff;
   animation: btn-pulse 1.8s ease-in-out infinite;
 }
 .section-play-btn:disabled {
-  border-color: var(--line);
-  color: var(--ink-faint);
+  border-color: rgba(255,255,255,0.2);
+  color: rgba(255,255,255,0.3);
   background: transparent;
   cursor: not-allowed;
   transform: none;
@@ -74,52 +73,65 @@
 /* ── Play Full Lesson button ──────────────────────────────── */
 
 #play-full-lesson-mount {
-  margin: 20px 0 32px;
+  margin: 0;
 }
 
 .play-full-lesson-btn {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  max-width: 480px;
-  padding: 16px 24px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 14px;
   border-radius: var(--radius-md);
   border: none;
   cursor: pointer;
-  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-soft) 100%);
-  color: #0f1115;
-  text-align: left;
-  transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
+  background: var(--phase-color, var(--accent));
+  box-shadow: var(--shadow-1);
+  color: #fff;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  transition: filter 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
   outline: none;
+  white-space: nowrap;
 }
 .play-full-lesson-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(255,122,61,0.35);
+  filter: brightness(1.1);
+  box-shadow: var(--shadow-2);
+  transform: translateY(-1px);
 }
-.play-full-lesson-btn:active {
-  transform: translateY(0);
-}
+.play-full-lesson-btn:active { transform: translateY(0); }
 .play-full-lesson-btn:focus-visible {
-  box-shadow: 0 0 0 3px rgba(255,122,61,0.4);
+  box-shadow: 0 0 0 3px rgba(0,0,0,0.2);
 }
 .play-full-lesson-btn.is-playing {
   animation: lesson-btn-pulse 2.2s ease-in-out infinite;
 }
-.play-full-lesson-btn .pfl-label {
-  font-family: 'Inter Tight', sans-serif;
+.play-full-lesson-btn .pfl-icon {
   font-size: 15px;
-  font-weight: 600;
-  letter-spacing: 0.01em;
+  display: flex;
 }
-.play-full-lesson-btn .pfl-sub {
-  font-family: 'Inter Tight', sans-serif;
-  font-size: 12px;
-  opacity: 0.75;
+.play-full-lesson-btn .pfl-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 600;
+}
+.play-full-lesson-btn .pfl-sub { display: none; }
+
+.play-full-lesson-btn:disabled {
+  background: var(--bg-code);
+  border: none;
+  color: var(--ink-faint);
+  box-shadow: var(--shadow-1);
+  cursor: default;
+  transform: none;
+  filter: none;
 }
 
 @keyframes lesson-btn-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(255,122,61,0.45); }
-  50%       { box-shadow: 0 0 0 10px rgba(255,122,61,0); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(0,0,0,0.25); }
+  50%       { box-shadow: 0 0 0 8px rgba(0,0,0,0); }
 }
 
 /* ── Floating mini audio bar ──────────────────────────────── */

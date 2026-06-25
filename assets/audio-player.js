@@ -165,8 +165,8 @@
     pflBtn = document.createElement('button');
     pflBtn.className = 'play-full-lesson-btn';
     pflBtn.innerHTML = `
-      <span class="pfl-label">▶&ensp;Play Full Lesson</span>
-      <span class="pfl-sub" id="pfl-sub">Checking audio…</span>
+      <span class="pfl-icon material-symbols-rounded">play_arrow</span>
+      <span class="pfl-label">Play Full Lesson</span>
     `;
     pflBtn.disabled = true;
     mount.appendChild(pflBtn);
@@ -303,18 +303,18 @@
 
     if (isPlaying && fullMode) {
       pflBtn.classList.add('is-playing');
-      pflBtn.querySelector('.pfl-label').innerHTML = '⏸&ensp;Pause Lesson';
+      pflBtn.querySelector('.pfl-icon').textContent = 'pause';
+      pflBtn.querySelector('.pfl-label').textContent = 'Pause Lesson';
     } else {
       pflBtn.classList.remove('is-playing');
-      pflBtn.querySelector('.pfl-label').innerHTML = '▶&ensp;Play Full Lesson';
+      pflBtn.querySelector('.pfl-icon').textContent = 'play_arrow';
+      pflBtn.querySelector('.pfl-label').textContent = 'Play Full Lesson';
     }
 
     const count = sectionAvailable.filter(Boolean).length;
-    const sub = pflBtn.querySelector('#pfl-sub');
-    if (sub) {
-      sub.textContent = anyAvail
-        ? `${count} of ${stages.length} sections available`
-        : 'No audio available for this lesson';
+    if (!anyAvail) {
+      pflBtn.querySelector('.pfl-icon').textContent = 'volume_off';
+      pflBtn.querySelector('.pfl-label').textContent = 'No Audio';
     }
   }
 

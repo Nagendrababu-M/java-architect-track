@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -7,16 +7,13 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,800&family=JetBrains+Mono:wght@400;500;700&family=Inter+Tight:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,1,0" rel="stylesheet">
 <link rel="stylesheet" href="../assets/styles.css">
 <link rel="stylesheet" href="../assets/audio-player.css">
 <link rel="stylesheet" href="../assets/glossary.css">
 <link rel="stylesheet" href="../assets/abbreviations.css">
+<style>:root { --phase-color: var(--phase-1); }</style>
 <style>
-  body {
-    background-image:
-      radial-gradient(ellipse 800px 600px at 20% 0%, rgba(255,122,61,0.07), transparent 60%),
-      radial-gradient(ellipse 600px 400px at 90% 100%, rgba(255,122,61,0.04), transparent 60%);
-  }
   .interview-q {
     margin: 20px 0;
     padding: 18px 22px;
@@ -42,23 +39,37 @@
 <body>
 <div class="grain"></div>
 
-<div class="container">
+<div class="container-wide">
 
   <header class="lesson-header">
-    <a href="../index.html" class="back-link">&larr; Back to curriculum</a>
-    <div class="meta">
-      <span class="dot"></span>
-      <span class="phase">Phase 1 &middot; Advanced Java</span>
-      <span>&middot;</span>
-      <span>Week 1 / Day 6</span>
+  <div class="lesson-header-top">
+    <a href="../index.html" class="back-link">
+      <span class="material-symbols-rounded">arrow_back</span>Curriculum
+    </a>
+    <div class="lesson-header-actions">
+      <div class="meta">
+        <span class="dot"></span>
+        <span class="phase">Phase 1 &middot; Advanced Java</span>
+        <span class="meta-sep">&middot;</span>
+        <span>Week 1 / Day 6</span>
+      </div>
     </div>
-    <h1>
-      Profiling in Anger: <abbr data-abbr="JFR">JFR</abbr>, async-profiler &amp; Flame Graphs
-      <span class="sub">How to find <em>why</em> a service is slow &mdash; the methodology, the tools, and how to read the evidence.</span>
-    </h1>
-    <div class="scope"><strong>SCOPE</strong> &middot; 160 min &middot; 6 stages &mdash; the diagnostic layer above metrics. Suspect, then measure, then fix.</div>
-  <div id="play-full-lesson-mount"></div>
-  </header>
+  </div>
+  <h1>
+    Profiling in Anger: <abbr data-abbr=&quot;JFR&quot;>JFR</abbr>, async-profiler &amp; Flame Graphs
+    <span class="sub">How to find <em>why</em> a service is slow &mdash; the methodology, the tools, and how to read the evidence.</span>
+  </h1>
+  <div class="lesson-header-footer">
+    <div class="scope">
+      <span class="material-symbols-rounded">schedule</span>
+      <strong>160 min</strong>
+      <span class="scope-sep">&middot;</span>
+      <span class="material-symbols-rounded">layers</span>
+      <span>6 stages</span>
+    </div>
+    <div id="play-full-lesson-mount"></div>
+  </div>
+</header>
 
   <div class="recap">
     <span class="recap-tag">RECAP FROM DAYS 4&ndash;5</span>
@@ -281,24 +292,29 @@ asprof -e wall -d <span class="num-lit">30</span> -f wall.html &lt;PID&gt;</code
 
       <div class="diagram-svg">
         <svg viewBox="0 0 760 250" xmlns="http://www.w3.org/2000/svg" width="100%" preserveAspectRatio="xMidYMid meet" role="img" aria-label="CPU flame graph">
+          <defs>
+            <filter id="regionShadowD6a" x="-10%" y="-10%" width="120%" height="130%">
+              <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="rgba(0,0,0,0.6)"/>
+            </filter>
+          </defs>
           <!-- level 0 -->
-          <rect x="20" y="210" width="720" height="26" rx="2" fill="#2a2018" stroke="#ff7a3d" stroke-opacity="0.5"/>
+          <rect x="20" y="210" width="720" height="26" rx="2" fill="#2A1800" filter="url(#regionShadowD6a)"/>
           <text x="380" y="227" class="flame-frame" fill="#c9a07a" text-anchor="middle">TradeController.validate()  —  98%</text>
           <!-- level 1 -->
-          <rect x="20" y="182" width="690" height="26" rx="2" fill="#2a1f18" stroke="#ff7a3d" stroke-opacity="0.5"/>
+          <rect x="20" y="182" width="690" height="26" rx="2" fill="#2A1800" filter="url(#regionShadowD6a)"/>
           <text x="365" y="199" class="flame-frame" fill="#c9a07a" text-anchor="middle">RuleEngine.checkAll()  —  94%</text>
           <!-- level 2 -->
-          <rect x="20" y="154" width="120" height="26" rx="2" fill="#1f2a20" stroke="#6ed3a8" stroke-opacity="0.5"/>
+          <rect x="20" y="154" width="120" height="26" rx="2" fill="#0A2010" filter="url(#regionShadowD6a)"/>
           <text x="80" y="171" class="flame-frame" fill="#8fcaa6" text-anchor="middle">rangeCheck 12%</text>
-          <rect x="144" y="154" width="566" height="26" rx="2" fill="#2a1812" stroke="#ff7a3d" stroke-opacity="0.7"/>
+          <rect x="144" y="154" width="566" height="26" rx="2" fill="#2A1800" filter="url(#regionShadowD6a)"/>
           <text x="427" y="171" class="flame-frame" fill="#ffae85" text-anchor="middle">RuleEngine.matchSymbol()  —  80%</text>
           <!-- level 3 -->
-          <rect x="144" y="126" width="540" height="26" rx="2" fill="#2a1812" stroke="#ff7a3d" stroke-opacity="0.8"/>
+          <rect x="144" y="126" width="540" height="26" rx="2" fill="#2A1800" filter="url(#regionShadowD6a)"/>
           <text x="414" y="143" class="flame-frame" fill="#ffae85" text-anchor="middle">Pattern.compile()  —  76%</text>
           <!-- level 4 -->
-          <rect x="144" y="98" width="540" height="26" rx="2" fill="#3a1a10" stroke="#ff7a3d"/>
+          <rect x="144" y="98" width="540" height="26" rx="2" fill="#2A1800" filter="url(#regionShadowD6a)"/>
           <text x="414" y="115" class="flame-frame" fill="#ffc7a8" text-anchor="middle">Pattern.&lt;init&gt; / compile internals  —  76%</text>
-          <text x="380" y="60" fill="#ff7a3d" font-family="JetBrains Mono, monospace" font-size="12" font-weight="700" text-anchor="middle" letter-spacing="2">CPU FLAME GRAPH — width = CPU time</text>
+          <text x="380" y="60" fill="#FF6D00" font-family="JetBrains Mono, monospace" font-size="12" font-weight="700" text-anchor="middle" letter-spacing="2">CPU FLAME GRAPH — width = CPU time</text>
           <text x="380" y="78" fill="#5e6473" font-family="Inter Tight, sans-serif" font-size="11" text-anchor="middle" font-style="italic">matchSymbol() calls Pattern.compile() on every invocation</text>
         </svg>
       </div>

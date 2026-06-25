@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -11,33 +11,42 @@
 <link rel="stylesheet" href="../assets/audio-player.css">
 <link rel="stylesheet" href="../assets/glossary.css">
 <link rel="stylesheet" href="../assets/abbreviations.css">
-<style>
-  body {
-    background-image:
-      radial-gradient(ellipse 800px 600px at 20% 0%, rgba(255,122,61,0.06), transparent 60%),
-      radial-gradient(ellipse 600px 400px at 90% 100%, rgba(177,138,224,0.05), transparent 60%);
-  }
-</style>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,1,0" rel="stylesheet">
+<style>:root { --phase-color: var(--phase-1); }</style>
 </head>
 <body>
 <div class="grain"></div>
 
-<div class="container">
+<div class="container-wide">
 
   <header class="lesson-header">
-    <a href="../index.html" class="back-link">← Back to curriculum</a>
-    <div class="meta">
-      <span class="dot"></span>
-      <span class="phase">Phase 1 &middot; Advanced Java</span>
-      <span>&middot;</span>
-      <span>Week 1 / Day 2</span>
+    <div class="lesson-header-top">
+      <a href="../index.html" class="back-link">
+        <span class="material-symbols-rounded">arrow_back</span>Curriculum
+      </a>
+      <div class="lesson-header-actions">
+        <div class="meta">
+          <span class="dot"></span>
+          <span class="phase">Phase 1 · Advanced Java</span>
+          <span class="meta-sep">·</span>
+          <span>Week 1 / Day 2</span>
+        </div>
+      </div>
     </div>
     <h1>
       Static, Instance, Metaspace &amp; Reflection
-      <span class="sub">Class metadata, runtime inspection, MethodHandles &mdash; and a full 7-row memory challenge.</span>
+      <span class="sub">Class metadata, runtime inspection, MethodHandles — and a full 7-row memory challenge.</span>
     </h1>
-    <div class="scope"><strong>SCOPE</strong> &middot; 75 min &middot; 5 stages + final challenge</div>
-  <div id="play-full-lesson-mount"></div>
+    <div class="lesson-header-footer">
+      <div class="scope">
+        <span class="material-symbols-rounded">schedule</span>
+        <strong>75 min</strong>
+        <span class="scope-sep">·</span>
+        <span class="material-symbols-rounded">layers</span>
+        <span>5 stages + final challenge</span>
+      </div>
+      <div id="play-full-lesson-mount"></div>
+    </div>
   </header>
 
   <div class="recap">
@@ -75,27 +84,30 @@ u.name = <span class="str">"Ana"</span>;</code></pre>
       <svg viewBox="0 0 760 260" xmlns="http://www.w3.org/2000/svg" width="100%" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Instance fields embedded in heap object">
         <defs>
           <marker id="arrA" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
-            <path d="M 0 0 L 10 5 L 0 10 z" fill="#ff7a3d"/>
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="#FF6D00"/>
           </marker>
+          <filter id="regionShadowD2a" x="-10%" y="-10%" width="120%" height="130%">
+            <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="rgba(0,0,0,0.6)"/>
+          </filter>
         </defs>
-        <text x="140" y="30" fill="#7ab8e8" font-family="JetBrains Mono, monospace" font-size="11" font-weight="700" text-anchor="middle" letter-spacing="2">STACK</text>
-        <rect x="50" y="60" width="180" height="80" rx="6" fill="#13192a" stroke="#7ab8e8" stroke-opacity="0.5"/>
-        <rect x="68" y="85" width="140" height="36" rx="4" fill="#0f1115" stroke="#252a37"/>
+        <text x="140" y="30" fill="#1A73E8" font-family="JetBrains Mono, monospace" font-size="11" font-weight="700" text-anchor="middle" letter-spacing="2">STACK</text>
+        <rect x="50" y="60" width="180" height="80" rx="6" fill="#0D1F3C" filter="url(#regionShadowD2a)"/>
+        <rect x="68" y="85" width="140" height="36" rx="4" fill="#0f1115"/>
         <text x="80" y="108" fill="#e8e6e1" font-family="JetBrains Mono, monospace" font-size="12">u</text>
-        <circle cx="198" cy="103" r="4" fill="#ff7a3d"/>
+        <circle cx="198" cy="103" r="4" fill="#FF6D00"/>
         <text x="140" y="165" fill="#5e6473" font-family="Inter Tight, sans-serif" font-size="11" font-style="italic" text-anchor="middle">One reference,</text>
         <text x="140" y="182" fill="#5e6473" font-family="Inter Tight, sans-serif" font-size="11" font-style="italic" text-anchor="middle">8 bytes</text>
-        <path d="M 203 103 L 380 103" fill="none" stroke="#ff7a3d" stroke-width="2" marker-end="url(#arrA)"/>
-        <text x="540" y="30" fill="#ff7a3d" font-family="JetBrains Mono, monospace" font-size="11" font-weight="700" text-anchor="middle" letter-spacing="2">HEAP</text>
-        <rect x="390" y="60" width="320" height="160" rx="6" fill="#1a1612" stroke="#ff7a3d" stroke-opacity="0.5"/>
-        <rect x="410" y="80" width="280" height="120" rx="4" fill="#0f1115" stroke="#ff7a3d" stroke-opacity="0.5"/>
-        <text x="425" y="103" fill="#ffb38a" font-family="JetBrains Mono, monospace" font-size="13" font-weight="500">User object</text>
+        <path d="M 203 103 L 380 103" fill="none" stroke="#FF6D00" stroke-width="2" marker-end="url(#arrA)"/>
+        <text x="540" y="30" fill="#FF6D00" font-family="JetBrains Mono, monospace" font-size="11" font-weight="700" text-anchor="middle" letter-spacing="2">HEAP</text>
+        <rect x="390" y="60" width="320" height="160" rx="6" fill="#2A1800" filter="url(#regionShadowD2a)"/>
+        <rect x="410" y="80" width="280" height="120" rx="4" fill="#0f1115"/>
+        <text x="425" y="103" fill="#FF6D00" font-family="JetBrains Mono, monospace" font-size="13" font-weight="500">User object</text>
         <rect x="425" y="118" width="250" height="32" rx="3" fill="#1c2030" stroke="#252a37"/>
-        <text x="438" y="138" fill="#e8c87a" font-family="JetBrains Mono, monospace" font-size="11">age = 30</text>
+        <text x="438" y="138" fill="#FDD663" font-family="JetBrains Mono, monospace" font-size="11">age = 30</text>
         <text x="660" y="138" fill="#5e6473" font-family="Inter Tight, sans-serif" font-size="10" font-style="italic" text-anchor="end">primitive, inline</text>
         <rect x="425" y="155" width="250" height="32" rx="3" fill="#1c2030" stroke="#252a37"/>
-        <text x="438" y="175" fill="#e8c87a" font-family="JetBrains Mono, monospace" font-size="11">name &rarr;</text>
-        <circle cx="595" cy="171" r="3" fill="#6ed3a8"/>
+        <text x="438" y="175" fill="#FDD663" font-family="JetBrains Mono, monospace" font-size="11">name &rarr;</text>
+        <circle cx="595" cy="171" r="3" fill="#34A853"/>
         <text x="660" y="175" fill="#5e6473" font-family="Inter Tight, sans-serif" font-size="10" font-style="italic" text-anchor="end">reference to "Ana"</text>
         <text x="550" y="245" fill="#5e6473" font-family="Inter Tight, sans-serif" font-size="11" font-style="italic" text-anchor="middle">Both fields physically embedded inside the User object on the heap</text>
       </svg>
@@ -150,32 +162,37 @@ u.name = <span class="str">"Ana"</span>;</code></pre>
 
     <div class="diagram-svg">
       <svg viewBox="0 0 760 320" xmlns="http://www.w3.org/2000/svg" width="100%" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Three memory regions with Counter example">
-        <text x="120" y="30" fill="#7ab8e8" font-family="JetBrains Mono, monospace" font-size="11" font-weight="700" text-anchor="middle" letter-spacing="2">STACK</text>
-        <text x="380" y="30" fill="#ff7a3d" font-family="JetBrains Mono, monospace" font-size="11" font-weight="700" text-anchor="middle" letter-spacing="2">HEAP</text>
-        <text x="640" y="30" fill="#b18ae0" font-family="JetBrains Mono, monospace" font-size="11" font-weight="700" text-anchor="middle" letter-spacing="2">METASPACE</text>
-        <rect x="40" y="55" width="160" height="220" rx="6" fill="#13192a" stroke="#7ab8e8" stroke-opacity="0.5"/>
-        <rect x="55" y="80" width="130" height="32" rx="3" fill="#0f1115" stroke="#252a37"/>
+        <defs>
+          <filter id="regionShadowD2b" x="-10%" y="-10%" width="120%" height="130%">
+            <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="rgba(0,0,0,0.6)"/>
+          </filter>
+        </defs>
+        <text x="120" y="30" fill="#1A73E8" font-family="JetBrains Mono, monospace" font-size="11" font-weight="700" text-anchor="middle" letter-spacing="2">STACK</text>
+        <text x="380" y="30" fill="#FF6D00" font-family="JetBrains Mono, monospace" font-size="11" font-weight="700" text-anchor="middle" letter-spacing="2">HEAP</text>
+        <text x="640" y="30" fill="#7B5EA7" font-family="JetBrains Mono, monospace" font-size="11" font-weight="700" text-anchor="middle" letter-spacing="2">METASPACE</text>
+        <rect x="40" y="55" width="160" height="220" rx="6" fill="#0D1F3C" filter="url(#regionShadowD2b)"/>
+        <rect x="55" y="80" width="130" height="32" rx="3" fill="#0f1115"/>
         <text x="65" y="100" fill="#e8e6e1" font-family="JetBrains Mono, monospace" font-size="11">a</text>
-        <circle cx="175" cy="96" r="3" fill="#ff7a3d"/>
-        <rect x="55" y="120" width="130" height="32" rx="3" fill="#0f1115" stroke="#252a37"/>
+        <circle cx="175" cy="96" r="3" fill="#FF6D00"/>
+        <rect x="55" y="120" width="130" height="32" rx="3" fill="#0f1115"/>
         <text x="65" y="140" fill="#e8e6e1" font-family="JetBrains Mono, monospace" font-size="11">b</text>
-        <circle cx="175" cy="136" r="3" fill="#ff7a3d"/>
-        <rect x="240" y="55" width="280" height="220" rx="6" fill="#1a1612" stroke="#ff7a3d" stroke-opacity="0.5"/>
-        <rect x="260" y="75" width="240" height="80" rx="4" fill="#0f1115" stroke="#ff7a3d" stroke-opacity="0.5"/>
-        <text x="275" y="98" fill="#ffb38a" font-family="JetBrains Mono, monospace" font-size="12">Counter #1</text>
-        <text x="275" y="120" fill="#e8c87a" font-family="JetBrains Mono, monospace" font-size="11">instanceCount = 0</text>
+        <circle cx="175" cy="136" r="3" fill="#FF6D00"/>
+        <rect x="240" y="55" width="280" height="220" rx="6" fill="#2A1800" filter="url(#regionShadowD2b)"/>
+        <rect x="260" y="75" width="240" height="80" rx="4" fill="#0f1115"/>
+        <text x="275" y="98" fill="#FF6D00" font-family="JetBrains Mono, monospace" font-size="12">Counter #1</text>
+        <text x="275" y="120" fill="#FDD663" font-family="JetBrains Mono, monospace" font-size="11">instanceCount = 0</text>
         <text x="275" y="140" fill="#5e6473" font-family="JetBrains Mono, monospace" font-size="10" font-style="italic">(no totalCount here)</text>
-        <rect x="260" y="170" width="240" height="80" rx="4" fill="#0f1115" stroke="#ff7a3d" stroke-opacity="0.5"/>
-        <text x="275" y="193" fill="#ffb38a" font-family="JetBrains Mono, monospace" font-size="12">Counter #2</text>
-        <text x="275" y="215" fill="#e8c87a" font-family="JetBrains Mono, monospace" font-size="11">instanceCount = 0</text>
+        <rect x="260" y="170" width="240" height="80" rx="4" fill="#0f1115"/>
+        <text x="275" y="193" fill="#FF6D00" font-family="JetBrains Mono, monospace" font-size="12">Counter #2</text>
+        <text x="275" y="215" fill="#FDD663" font-family="JetBrains Mono, monospace" font-size="11">instanceCount = 0</text>
         <text x="275" y="235" fill="#5e6473" font-family="JetBrains Mono, monospace" font-size="10" font-style="italic">(no totalCount here)</text>
-        <rect x="560" y="55" width="170" height="220" rx="6" fill="#1a1419" stroke="#b18ae0" stroke-opacity="0.45"/>
-        <rect x="575" y="80" width="140" height="60" rx="4" fill="#0f1115" stroke="#b18ae0" stroke-opacity="0.4"/>
-        <text x="585" y="100" fill="#b18ae0" font-family="JetBrains Mono, monospace" font-size="11">class Counter</text>
+        <rect x="560" y="55" width="170" height="220" rx="6" fill="#1A0A2E" filter="url(#regionShadowD2b)"/>
+        <rect x="575" y="80" width="140" height="60" rx="4" fill="#0f1115"/>
+        <text x="585" y="100" fill="#7B5EA7" font-family="JetBrains Mono, monospace" font-size="11">class Counter</text>
         <text x="585" y="118" fill="#9aa0ad" font-family="JetBrains Mono, monospace" font-size="10">(bytecode, struct)</text>
         <text x="585" y="132" fill="#9aa0ad" font-family="JetBrains Mono, monospace" font-size="10">(method table)</text>
-        <rect x="575" y="155" width="140" height="44" rx="4" fill="#0f1115" stroke="#b18ae0" stroke-opacity="0.6"/>
-        <text x="585" y="175" fill="#e8c87a" font-family="JetBrains Mono, monospace" font-size="11">totalCount = 0</text>
+        <rect x="575" y="155" width="140" height="44" rx="4" fill="#0f1115"/>
+        <text x="585" y="175" fill="#FDD663" font-family="JetBrains Mono, monospace" font-size="11">totalCount = 0</text>
         <text x="585" y="190" fill="#5e6473" font-family="JetBrains Mono, monospace" font-size="9" font-style="italic">ONE copy, shared</text>
         <text x="640" y="245" fill="#5e6473" font-family="Inter Tight, sans-serif" font-size="11" font-style="italic" text-anchor="middle">Loaded once, lives</text>
         <text x="640" y="260" fill="#5e6473" font-family="Inter Tight, sans-serif" font-size="11" font-style="italic" text-anchor="middle">with the JVM</text>
@@ -562,3 +579,4 @@ vh.getAndAdd(counter, <span class="num">1</span>);  <span class="cm">// atomic i
 </script>
 </body>
 </html>
+
