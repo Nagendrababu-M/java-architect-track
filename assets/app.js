@@ -675,7 +675,7 @@ function showAnswers(dayKey) {
 
 function initOpenEndedChallenge(dayKey) {
   const dayData = CURRICULUM.dayMap[dayKey];
-  if (!dayData || dayData.challenge.type !== 'open-ended') return;
+  if (!dayData || !dayData.challenge) return;
 
   dayData.challenge.questions.forEach(q => {
     const textarea = document.getElementById(`ta-${dayKey}-${q.id}`);
