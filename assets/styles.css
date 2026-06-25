@@ -1768,7 +1768,7 @@ footer {
   border-radius: 0 0 var(--radius-md) var(--radius-md);
   border: 1px solid var(--line);
   border-top: none;
-  box-shadow: var(--shadow-1);
+  box-shadow: none;
   overflow: hidden;
   max-height: 0;
   padding: 0 18px;
@@ -1800,12 +1800,13 @@ footer {
               background var(--dur-short) var(--ease-standard);
   position: relative;
   overflow: hidden;
-  box-shadow: var(--shadow-1);
+  box-shadow: none;
 }
 .day-card:hover:not(.locked) {
   transform: translateY(-3px);
-  box-shadow: var(--shadow-3);
+  box-shadow: none;
   border-color: rgba(255,255,255,0.20);
+  filter: brightness(1.1);
 }
 .day-card:active:not(.locked) { transform: translateY(-1px); }
 
@@ -1815,10 +1816,10 @@ footer {
 /* Current â€” orange left border + subtle glow */
 .day-card.current {
   border-left: 3px solid rgba(255,255,255,0.60);
-  box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+  box-shadow: none;
 }
 .day-card.current:hover:not(.locked) {
-  box-shadow: 0 12px 32px rgba(0,0,0,0.5), 0 2px 6px rgba(0,0,0,0.3);
+  box-shadow: none;
 }
 
 /* Locked â€” same card, just faded */
@@ -1827,7 +1828,7 @@ footer {
   opacity: 0.45;
   box-shadow: none;
 }
-.day-card.locked:hover { transform: translateY(-4px); filter: brightness(1.12); box-shadow: var(--shadow-3); }
+.day-card.locked:hover { transform: translateY(-4px); filter: brightness(1.12); box-shadow: none; }
 
 .day-number {
   font-family: 'JetBrains Mono', monospace;
@@ -2535,12 +2536,8 @@ footer {
 .week-section[data-phase] .day-card .day-topic-badge[data-tp="5"] { background: var(--phase-5); color: #fff; border-color: transparent; }
 .week-section[data-phase] .day-card .day-topic-badge[data-tp="6"] { background: var(--phase-6); color: #fff; border-color: transparent; }
 
-@keyframes current-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(26,115,232,0); }
-  50%       { box-shadow: 0 0 10px 3px rgba(26,115,232,0.18); }
-}
 .day-card.current {
-  animation: current-pulse 3s ease-in-out infinite;
+  animation: none;
 }
 
 /* â”€â”€ Search icon override (SVG) & shortcut kbd â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
