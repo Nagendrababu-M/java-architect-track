@@ -675,10 +675,22 @@ function showAnswers(dayKey) {
 
 function initOpenEndedChallenge(dayKey) {
   const MIN_CHARS = 20;
+  const parts = dayKey.split('-');
+  const isDone = loadProgress()[dayKey] === 'done';
+
   document.querySelectorAll(`#challenge-${dayKey} .answer-textarea`).forEach(textarea => {
     const id = textarea.id.replace(`ta-${dayKey}-`, '');
     const countEl  = document.getElementById(`cc-${dayKey}-${id}`);
     const revealBtn = document.getElementById(`reveal-${dayKey}-${id}`);
+    const modelEl   = document.getElementById(`ma-${dayKey}-${id}`);
+
+    // If day already completed, restore revealed state
+    if (isDone) {
+      if (modelEl) modelEl.classList.add('visible');
+      if (revealBtn) revealBtn.disabled = true;
+      if (countEl) { countEl.textContent = `✓ Done`; countEl.classList.add('ready'); }
+      return;
+    }
 
     const updateCount = () => {
       const len = textarea.value.trim().length;
@@ -701,12 +713,10 @@ function revealModelAnswer(dayKey, questionId) {
   const btn = document.getElementById(`reveal-${dayKey}-${questionId}`);
   if (btn) btn.disabled = true;
 
-  // Mark day 3 as done once all answers revealed
-  const dayData = CURRICULUM.dayMap[dayKey];
-  if (!dayData) return;
-  const allRevealed = dayData.challenge.questions.every(q =>
-    document.getElementById(`ma-${dayKey}-${q.id}`)?.classList.contains('visible')
-  );
+  // Mark day done once all model answers on this page are revealed
+  const allAnswers  = document.querySelectorAll(`[id^="ma-${dayKey}-"]`);
+  const allRevealed = allAnswers.length > 0 &&
+    [...allAnswers].every(el => el.classList.contains('visible'));
   if (allRevealed) {
     const parts = dayKey.split('-');
     markDayDone(parseInt(parts[0]), parseInt(parts[1]));
