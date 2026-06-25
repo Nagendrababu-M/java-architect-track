@@ -674,22 +674,19 @@ function showAnswers(dayKey) {
 /* ── Open-ended challenge (Day 3) ───────────────────────── */
 
 function initOpenEndedChallenge(dayKey) {
-  const dayData = CURRICULUM.dayMap[dayKey];
-  if (!dayData || !dayData.challenge) return;
-
-  dayData.challenge.questions.forEach(q => {
-    const textarea = document.getElementById(`ta-${dayKey}-${q.id}`);
-    const countEl  = document.getElementById(`cc-${dayKey}-${q.id}`);
-    const revealBtn = document.getElementById(`reveal-${dayKey}-${q.id}`);
-    if (!textarea) return;
+  const MIN_CHARS = 20;
+  document.querySelectorAll(`#challenge-${dayKey} .answer-textarea`).forEach(textarea => {
+    const id = textarea.id.replace(`ta-${dayKey}-`, '');
+    const countEl  = document.getElementById(`cc-${dayKey}-${id}`);
+    const revealBtn = document.getElementById(`reveal-${dayKey}-${id}`);
 
     const updateCount = () => {
       const len = textarea.value.trim().length;
       if (countEl) {
-        countEl.textContent = `${len} / ${q.minChars} characters`;
-        countEl.classList.toggle('ready', len >= q.minChars);
+        countEl.textContent = `${len} / ${MIN_CHARS} characters`;
+        countEl.classList.toggle('ready', len >= MIN_CHARS);
       }
-      if (revealBtn) revealBtn.disabled = len < q.minChars;
+      if (revealBtn) revealBtn.disabled = len < MIN_CHARS;
     };
 
     if (revealBtn) revealBtn.disabled = true;
