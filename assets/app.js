@@ -844,6 +844,7 @@ function initLessonNav() {
   floatNav.id = 'float-nav';
   floatNav.innerHTML = `
     <button class="float-scroll-top" onclick="window.scrollTo({top:0,behavior:'smooth'})"><span class="material-symbols-rounded">vertical_align_top</span>Top</button>
+    <button class="float-scroll-top" onclick="window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'})"><span class="material-symbols-rounded">vertical_align_bottom</span>Bottom</button>
     <div class="float-divider"></div>
     ${prev
       ? `<a class="float-btn${prevHref ? '' : ' disabled'}" href="${prevHref || '#'}"><span class="material-symbols-rounded">arrow_back</span>Day ${prev.day}</a>`

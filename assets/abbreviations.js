@@ -203,21 +203,81 @@
 
   document.addEventListener('scroll', scheduleHide, { passive: true });
 
+  /* ── Auto-scan text nodes and wrap first occurrence ─── */
+
+  function autoWrapAbbreviations(seen) {
+    if (typeof ABBREVIATIONS === 'undefined') return;
+
+    const keys = Object.keys(ABBREVIATIONS).sort((a, b) => b.length - a.length);
+    // Build a regex that matches any unwrapped abbreviation as a whole word
+    const pattern = new RegExp(`\\b(${keys.map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})\\b`);
+
+    const walker = document.createTreeWalker(
+      document.body,
+      NodeFilter.SHOW_TEXT,
+      {
+        acceptNode(node) {
+          const parent = node.parentElement;
+          if (!parent) return NodeFilter.FILTER_REJECT;
+          const tag = parent.tagName;
+          // Skip script, style, pre, code, abbr, and already-tagged elements
+          if (['SCRIPT','STYLE','PRE','CODE','ABBR','TEXTAREA','INPUT'].includes(tag)) return NodeFilter.FILTER_REJECT;
+          return NodeFilter.FILTER_ACCEPT;
+        }
+      }
+    );
+
+    const nodesToProcess = [];
+    while (walker.nextNode()) nodesToProcess.push(walker.currentNode);
+
+    nodesToProcess.forEach(node => {
+      const text = node.nodeValue;
+      if (!pattern.test(text)) return;
+
+      const frag = document.createDocumentFragment();
+      let last = 0;
+      let match;
+      const re = new RegExp(`\\b(${keys.map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})\\b`, 'g');
+
+      while ((match = re.exec(text)) !== null) {
+        const key = match[1];
+        if (seen.has(key)) continue;
+        seen.add(key);
+
+        if (match.index > last) frag.appendChild(document.createTextNode(text.slice(last, match.index)));
+
+        const abbr = document.createElement('abbr');
+        abbr.dataset.abbr = key;
+        abbr.textContent = key;
+        wireAbbr(abbr);
+        frag.appendChild(abbr);
+        last = match.index + key.length;
+      }
+
+      if (frag.childNodes.length === 0) return;
+      if (last < text.length) frag.appendChild(document.createTextNode(text.slice(last)));
+      node.parentNode.replaceChild(frag, node);
+    });
+  }
+
   /* ── Init ───────────────────────────────────────────── */
 
   document.addEventListener('DOMContentLoaded', () => {
     const seen = new Set();
 
+    // Wire existing manual <abbr data-abbr> tags first
     document.querySelectorAll('abbr[data-abbr]').forEach(el => {
       const key = el.dataset.abbr;
       if (seen.has(key)) {
-        // Subsequent occurrences: remove data-abbr so they stay plain
         el.removeAttribute('data-abbr');
         return;
       }
       seen.add(key);
       wireAbbr(el);
     });
+
+    // Auto-wrap first plain-text occurrence of any remaining abbreviations
+    autoWrapAbbreviations(seen);
   });
 
 })();
