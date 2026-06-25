@@ -297,14 +297,14 @@ ses.scheduleWithFixedDelay(task, <span class="num-lit">0</span>, <span class="nu
     </div>
 
     <div class="challenge-form" id="challenge-2-10">
-      <span class="challenge-tag">YOUR ANSWERS &middot; MINIMUM 50 CHARS EACH TO UNLOCK MODEL ANSWER</span>
+      <span class="challenge-tag">YOUR ANSWERS &middot; MINIMUM 20 CHARS EACH TO UNLOCK MODEL ANSWER</span>
 
       <div class="textarea-row">
         <label class="textarea-label" for="ta-2-10-w1">
           Q1 &mdash; Workload A (CPU-bound, bursty). Size the pool, choose the queue and saturation policy, and justify each from the sizing formula and the overload behavior you want.
         </label>
         <textarea class="answer-textarea" id="ta-2-10-w1" placeholder="CPU-bound → how many threads? Bursty above capacity → what queue and policy give graceful degradation?"></textarea>
-        <div class="char-count" id="cc-2-10-w1">0 / 50 characters</div>
+        <div class="char-count" id="cc-2-10-w1">0 / 20 characters</div>
         <div style="margin-top:12px">
           <button class="btn-reveal" id="reveal-2-10-w1" onclick="revealModelAnswer('2-10','w1')" disabled>Reveal model answer</button>
         </div>
@@ -319,7 +319,7 @@ ses.scheduleWithFixedDelay(task, <span class="num-lit">0</span>, <span class="nu
           Q2 &mdash; Workload B (I/O-bound, must-not-drop, no-OOM). Size it, choose queue + policy, and explain the producer&rsquo;s experience during a spike. Would virtual threads change your answer?
         </label>
         <textarea class="answer-textarea" id="ta-2-10-w2" placeholder="150ms wait / 5ms compute → sizing? 'never drop' + 'no OOM' → which queue/policy? Day 8 angle?"></textarea>
-        <div class="char-count" id="cc-2-10-w2">0 / 50 characters</div>
+        <div class="char-count" id="cc-2-10-w2">0 / 20 characters</div>
         <div style="margin-top:12px">
           <button class="btn-reveal" id="reveal-2-10-w2" onclick="revealModelAnswer('2-10','w2')" disabled>Reveal model answer</button>
         </div>
@@ -334,7 +334,7 @@ ses.scheduleWithFixedDelay(task, <span class="num-lit">0</span>, <span class="nu
           Q3 &mdash; Workload C (periodic, latest-value-wins). Which executor and which saturation/scheduling choices fit &ldquo;stale data is worthless,&rdquo; and what scheduling pitfall must you guard against?
         </label>
         <textarea class="answer-textarea" id="ta-2-10-w3" placeholder="Periodic push → which executor? 'only newest matters' → which policy? What silently kills a scheduled task?"></textarea>
-        <div class="char-count" id="cc-2-10-w3">0 / 50 characters</div>
+        <div class="char-count" id="cc-2-10-w3">0 / 20 characters</div>
         <div style="margin-top:12px">
           <button class="btn-reveal" id="reveal-2-10-w3" onclick="revealModelAnswer('2-10','w3')" disabled>Reveal model answer</button>
         </div>
@@ -422,5 +422,7 @@ ses.scheduleWithFixedDelay(task, <span class="num-lit">0</span>, <span class="nu
 </script>
 </body>
 </html>
+
+
 
 

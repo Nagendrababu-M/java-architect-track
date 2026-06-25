@@ -86,19 +86,19 @@ const CURRICULUM = {
               {
                 id: "gc1",
                 prompt: "Which type of GC event is most likely causing the 350ms spike? Justify using the symptoms.",
-                minChars: 50,
+                minChars: 20,
                 modelAnswer: "Most likely a Major GC. Minor GCs are too fast (single-digit ms) to cause 350ms spikes. Full GCs would be even longer and rarer. 350ms aligns with old-gen collection clearing promoted objects — long enough to be painful, short enough to not be a Full GC."
               },
               {
                 id: "gc2",
                 prompt: "What does the 45-second interval tell you about the app's allocation behaviour?",
-                minChars: 50,
+                minChars: 20,
                 modelAnswer: "The 45-second interval suggests the old generation fills up at a steady rate — consistent with promotion of long-lived objects (likely a growing cache or session store). Allocation rate itself isn't the issue; promotion rate is. Something is surviving enough Minor GCs to get tenured, then accumulating until the old gen triggers a collection."
               },
               {
                 id: "gc3",
                 prompt: "If p50 is unchanged, why does this matter? Argue to a PM who says 'p50 is fine, ship it.'",
-                minChars: 50,
+                minChars: 20,
                 modelAnswer: "p50 measures median, hiding tail latency entirely. For a 5,000 req/sec service, a 350ms spike every 45s affects roughly 225 requests per spike — those users see the system as broken even if 99% see it as fine. SLA contracts, retry storms, and downstream cascades all live in the tail. One bad GC pause can cascade into a thundering herd when 225 clients retry simultaneously."
               },
             ]

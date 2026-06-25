@@ -318,14 +318,14 @@ count++;   <span class="cmt">// THREE operations: read count, add 1, write count
     </div>
 
     <div class="challenge-form" id="challenge-1-5">
-      <span class="challenge-tag">YOUR ANSWERS &middot; MINIMUM 50 CHARS EACH TO UNLOCK MODEL ANSWER</span>
+      <span class="challenge-tag">YOUR ANSWERS &middot; MINIMUM 20 CHARS EACH TO UNLOCK MODEL ANSWER</span>
 
       <div class="textarea-row">
         <label class="textarea-label" for="ta-1-5-r1">
           Q1 &mdash; Identify the three distinct race conditions (lines A&ndash;C). For each, name which guarantee it violates &mdash; atomicity, visibility, or ordering.
         </label>
         <textarea class="answer-textarea" id="ta-1-5-r1" placeholder="Look at the unsynchronized getInstance(), the shared HashMap, and hitCount++..."></textarea>
-        <div class="char-count" id="cc-1-5-r1">0 / 50 characters</div>
+        <div class="char-count" id="cc-1-5-r1">0 / 20 characters</div>
         <div style="margin-top:12px">
           <button class="btn-reveal" id="reveal-1-5-r1" onclick="revealModelAnswer('1-5','r1')" disabled>Reveal model answer</button>
         </div>
@@ -340,7 +340,7 @@ count++;   <span class="cmt">// THREE operations: read count, add 1, write count
           Q2 &mdash; Rewrite the class to be correct. Justify each choice in JMM terms (which idiom gives safe publication, which gives atomicity).
         </label>
         <textarea class="answer-textarea" id="ta-1-5-r2" placeholder="Think: holder idiom or enum for the singleton; ConcurrentHashMap; AtomicInteger or LongAdder for the counter..."></textarea>
-        <div class="char-count" id="cc-1-5-r2">0 / 50 characters</div>
+        <div class="char-count" id="cc-1-5-r2">0 / 20 characters</div>
         <div style="margin-top:12px">
           <button class="btn-reveal" id="reveal-1-5-r2" onclick="revealModelAnswer('1-5','r2')" disabled>Reveal model answer</button>
         </div>
@@ -355,7 +355,7 @@ count++;   <span class="cmt">// THREE operations: read count, add 1, write count
           Q3 &mdash; Explain, in happens-before terms, exactly how a caller of the original code could receive a <code>PriceCache</code> whose <code>prices</code> map is still null.
         </label>
         <textarea class="answer-textarea" id="ta-1-5-r3" placeholder="Trace the reordering of allocate / construct / assign, and the missing edge to the reader..."></textarea>
-        <div class="char-count" id="cc-1-5-r3">0 / 50 characters</div>
+        <div class="char-count" id="cc-1-5-r3">0 / 20 characters</div>
         <div style="margin-top:12px">
           <button class="btn-reveal" id="reveal-1-5-r3" onclick="revealModelAnswer('1-5','r3')" disabled>Reveal model answer</button>
         </div>
@@ -443,5 +443,7 @@ count++;   <span class="cmt">// THREE operations: read count, add 1, write count
 </script>
 </body>
 </html>
+
+
 
 

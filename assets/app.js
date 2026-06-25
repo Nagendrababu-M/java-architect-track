@@ -683,16 +683,18 @@ function initOpenEndedChallenge(dayKey) {
     const revealBtn = document.getElementById(`reveal-${dayKey}-${q.id}`);
     if (!textarea) return;
 
-    textarea.addEventListener('input', () => {
+    const updateCount = () => {
       const len = textarea.value.trim().length;
       if (countEl) {
         countEl.textContent = `${len} / ${q.minChars} characters`;
         countEl.classList.toggle('ready', len >= q.minChars);
       }
-      if (revealBtn) {
-        revealBtn.disabled = len < q.minChars;
-      }
-    });
+      if (revealBtn) revealBtn.disabled = len < q.minChars;
+    };
+
+    if (revealBtn) revealBtn.disabled = true;
+    textarea.addEventListener('input', updateCount);
+    updateCount();
   });
 }
 
@@ -862,7 +864,7 @@ function initLessonNav() {
     clearTimeout(scrollTimer);
     scrollTimer = setTimeout(() => {
       floatNav.classList.remove('visible');
-    }, 1000);
+    }, 2500);
   }, { passive: true });
 }
 

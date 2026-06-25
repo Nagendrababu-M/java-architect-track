@@ -410,14 +410,14 @@ history.addFirst(latest);  history.removeLast();  <span class="kw">var</span> ne
     </div>
 
     <div class="challenge-form" id="challenge-1-8">
-      <span class="challenge-tag">YOUR ANSWERS &middot; MINIMUM 50 CHARS EACH TO UNLOCK MODEL ANSWER</span>
+      <span class="challenge-tag">YOUR ANSWERS &middot; MINIMUM 20 CHARS EACH TO UNLOCK MODEL ANSWER</span>
 
       <div class="textarea-row">
         <label class="textarea-label" for="ta-1-8-os1">
           Q1 &mdash; Write the type design (Java 17 constructs). Which models the closed set of states, which models each state&rsquo;s data, and where does validation live?
         </label>
         <textarea class="answer-textarea" id="ta-1-8-os1" placeholder="Think: what gives the compiler the complete list of states? What makes each state immutable?"></textarea>
-        <div class="char-count" id="cc-1-8-os1">0 / 50 characters</div>
+        <div class="char-count" id="cc-1-8-os1">0 / 20 characters</div>
         <div style="margin-top:12px">
           <button class="btn-reveal" id="reveal-1-8-os1" onclick="revealModelAnswer('1-8','os1')" disabled>Reveal model answer</button>
         </div>
@@ -432,7 +432,7 @@ history.addFirst(latest);  history.removeLast();  <span class="kw">var</span> ne
           Q2 &mdash; Write the method that turns an <code>OrderState</code> into a status message so &ldquo;forgetting a state&rdquo; is a compile error. Which Java 21 features do the work?
         </label>
         <textarea class="answer-textarea" id="ta-1-8-os2" placeholder="What kind of switch? What patterns pull out fillPrice and reason? Why no default branch?"></textarea>
-        <div class="char-count" id="cc-1-8-os2">0 / 50 characters</div>
+        <div class="char-count" id="cc-1-8-os2">0 / 20 characters</div>
         <div style="margin-top:12px">
           <button class="btn-reveal" id="reveal-1-8-os2" onclick="revealModelAnswer('1-8','os2')" disabled>Reveal model answer</button>
         </div>
@@ -447,7 +447,7 @@ history.addFirst(latest);  history.removeLast();  <span class="kw">var</span> ne
           Q3 &mdash; A new state <code>PartiallyFilled(long filledQty, long remainingQty)</code> is added to the sealed interface. What happens across the codebase, and why is that what you <em>want</em>?
         </label>
         <textarea class="answer-textarea" id="ta-1-8-os3" placeholder="Think about what the compiler does to every existing switch over OrderState."></textarea>
-        <div class="char-count" id="cc-1-8-os3">0 / 50 characters</div>
+        <div class="char-count" id="cc-1-8-os3">0 / 20 characters</div>
         <div style="margin-top:12px">
           <button class="btn-reveal" id="reveal-1-8-os3" onclick="revealModelAnswer('1-8','os3')" disabled>Reveal model answer</button>
         </div>
@@ -534,5 +534,7 @@ history.addFirst(latest);  history.removeLast();  <span class="kw">var</span> ne
 </script>
 </body>
 </html>
+
+
 
 

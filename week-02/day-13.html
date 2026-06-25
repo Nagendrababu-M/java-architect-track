@@ -438,14 +438,14 @@ chainFuture
     </div>
 
     <div class="challenge-form" id="challenge-2-13">
-      <span class="challenge-tag">YOUR ANSWERS &middot; MINIMUM 50 CHARS EACH TO UNLOCK MODEL ANSWER</span>
+      <span class="challenge-tag">YOUR ANSWERS &middot; MINIMUM 20 CHARS EACH TO UNLOCK MODEL ANSWER</span>
 
       <div class="textarea-row">
         <label class="textarea-label" for="ta-2-13-a1">
           Q1 &mdash; Rewrite the blocking cascade as a clean non-blocking <code>CompletableFuture</code> chain. Explain which operator connects each step and why.
         </label>
         <textarea class="answer-textarea" id="ta-2-13-a1" placeholder="Which operator chains CF-returning methods? What's the type without it? Add a timeout and log errors."></textarea>
-        <div class="char-count" id="cc-2-13-a1">0 / 50 characters</div>
+        <div class="char-count" id="cc-2-13-a1">0 / 20 characters</div>
         <div style="margin-top:12px">
           <button class="btn-reveal" id="reveal-2-13-a1" onclick="revealModelAnswer('2-13','a1')" disabled>Reveal model answer</button>
         </div>
@@ -469,7 +469,7 @@ chainFuture
           Q2 &mdash; Write the parallel risk check: fetch <code>spotPrice</code> and <code>impliedVolatility</code> concurrently, combine to compute Greeks, with a 600 ms timeout falling back to <code>Greeks.ZERO</code>.
         </label>
         <textarea class="answer-textarea" id="ta-2-13-a2" placeholder="Which operator combines two independent CFs? Which timeout variant gives you a fallback value (not an exception)?"></textarea>
-        <div class="char-count" id="cc-2-13-a2">0 / 50 characters</div>
+        <div class="char-count" id="cc-2-13-a2">0 / 20 characters</div>
         <div style="margin-top:12px">
           <button class="btn-reveal" id="reveal-2-13-a2" onclick="revealModelAnswer('2-13','a2')" disabled>Reveal model answer</button>
         </div>
@@ -491,7 +491,7 @@ chainFuture
           Q3 &mdash; Both pipelines use <code>supplyAsync</code> under the hood without an explicit executor. What is the production risk, and what change fixes it?
         </label>
         <textarea class="answer-textarea" id="ta-2-13-a3" placeholder="Which thread pool? What's shared? What's the fix? Consider trading hours concurrency."></textarea>
-        <div class="char-count" id="cc-2-13-a3">0 / 50 characters</div>
+        <div class="char-count" id="cc-2-13-a3">0 / 20 characters</div>
         <div style="margin-top:12px">
           <button class="btn-reveal" id="reveal-2-13-a3" onclick="revealModelAnswer('2-13','a3')" disabled>Reveal model answer</button>
         </div>
@@ -585,5 +585,7 @@ chainFuture
 </script>
 </body>
 </html>
+
+
 
 

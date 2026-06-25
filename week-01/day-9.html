@@ -272,14 +272,14 @@
     </div>
 
     <div class="challenge-form" id="challenge-1-9">
-      <span class="challenge-tag">YOUR ANSWERS &middot; MINIMUM 50 CHARS EACH TO UNLOCK MODEL ANSWER</span>
+      <span class="challenge-tag">YOUR ANSWERS &middot; MINIMUM 20 CHARS EACH TO UNLOCK MODEL ANSWER</span>
 
       <div class="textarea-row">
         <label class="textarea-label" for="ta-1-9-s1">
           Q1 &mdash; This is not one bug but several. Separate the symptoms into distinct problems and classify each (GC / leak / concurrency / contention). Which Week-1 day owns each?
         </label>
         <textarea class="answer-textarea" id="ta-1-9-s1" placeholder="Market-open burst vs day-long creep vs wrong counter vs WAITING threads — these are different root causes."></textarea>
-        <div class="char-count" id="cc-1-9-s1">0 / 50 characters</div>
+        <div class="char-count" id="cc-1-9-s1">0 / 20 characters</div>
         <div style="margin-top:12px">
           <button class="btn-reveal" id="reveal-1-9-s1" onclick="revealModelAnswer('1-9','s1')" disabled>Reveal model answer</button>
         </div>
@@ -294,7 +294,7 @@
           Q2 &mdash; Give your diagnostic plan: for each problem, the exact evidence you&rsquo;d collect and the tool you&rsquo;d use, in the order you&rsquo;d work them. Why that order?
         </label>
         <textarea class="answer-textarea" id="ta-1-9-s2" placeholder="GC log, heap dump on OOM, allocation profile, thread dumps, code review of the counter... what first?"></textarea>
-        <div class="char-count" id="cc-1-9-s2">0 / 50 characters</div>
+        <div class="char-count" id="cc-1-9-s2">0 / 20 characters</div>
         <div style="margin-top:12px">
           <button class="btn-reveal" id="reveal-1-9-s2" onclick="revealModelAnswer('1-9','s2')" disabled>Reveal model answer</button>
         </div>
@@ -309,7 +309,7 @@
           Q3 &mdash; Propose the fixes, and call out the one tempting &ldquo;fix&rdquo; that would make things worse or merely hide a problem.
         </label>
         <textarea class="answer-textarea" id="ta-1-9-s3" placeholder="Young Gen sizing / ZGC, bound the cache, AtomicLong, isolate parallelism / ReentrantLock... and the trap?"></textarea>
-        <div class="char-count" id="cc-1-9-s3">0 / 50 characters</div>
+        <div class="char-count" id="cc-1-9-s3">0 / 20 characters</div>
         <div style="margin-top:12px">
           <button class="btn-reveal" id="reveal-1-9-s3" onclick="revealModelAnswer('1-9','s3')" disabled>Reveal model answer</button>
         </div>
@@ -398,5 +398,7 @@
 </script>
 </body>
 </html>
+
+
 
 

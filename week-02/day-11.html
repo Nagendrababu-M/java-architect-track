@@ -304,14 +304,14 @@ lock.lock();
     </div>
 
     <div class="challenge-form" id="challenge-2-11">
-      <span class="challenge-tag">YOUR ANSWERS &middot; MINIMUM 50 CHARS EACH TO UNLOCK MODEL ANSWER</span>
+      <span class="challenge-tag">YOUR ANSWERS &middot; MINIMUM 20 CHARS EACH TO UNLOCK MODEL ANSWER</span>
 
       <div class="textarea-row">
         <label class="textarea-label" for="ta-2-11-l1">
           Q1 &mdash; Why is throughput capped despite reads not conflicting? Explain in terms of what the single monitor forces, and tie it to the BLOCKED threads in the profile.
         </label>
         <textarea class="answer-textarea" id="ta-2-11-l1" placeholder="What does one synchronized monitor do to concurrent reads that don't actually conflict?"></textarea>
-        <div class="char-count" id="cc-2-11-l1">0 / 50 characters</div>
+        <div class="char-count" id="cc-2-11-l1">0 / 20 characters</div>
         <div style="margin-top:12px">
           <button class="btn-reveal" id="reveal-2-11-l1" onclick="revealModelAnswer('2-11','l1')" disabled>Reveal model answer</button>
         </div>
@@ -326,7 +326,7 @@ lock.lock();
           Q2 &mdash; Refactor it. Give your first choice and your reasoning, including the correctness rule you must respect for the read path.
         </label>
         <textarea class="answer-textarea" id="ta-2-11-l2" placeholder="Read-heavy → ReadWriteLock or StampedLock? Or is there an even simpler j.u.c answer? What about size()?"></textarea>
-        <div class="char-count" id="cc-2-11-l2">0 / 50 characters</div>
+        <div class="char-count" id="cc-2-11-l2">0 / 20 characters</div>
         <div style="margin-top:12px">
           <button class="btn-reveal" id="reveal-2-11-l2" onclick="revealModelAnswer('2-11','l2')" disabled>Reveal model answer</button>
         </div>
@@ -341,7 +341,7 @@ lock.lock();
           Q3 &mdash; A junior proposes &ldquo;just make <code>get</code> non-synchronized for speed, keep <code>put</code> synchronized.&rdquo; Why is that wrong, and what guarantee from Day 5 does it violate?
         </label>
         <textarea class="answer-textarea" id="ta-2-11-l3" placeholder="If only the writer synchronizes, what does the unsynchronized reader lose? Think happens-before."></textarea>
-        <div class="char-count" id="cc-2-11-l3">0 / 50 characters</div>
+        <div class="char-count" id="cc-2-11-l3">0 / 20 characters</div>
         <div style="margin-top:12px">
           <button class="btn-reveal" id="reveal-2-11-l3" onclick="revealModelAnswer('2-11','l3')" disabled>Reveal model answer</button>
         </div>
@@ -429,5 +429,7 @@ lock.lock();
 </script>
 </body>
 </html>
+
+
 
 

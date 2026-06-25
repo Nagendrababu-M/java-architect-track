@@ -401,14 +401,14 @@ stream.filter(<span class="typ">Predicate</span>.not(<span class="typ">String</s
     </div>
 
     <div class="challenge-form" id="challenge-1-7">
-      <span class="challenge-tag">YOUR ANSWERS &middot; MINIMUM 50 CHARS EACH TO UNLOCK MODEL ANSWER</span>
+      <span class="challenge-tag">YOUR ANSWERS &middot; MINIMUM 20 CHARS EACH TO UNLOCK MODEL ANSWER</span>
 
       <div class="textarea-row">
         <label class="textarea-label" for="ta-1-7-pi1">
           Q1 &mdash; What is the root cause, and the exact failure mode? Why does it only show up under concurrent load and not in single-endpoint tests?
         </label>
         <textarea class="answer-textarea" id="ta-1-7-pi1" placeholder="Where do parallelStream() threads come from? What is shared across the whole JVM?"></textarea>
-        <div class="char-count" id="cc-1-7-pi1">0 / 50 characters</div>
+        <div class="char-count" id="cc-1-7-pi1">0 / 20 characters</div>
         <div style="margin-top:12px">
           <button class="btn-reveal" id="reveal-1-7-pi1" onclick="revealModelAnswer('1-7','pi1')" disabled>Reveal model answer</button>
         </div>
@@ -423,7 +423,7 @@ stream.filter(<span class="typ">Predicate</span>.not(<span class="typ">String</s
           Q2 &mdash; Fix #1: keep parallelism but isolate it. How, exactly? What are the caveats?
         </label>
         <textarea class="answer-textarea" id="ta-1-7-pi2" placeholder="How do you make a parallel stream run on a pool you control instead of the common pool?"></textarea>
-        <div class="char-count" id="cc-1-7-pi2">0 / 50 characters</div>
+        <div class="char-count" id="cc-1-7-pi2">0 / 20 characters</div>
         <div style="margin-top:12px">
           <button class="btn-reveal" id="reveal-1-7-pi2" onclick="revealModelAnswer('1-7','pi2')" disabled>Reveal model answer</button>
         </div>
@@ -438,7 +438,7 @@ stream.filter(<span class="typ">Predicate</span>.not(<span class="typ">String</s
           Q3 &mdash; Fix #2: remove parallelization entirely. Why is this often the <em>better</em> fix here, and when would parallel actually be justified?
         </label>
         <textarea class="answer-textarea" id="ta-1-7-pi3" placeholder="Recall the 'parallel only if ALL' checklist. Does a few-hundred-item, CPU-light aggregation qualify?"></textarea>
-        <div class="char-count" id="cc-1-7-pi3">0 / 50 characters</div>
+        <div class="char-count" id="cc-1-7-pi3">0 / 20 characters</div>
         <div style="margin-top:12px">
           <button class="btn-reveal" id="reveal-1-7-pi3" onclick="revealModelAnswer('1-7','pi3')" disabled>Reveal model answer</button>
         </div>
@@ -525,5 +525,7 @@ stream.filter(<span class="typ">Predicate</span>.not(<span class="typ">String</s
 </script>
 </body>
 </html>
+
+
 
 

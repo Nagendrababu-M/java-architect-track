@@ -271,14 +271,14 @@ top.compareAndSet(cur, next, stamp, stamp + <span class="num-lit">1</span>);  <s
     </div>
 
     <div class="challenge-form" id="challenge-2-12">
-      <span class="challenge-tag">YOUR ANSWERS &middot; MINIMUM 50 CHARS EACH TO UNLOCK MODEL ANSWER</span>
+      <span class="challenge-tag">YOUR ANSWERS &middot; MINIMUM 20 CHARS EACH TO UNLOCK MODEL ANSWER</span>
 
       <div class="textarea-row">
         <label class="textarea-label" for="ta-2-12-a1">
           Q1 &mdash; Does Thread 1&rsquo;s CAS succeed, and what is the resulting state of the stack? Walk the exact corruption.
         </label>
         <textarea class="answer-textarea" id="ta-2-12-a1" placeholder="top is A again when T1 resumes — does compareAndSet(A, B) match? What does it set top to? Where did C go?"></textarea>
-        <div class="char-count" id="cc-2-12-a1">0 / 50 characters</div>
+        <div class="char-count" id="cc-2-12-a1">0 / 20 characters</div>
         <div style="margin-top:12px">
           <button class="btn-reveal" id="reveal-2-12-a1" onclick="revealModelAnswer('2-12','a1')" disabled>Reveal model answer</button>
         </div>
@@ -293,7 +293,7 @@ top.compareAndSet(cur, next, stamp, stamp + <span class="num-lit">1</span>);  <s
           Q2 &mdash; Fix it two ways: a primitive-level fix, and a &ldquo;don&rsquo;t hand-roll this&rdquo; fix. Note any precondition that made the bug possible.
         </label>
         <textarea class="answer-textarea" id="ta-2-12-a2" placeholder="What pairs a version with the reference? And what j.u.c. structure removes the problem entirely? What did node recycling enable?"></textarea>
-        <div class="char-count" id="cc-2-12-a2">0 / 50 characters</div>
+        <div class="char-count" id="cc-2-12-a2">0 / 20 characters</div>
         <div style="margin-top:12px">
           <button class="btn-reveal" id="reveal-2-12-a2" onclick="revealModelAnswer('2-12','a2')" disabled>Reveal model answer</button>
         </div>
@@ -308,7 +308,7 @@ top.compareAndSet(cur, next, stamp, stamp + <span class="num-lit">1</span>);  <s
           Q3 &mdash; Separately: a colleague replaced an <code>AtomicLong</code> request counter with a <code>synchronized</code> block &ldquo;to be safe,&rdquo; and throughput dropped. And a different counter on <code>AtomicLong</code> is now the hottest line in a profile. Diagnose both and prescribe.
         </label>
         <textarea class="answer-textarea" id="ta-2-12-a3" placeholder="Why is AtomicLong better than synchronized for a counter? And when does even AtomicLong lose — to what?"></textarea>
-        <div class="char-count" id="cc-2-12-a3">0 / 50 characters</div>
+        <div class="char-count" id="cc-2-12-a3">0 / 20 characters</div>
         <div style="margin-top:12px">
           <button class="btn-reveal" id="reveal-2-12-a3" onclick="revealModelAnswer('2-12','a3')" disabled>Reveal model answer</button>
         </div>
@@ -396,5 +396,7 @@ top.compareAndSet(cur, next, stamp, stamp + <span class="num-lit">1</span>);  <s
 </script>
 </body>
 </html>
+
+
 
 
